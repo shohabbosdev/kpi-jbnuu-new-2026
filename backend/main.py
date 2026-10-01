@@ -2,9 +2,11 @@ import os
 import io
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
+import uuid
+import shutil
 from pydantic import BaseModel
 import requests
 from dotenv import load_dotenv
@@ -13,6 +15,12 @@ from dotenv import load_dotenv
 load_dotenv()
 HEMIS_BASE_URL = os.getenv("HEMIS_BASE_URL", "https://student.jbnuu.uz/rest/v1")
 HEMIS_API_TOKEN = os.getenv("HEMIS_API_TOKEN", "Qn8Jp7TVvpGdQUvWoqpBC1i0p7ukHKT0")
+
+from database import (
+    db_load_users, db_save_user, db_update_password,
+    db_load_submissions, db_save_submission,
+    db_save_audit_log, db_load_audit_logs
+)
 
 
 app = FastAPI(
@@ -203,44 +211,88 @@ USERS_DB: Dict[str, Dict[str, Any]] = {
         "password": "admin123",
         "name": "Tizim Administratori",
         "role": "ADMIN",
-        "department": "Axborot texnologiyalari markazi",
+        "department": "Raqamli taʼlim texnologiyalari markazi",
         "faculty": "Filial maʼmuriyati",
         "position": "Bosh administrator",
         "degree": "Texnika fanlari nomzodi",
         "fte": 1.0
     },
+    "dekan": {
+        "id": 7,
+        "password": "dekan123",
+        "name": "Dots. Aliqulov Saloxiddin Turdimuratovich",
+        "role": "DEAN",
+        "department": "Psixologiya dekanati",
+        "faculty": "Psixologiya fakulteti",
+        "position": "Fakultet dekani, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.25
+    },
+    "dekan_matematika": {
+        "id": 4,
+        "password": "dekan123",
+        "name": "Dots. Alimov Salohiddin Hikmat oʻgʻli",
+        "role": "DEAN",
+        "department": "Amaliy matematika dekanati",
+        "faculty": "Amaliy matematika fakulteti",
+        "position": "Dekan muovini, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.50
+    },
     "mudir": {
         "id": 1,
         "password": "mudir123",
-        "name": "Prof. Rahimov Ulugʻbek Shavkatovich",
+        "name": "Dots. Sharipova Sadoqat Fazliddinovna",
         "role": "HEAD_OF_DEPT",
-        "department": "Dasturiy injiniring kafedrasi",
-        "faculty": "Axborot texnologiyalari fakulteti",
-        "position": "Kafedra mudiri, professor",
-        "degree": "Fan doktori (DSc)",
-        "fte": 1.0
+        "department": "Amaliy matematika",
+        "faculty": "Amaliy matematika fakulteti",
+        "position": "Kafedra mudiri, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.50
+    },
+    "mudir_kompyuter": {
+        "id": 3,
+        "password": "mudir123",
+        "name": "Dots. Kuvandikov Joʻra Tursunbayevich",
+        "role": "HEAD_OF_DEPT",
+        "department": "Kompyuter ilmlari va dasturlashtirish",
+        "faculty": "Amaliy matematika fakulteti",
+        "position": "Kafedra mudiri, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.50
+    },
+    "mudir_tillar": {
+        "id": 10,
+        "password": "mudir123",
+        "name": "Joʻrayev Muxammadraximxon Murod oʻgʻli",
+        "role": "HEAD_OF_DEPT",
+        "department": "Xorijiy tillar",
+        "faculty": "Psixologiya fakulteti",
+        "position": "Kafedra mudiri, assistent",
+        "degree": "Magistr",
+        "fte": 1.50
     },
     "oqituvchi": {
         "id": 2,
         "password": "oqituvchi123",
-        "name": "Dots. Karimov Jamshid Anvarovich",
+        "name": "Dots. Hafizov Erkin Alimboy oʻgʻli",
         "role": "TEACHER",
-        "department": "Amaliy matematika va informatika kafedrasi",
-        "faculty": "Axborot texnologiyalari fakulteti",
+        "department": "Axborot tizimlari va texnologiyalari",
+        "faculty": "Amaliy matematika fakulteti",
         "position": "Dotsent",
         "degree": "Falsafa doktori (PhD)",
-        "fte": 1.0
+        "fte": 1.50
     },
     "yosh": {
-        "id": 4,
+        "id": 6,
         "password": "yosh123",
         "name": "Abdullayev Sardor Ikrom oʻgʻli",
         "role": "TEACHER",
-        "department": "Dasturiy injiniring kafedrasi",
-        "faculty": "Axborot texnologiyalari fakulteti",
+        "department": "Kompyuter ilmlari va dasturlashtirish",
+        "faculty": "Amaliy matematika fakulteti",
         "position": "Assistent",
         "degree": "Magistr",
-        "fte": 0.5
+        "fte": 0.50
     },
     "rektor": {
         "id": 888,
@@ -357,74 +409,139 @@ def calculate_kpi(raw_oqv: float, raw_ilm: float, raw_xal: float, raw_man: float
 RAW_TEACHERS = [
     {
         "id": 1,
-        "name": "Prof. Rahimov Ulugʻbek Shavkatovich",
-        "faculty": "Axborot texnologiyalari fakulteti",
-        "department": "Dasturiy injiniring kafedrasi",
-        "position": "Kafedra mudiri, professor",
-        "degree": "Fan doktori (DSc)",
-        "fte": 1.0,
+        "name": "Dots. Sharipova Sadoqat Fazliddinovna",
+        "faculty": "Amaliy matematika fakulteti",
+        "department": "Amaliy matematika",
+        "position": "Kafedra mudiri, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.50,
         "track": "Tadqiqotchi",
         "is_first_year": False,
         "is_head_of_dept": True,
-        "oqv": 26.0, "ilm": 48.0, "xal": 18.0, "man": 8.0, "jarima": 0.0
+        "oqv": 38.0, "ilm": 62.0, "xal": 25.0, "man": 15.0, "jarima": 0.0
     },
     {
         "id": 2,
-        "name": "Dots. Karimov Jamshid Anvarovich",
-        "faculty": "Axborot texnologiyalari fakulteti",
-        "department": "Amaliy matematika va informatika kafedrasi",
+        "name": "Dots. Hafizov Erkin Alimboy oʻgʻli",
+        "faculty": "Amaliy matematika fakulteti",
+        "department": "Axborot tizimlari va texnologiyalari",
+        "position": "Dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.50,
+        "track": "Tadqiqotchi",
+        "is_first_year": False,
+        "is_head_of_dept": False,
+        "oqv": 35.0, "ilm": 55.0, "xal": 22.0, "man": 12.0, "jarima": 0.0
+    },
+    {
+        "id": 3,
+        "name": "Dots. Kuvandikov Joʻra Tursunbayevich",
+        "faculty": "Amaliy matematika fakulteti",
+        "department": "Kompyuter ilmlari va dasturlashtirish",
+        "position": "Kafedra mudiri, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.50,
+        "track": "Tadqiqotchi",
+        "is_first_year": False,
+        "is_head_of_dept": True,
+        "oqv": 40.0, "ilm": 50.0, "xal": 20.0, "man": 14.0, "jarima": 0.0
+    },
+    {
+        "id": 4,
+        "name": "Dots. Alimov Salohiddin Hikmat oʻgʻli",
+        "faculty": "Amaliy matematika fakulteti",
+        "department": "Amaliy matematika",
+        "position": "Dekan muovini, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.50,
+        "track": "Tadqiqotchi",
+        "is_first_year": False,
+        "is_head_of_dept": False,
+        "oqv": 36.0, "ilm": 58.0, "xal": 24.0, "man": 12.0, "jarima": 0.0
+    },
+    {
+        "id": 5,
+        "name": "Dots. Butayev Ruslan Buriboyevich",
+        "faculty": "Amaliy matematika fakulteti",
+        "department": "Amaliy matematika",
         "position": "Dotsent",
         "degree": "Falsafa doktori (PhD)",
         "fte": 1.0,
         "track": "Tadqiqotchi",
         "is_first_year": False,
         "is_head_of_dept": False,
-        "oqv": 22.0, "ilm": 38.0, "xal": 16.0, "man": 6.0, "jarima": 0.0
-    },
-    {
-        "id": 3,
-        "name": "Sobirova Nilufar Rustamovna",
-        "faculty": "Axborot texnologiyalari fakulteti",
-        "department": "Dasturiy injiniring kafedrasi",
-        "position": "Katta oʻqituvchi",
-        "degree": "Magistr",
-        "fte": 1.0,
-        "track": "Pedagog-metodist",
-        "is_first_year": False,
-        "is_head_of_dept": False,
-        "oqv": 28.0, "ilm": 18.0, "xal": 8.0, "man": 10.0, "jarima": 0.0
-    },
-    {
-        "id": 4,
-        "name": "Abdullayev Sardor Ikrom oʻgʻli",
-        "faculty": "Axborot texnologiyalari fakulteti",
-        "department": "Dasturiy injiniring kafedrasi",
-        "position": "Assistent",
-        "degree": "Magistr",
-        "fte": 0.5,
-        "track": "Pedagog-metodist",
-        "is_first_year": True,
-        "is_head_of_dept": False,
-        "oqv": 14.0, "ilm": 4.0, "xal": 3.0, "man": 4.0, "jarima": 0.0
-    },
-    {
-        "id": 5,
-        "name": "Toshev Rustam Erkinovich",
-        "faculty": "Iqtisodiyot va tabiiy fanlar fakulteti",
-        "department": "Iqtisodiyot kafedrasi",
-        "position": "Oʻqituvchi",
-        "degree": "Magistr",
-        "fte": 1.0,
-        "track": "Pedagog-metodist",
-        "is_first_year": False,
-        "is_head_of_dept": False,
-        "oqv": 18.0, "ilm": 8.0, "xal": 2.0, "man": 4.0, "jarima": -6.0
+        "oqv": 28.0, "ilm": 42.0, "xal": 16.0, "man": 10.0, "jarima": 0.0
     },
     {
         "id": 6,
+        "name": "Abdullayev Sardor Ikrom oʻgʻli",
+        "faculty": "Amaliy matematika fakulteti",
+        "department": "Kompyuter ilmlari va dasturlashtirish",
+        "position": "Assistent",
+        "degree": "Magistr",
+        "fte": 0.50,
+        "track": "Pedagog-metodist",
+        "is_first_year": True,
+        "is_head_of_dept": False,
+        "oqv": 16.0, "ilm": 6.0, "xal": 4.0, "man": 5.0, "jarima": 0.0
+    },
+    {
+        "id": 7,
+        "name": "Dots. Aliqulov Saloxiddin Turdimuratovich",
+        "faculty": "Psixologiya fakulteti",
+        "department": "Psixologiya kafedrasi",
+        "position": "Fakultet dekani, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.25,
+        "track": "Tadqiqotchi",
+        "is_first_year": False,
+        "is_head_of_dept": False,
+        "oqv": 32.0, "ilm": 48.0, "xal": 18.0, "man": 12.0, "jarima": 0.0
+    },
+    {
+        "id": 8,
+        "name": "Dots. Nasirov Bunyod Uralovich",
+        "faculty": "Psixologiya fakulteti",
+        "department": "O'zbek tili va ijtimoiy fanlar kafedrasi",
+        "position": "Kafedra mudiri, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.50,
+        "track": "Pedagog-metodist",
+        "is_first_year": False,
+        "is_head_of_dept": True,
+        "oqv": 36.0, "ilm": 44.0, "xal": 16.0, "man": 14.0, "jarima": 0.0
+    },
+    {
+        "id": 9,
+        "name": "Prof. Soy Marina Petrovna",
+        "faculty": "Psixologiya fakulteti",
+        "department": "Iqtisodiyot va turizm",
+        "position": "Kafedra mudiri, professor",
+        "degree": "Fan doktori (DSc)",
+        "fte": 1.50,
+        "track": "Tadqiqotchi",
+        "is_first_year": False,
+        "is_head_of_dept": True,
+        "oqv": 38.0, "ilm": 65.0, "xal": 28.0, "man": 15.0, "jarima": 0.0
+    },
+    {
+        "id": 10,
+        "name": "Joʻrayev Muxammadraximxon Murod oʻgʻli",
+        "faculty": "Psixologiya fakulteti",
+        "department": "Xorijiy tillar",
+        "position": "Kafedra mudiri, assistent",
+        "degree": "Magistr",
+        "fte": 1.50,
+        "track": "Pedagog-metodist",
+        "is_first_year": False,
+        "is_head_of_dept": True,
+        "oqv": 34.0, "ilm": 28.0, "xal": 20.0, "man": 10.0, "jarima": 0.0
+    },
+    {
+        "id": 11,
         "name": "Dots. Umarova Dilfuza Mahmudovna",
-        "faculty": "Pedagogika va gumanitar fanlar fakulteti",
-        "department": "Xorijiy tillar kafedrasi",
+        "faculty": "Psixologiya fakulteti",
+        "department": "Psixologiya kafedrasi",
         "position": "Dotsent",
         "degree": "Falsafa doktori (PhD)",
         "fte": 1.0,
@@ -432,6 +549,19 @@ RAW_TEACHERS = [
         "is_first_year": False,
         "is_head_of_dept": False,
         "oqv": 27.0, "ilm": 24.0, "xal": 18.0, "man": 8.0, "jarima": 0.0
+    },
+    {
+        "id": 12,
+        "name": "Dots. Halimov Oʻktam Haydarovich",
+        "faculty": "Sirtqi fakultet",
+        "department": "Sirtqi (maxsus sirtqi) boʻlimi",
+        "position": "Fakultet dekani, dotsent",
+        "degree": "Falsafa doktori (PhD)",
+        "fte": 1.50,
+        "track": "Tadqiqotchi",
+        "is_first_year": False,
+        "is_head_of_dept": False,
+        "oqv": 35.0, "ilm": 50.0, "xal": 18.0, "man": 12.0, "jarima": 0.0
     }
 ]
 
@@ -501,9 +631,77 @@ APPEALS_DB: List[Appeal] = [
     )
 ]
 
+# SQLite doimiy xotirasidan yuklash va sinxronlash
+existing_db_users = db_load_users()
+if existing_db_users:
+    USERS_DB.update(existing_db_users)
+else:
+    for u_name, u_data in USERS_DB.items():
+        db_save_user(u_name, u_data)
+
+existing_db_submissions = db_load_submissions()
+if existing_db_submissions:
+    SUBMISSIONS_DB = [Submission(**s) for s in existing_db_submissions]
+else:
+    for s in SUBMISSIONS_DB:
+        db_save_submission(s.dict())
+
 # ==========================================
 # REST API ENDPOINTS
 # ==========================================
+
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".zip", ".rar", ".png", ".jpg", ".jpeg"}
+MAX_FILE_SIZE_MB = 15
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """
+    KPI daliliy hujjatlarini xavfsiz qabul qilish va diskka saqlash.
+    Maksimal hajm: 15 MB. Ruxsat etilgan formatlar: PDF, DOCX, ZIP, PNG, JPG.
+    """
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Faqat quyidagi formatlardagi fayllarni yuklash mumkin: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    unique_filename = f"{uuid.uuid4().hex[:12]}_{file.filename.replace(' ', '_')}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    
+    # Hajmni tekshirib oqim orqali yozish
+    size = 0
+    with open(file_path, "wb") as buffer:
+        while chunk := await file.read(1024 * 1024):  # 1MB bo'laklar
+            size += len(chunk)
+            if size > MAX_FILE_SIZE_MB * 1024 * 1024:
+                buffer.close()
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Fayl hajmi ruxsat etilgan {MAX_FILE_SIZE_MB} MB dan oshmasligi kerak!"
+                )
+            buffer.write(chunk)
+            
+    return {
+        "success": True,
+        "file_name": file.filename,
+        "saved_as": unique_filename,
+        "size_kb": round(size / 1024, 1),
+        "url": f"/api/uploads/{unique_filename}"
+    }
+
+@app.get("/api/uploads/{filename}")
+def get_uploaded_file(filename: str):
+    """Yuklangan daliliy hujjatni xavfsiz yuklab olish"""
+    # Path traversal xavfsizligi
+    clean_filename = os.path.basename(filename)
+    full_path = os.path.join(UPLOAD_DIR, clean_filename)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="Fayl topilmadi")
+    return FileResponse(full_path, filename=clean_filename)
 
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login(creds: LoginRequest):
@@ -574,10 +772,13 @@ def change_password(req: ChangePasswordRequest):
     # Parolni yangilash
     user_record["password"] = req.new_password
     user_record["must_change_password"] = False
+    db_update_password(username, req.new_password)
 
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    db_save_audit_log(now_str, username, "Birlamchi HEMIS ID paroli yangi shaxsiy parolga muvaffaqiyatli almashtirildi")
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
-        "time": "2026-10-01 21:36",
+        "time": now_str,
         "user": username,
         "action": "Birlamchi HEMIS ID paroli yangi shaxsiy parolga muvaffaqiyatli almashtirildi"
     })
@@ -605,6 +806,129 @@ def change_password(req: ChangePasswordRequest):
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "service": "JBNUU KPI Backend API", "version": "2.0.0"}
+
+@app.get("/api/structure/hierarchy")
+def get_structure_hierarchy():
+    """
+    Filial tashkiliy ierarxiyasi: Filial -> Fakultetlar -> Kafedralar -> O'qituvchilar va Dekanlar
+    """
+    faculties = [
+        {
+            "id": 1,
+            "name": "Amaliy matematika fakulteti",
+            "code": "401-101",
+            "dean": "Dots. Alimov Salohiddin Hikmat oʻgʻli (Dekan muovini)",
+            "dean_fte": 1.50,
+            "departments": [
+                {
+                    "id": 34,
+                    "name": "Amaliy matematika",
+                    "code": "401-101-04",
+                    "head": "Dots. Sharipova Sadoqat Fazliddinovna",
+                    "head_fte": 1.50,
+                    "teachers_count": 24,
+                    "avg_score": 93.3
+                },
+                {
+                    "id": 5,
+                    "name": "Kompyuter ilmlari va dasturlashtirish",
+                    "code": "401-101-01",
+                    "head": "Dots. Kuvandikov Joʻra Tursunbayevich",
+                    "head_fte": 1.50,
+                    "teachers_count": 28,
+                    "avg_score": 88.5
+                },
+                {
+                    "id": 31,
+                    "name": "Axborot tizimlari va texnologiyalari",
+                    "code": "401-101-03",
+                    "head": "Dots. Hafizov Erkin Alimboy oʻgʻli",
+                    "head_fte": 1.50,
+                    "teachers_count": 22,
+                    "avg_score": 82.7
+                },
+                {
+                    "id": 6,
+                    "name": "Biotexnologiya",
+                    "code": "401-101-02",
+                    "head": "Dots. Karimov Jamshid Anvarovich",
+                    "head_fte": 1.0,
+                    "teachers_count": 16,
+                    "avg_score": 79.4
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "name": "Psixologiya fakulteti",
+            "code": "401-102",
+            "dean": "Dots. Aliqulov Saloxiddin Turdimuratovich (Dekan)",
+            "dean_fte": 1.25,
+            "departments": [
+                {
+                    "id": 77,
+                    "name": "Psixologiya kafedrasi",
+                    "code": "401-102-09",
+                    "head": "Dots. Umarova Dilfuza Mahmudovna",
+                    "head_fte": 1.0,
+                    "teachers_count": 26,
+                    "avg_score": 85.0
+                },
+                {
+                    "id": 76,
+                    "name": "O'zbek tili va ijtimoiy fanlar kafedrasi",
+                    "code": "401-102-08",
+                    "head": "Dots. Nasirov Bunyod Uralovich",
+                    "head_fte": 1.50,
+                    "teachers_count": 25,
+                    "avg_score": 77.2
+                },
+                {
+                    "id": 64,
+                    "name": "Iqtisodiyot va turizm",
+                    "code": "401-102-07",
+                    "head": "Prof. Soy Marina Petrovna",
+                    "head_fte": 1.50,
+                    "teachers_count": 23,
+                    "avg_score": 96.0
+                },
+                {
+                    "id": 33,
+                    "name": "Xorijiy tillar",
+                    "code": "401-102-04",
+                    "head": "Joʻrayev Muxammadraximxon Murod oʻgʻli",
+                    "head_fte": 1.50,
+                    "teachers_count": 35,
+                    "avg_score": 72.8
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "name": "Sirtqi fakultet",
+            "code": "401-105",
+            "dean": "Dots. Halimov Oʻktam Haydarovich (Dekan)",
+            "dean_fte": 1.50,
+            "departments": [
+                {
+                    "id": 38,
+                    "name": "Sirtqi (maxsus sirtqi) boʻlimi",
+                    "code": "401-223",
+                    "head": "Dots. Halimov Oʻktam Haydarovich",
+                    "head_fte": 1.50,
+                    "teachers_count": 25,
+                    "avg_score": 84.1
+                }
+            ]
+        }
+    ]
+    return {
+        "branch_name": "Oʻzbekiston Milliy universiteti Jizzax filiali",
+        "total_faculties": len(faculties),
+        "total_departments": sum(len(f["departments"]) for f in faculties),
+        "total_teachers_hemis": 199,
+        "faculties": faculties
+    }
 
 @app.get("/api/indicators", response_model=List[Indicator])
 def get_indicators(block: Optional[str] = None, include_inactive: bool = False):
@@ -745,12 +1069,16 @@ def create_submission(sub_in: SubmissionCreate):
         description=sub_in.description.strip() if sub_in.description else None
     )
     SUBMISSIONS_DB.append(new_sub)
+    db_save_submission(new_sub.dict())
 
+    audit_now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    audit_msg = f"Yangi KPI faoliyat natijasi yuklandi (#{new_sub.id}, Mezon: {new_sub.indicator_id}, Daʻvo qilingan ball: {new_sub.claimed_ball} ball)"
+    db_save_audit_log(audit_now, teacher["name"], audit_msg)
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "time": audit_now,
         "user": teacher["name"],
-        "action": f"Yangi KPI faoliyat natijasi yuklandi (#{new_sub.id}, Mezon: {new_sub.indicator_id}, Daʻvo qilingan ball: {new_sub.claimed_ball} ball)"
+        "action": audit_msg
     })
 
     return new_sub
@@ -783,12 +1111,15 @@ def verify_submission(sub_id: int, action: VerificationAction):
         sub.ball = 0.0
         sub.rejection_reason = reason
         sub.reviewer_comment = action.comment.strip() if action.comment else None
+        db_save_submission(sub.dict())
 
+        rej_msg = f"#{sub.id} arizasi rad etildi (Muallif: {sub.teacher_name}). Rad etish sababi: «{reason}»"
+        db_save_audit_log(current_time_str, action.reviewer_name, rej_msg)
         AUDIT_LOGS.insert(0, {
             "id": len(AUDIT_LOGS) + 1,
             "time": current_time_str,
             "user": action.reviewer_name,
-            "action": f"#{sub.id} arizasi rad etildi (Muallif: {sub.teacher_name}). Rad etish sababi: «{reason}»"
+            "action": rej_msg
         })
         return {
             "success": True,
@@ -807,6 +1138,7 @@ def verify_submission(sub_id: int, action: VerificationAction):
         sub.ball = final_ball
         sub.rejection_reason = None
         sub.reviewer_comment = action.comment.strip() if action.comment else "Ekspert komissiyasi tomonidan tekshirilib tasdiqlandi"
+        db_save_submission(sub.dict())
 
         # O'qituvchining jami ballari blokini yangilash
         teacher = next((t for t in RAW_TEACHERS if t["id"] == sub.teacher_id), None)
@@ -816,11 +1148,13 @@ def verify_submission(sub_id: int, action: VerificationAction):
             if block_key in teacher:
                 teacher[block_key] = round((teacher[block_key] + final_ball) * 10) / 10
 
+        app_msg = f"#{sub.id} arizasi tasdiqlandi (Muallif: {sub.teacher_name}, Qoʻyilgan ball: {final_ball} ball)"
+        db_save_audit_log(current_time_str, action.reviewer_name, app_msg)
         AUDIT_LOGS.insert(0, {
             "id": len(AUDIT_LOGS) + 1,
             "time": current_time_str,
             "user": action.reviewer_name,
-            "action": f"#{sub.id} arizasi tasdiqlandi (Muallif: {sub.teacher_name}, Qoʻyilgan ball: {final_ball} ball)"
+            "action": app_msg
         })
         return {
             "success": True,
@@ -899,6 +1233,7 @@ def get_admin_users(q: Optional[str] = None, role: Optional[str] = None):
     stats = {
         "total": len(USERS_DB),
         "teacher": 0,
+        "dean": 0,
         "head_of_dept": 0,
         "rectorate": 0,
         "admin": 0
@@ -907,6 +1242,7 @@ def get_admin_users(q: Optional[str] = None, role: Optional[str] = None):
     for k, v in USERS_DB.items():
         u_role = v.get("role", "TEACHER")
         if u_role == "ADMIN": stats["admin"] += 1
+        elif u_role == "DEAN": stats["dean"] += 1
         elif u_role == "HEAD_OF_DEPT": stats["head_of_dept"] += 1
         elif u_role == "RECTORATE": stats["rectorate"] += 1
         else: stats["teacher"] += 1

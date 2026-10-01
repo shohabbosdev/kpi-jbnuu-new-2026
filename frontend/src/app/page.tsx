@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import StructureHierarchyView from "../components/StructureHierarchyView";
 import {
   LayoutDashboard,
   CheckSquare,
@@ -125,7 +126,7 @@ interface AuthUser {
   id: number;
   username: string;
   name: string;
-  role: "ADMIN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE";
+  role: "ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE";
   department?: string;
   faculty?: string;
   position?: string;
@@ -133,6 +134,33 @@ interface AuthUser {
   fte: number;
   employee_id_number?: string;
   must_change_password?: boolean;
+}
+
+interface DepartmentHierarchy {
+  id: number;
+  name: string;
+  code: string;
+  head: string;
+  head_fte: number;
+  teachers_count: number;
+  avg_score: number;
+}
+
+interface FacultyHierarchy {
+  id: number;
+  name: string;
+  code: string;
+  dean: string;
+  dean_fte: number;
+  departments: DepartmentHierarchy[];
+}
+
+interface StructureHierarchy {
+  branch_name: string;
+  total_faculties: number;
+  total_departments: number;
+  total_teachers_hemis: number;
+  faculties: FacultyHierarchy[];
 }
 
 interface SystemSettings {
@@ -216,13 +244,15 @@ export default function KpiEnterpriseApp() {
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
   // Active Role and Navigation
-  const [activeRole, setActiveRole] = useState<"ADMIN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE">("ADMIN");
+  const [activeRole, setActiveRole] = useState<"ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE">("ADMIN");
   const [activePage, setActivePage] = useState<
-    "dashboard" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators"
+    "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators"
   >("dashboard");
   const [activeSvetaforFilter, setActiveSvetaforFilter] = useState<string>("ALL");
   const [selectedBlockFilter, setSelectedBlockFilter] = useState<string>("ALL");
+  const [fteFilter, setFteFilter] = useState<"ALL" | "1.5" | "1.0" | "PART">("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [structureHierarchy, setStructureHierarchy] = useState<StructureHierarchy | null>(null);
 
   // Data states
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -504,16 +534,18 @@ export default function KpiEnterpriseApp() {
 
   const fetchInitialData = async () => {
     try {
-      const [tRes, iRes, sRes, aRes] = await Promise.all([
+      const [tRes, iRes, sRes, aRes, hRes] = await Promise.all([
         fetch(`${API_BASE}/teachers`).then(r => r.json()),
         fetch(`${API_BASE}/indicators`).then(r => r.json()),
         fetch(`${API_BASE}/submissions`).then(r => r.json()),
-        fetch(`${API_BASE}/appeals`).then(r => r.json())
+        fetch(`${API_BASE}/appeals`).then(r => r.json()),
+        fetch(`${API_BASE}/structure/hierarchy`).then(r => r.json()).catch(() => null)
       ]);
       setTeachers(tRes);
       setIndicators(iRes);
       setSubmissions(sRes);
       setAppeals(aRes);
+      if (hRes) setStructureHierarchy(hRes);
     } catch (err) {
       console.error("FastAPI serverga ulanishda xatolik:", err);
     }
@@ -1204,7 +1236,7 @@ export default function KpiEnterpriseApp() {
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 text-center">
                 Tezkor sinov uchun namunaviy profillar
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                 <button
                   type="button"
                   onClick={() => handleFillDemo("admin", "admin123")}
@@ -1215,29 +1247,54 @@ export default function KpiEnterpriseApp() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleFillDemo("3082312087", "3082312087")}
-                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-amber-500/40 rounded-lg text-left transition-colors"
+                  onClick={() => handleFillDemo("dekan_matematika", "dekan123")}
+                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-indigo-500/40 rounded-lg text-left transition-colors"
                 >
-                  <div className="font-bold text-amber-300 flex items-center gap-1">
-                    <span>HEMIS Oʻqituvchi</span>
-                    <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded">Yangi</span>
+                  <div className="font-bold text-indigo-300 flex items-center justify-between">
+                    <span>Dekan (Matematika)</span>
+                    <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1 rounded">1.5 st</span>
                   </div>
-                  <div className="text-[10px] text-slate-400 font-mono">3082312087 (ID login)</div>
+                  <div className="text-[10px] text-slate-400 font-mono">dekan_matematika</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFillDemo("dekan", "dekan123")}
+                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-purple-500/40 rounded-lg text-left transition-colors"
+                >
+                  <div className="font-bold text-purple-300 flex items-center justify-between">
+                    <span>Dekan (Psixologiya)</span>
+                    <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1 rounded">1.25 st</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">dekan / dekan123</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFillDemo("mudir", "mudir123")}
-                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-slate-700/80 rounded-lg text-left transition-colors"
+                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-sky-500/40 rounded-lg text-left transition-colors"
                 >
-                  <div className="font-bold text-sky-300">Kafedra mudiri</div>
+                  <div className="font-bold text-sky-300 flex items-center justify-between">
+                    <span>Kafedra mudiri</span>
+                    <span className="text-[9px] bg-sky-500/20 text-sky-300 px-1 rounded">1.5 st</span>
+                  </div>
                   <div className="text-[10px] text-slate-400 font-mono">mudir / mudir123</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFillDemo("oqituvchi", "oqituvchi123")}
+                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-emerald-500/40 rounded-lg text-left transition-colors"
+                >
+                  <div className="font-bold text-emerald-300 flex items-center justify-between">
+                    <span>Oʻqituvchi (Dotsent)</span>
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded">1.50 st</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">oqituvchi / 123</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFillDemo("rektor", "rektor123")}
                   className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-slate-700/80 rounded-lg text-left transition-colors"
                 >
-                  <div className="font-bold text-purple-300">Filial rahbariyati</div>
+                  <div className="font-bold text-amber-300">Filial rahbariyati</div>
                   <div className="text-[10px] text-slate-400 font-mono">rektor / rektor123</div>
                 </button>
               </div>
@@ -1689,7 +1746,11 @@ export default function KpiEnterpriseApp() {
 
             <h2 className="text-sm font-bold truncate">
               {activePage === "dashboard" && activeRole === "ADMIN" && "Tizim administratori boshqaruv portali"}
-              {activePage === "dashboard" && activeRole !== "ADMIN" && "Professor-oʻqituvchilar faoliyatini baholash tizimi"}
+              {activePage === "dashboard" && activeRole === "DEAN" && "Fakultet dekanati KPI monitoring va kafedralar tahlili"}
+              {activePage === "dashboard" && activeRole === "HEAD_OF_DEPT" && "Kafedra boshqaruvi va oʻqituvchilar monitoringi"}
+              {activePage === "dashboard" && activeRole === "RECTORATE" && "Filial rahbariyati — Integral KPI boshqaruv portali"}
+              {activePage === "dashboard" && activeRole === "TEACHER" && "Professor-oʻqituvchilar shaxsiy faoliyatini baholash kabineti"}
+              {activePage === "structure" && "Filial tashkiliy tuzilmasi, fakultetlar va kafedralar ierarxiyasi"}
               {activePage === "admin_hemis" && "HEMIS axborot tizimi integratsiyasi"}
               {activePage === "admin_settings" && "Tizim konfiguratsiyasi va qabul muddatlari"}
               {activePage === "admin_indicators" && "KPI baholash mezonlari dinamik boshqaruvi (CRUD)"}
@@ -1724,12 +1785,12 @@ export default function KpiEnterpriseApp() {
                   Admin
                 </button>
                 <button
-                  onClick={() => { setActiveRole("TEACHER"); setActivePage("dashboard"); }}
+                  onClick={() => { setActiveRole("DEAN"); setActivePage("dashboard"); }}
                   className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                    activeRole === "TEACHER" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                    activeRole === "DEAN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  Oʻqituvchi
+                  Dekan
                 </button>
                 <button
                   onClick={() => { setActiveRole("HEAD_OF_DEPT"); setActivePage("dashboard"); }}
@@ -1738,6 +1799,14 @@ export default function KpiEnterpriseApp() {
                   }`}
                 >
                   Mudir
+                </button>
+                <button
+                  onClick={() => { setActiveRole("TEACHER"); setActivePage("dashboard"); }}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
+                    activeRole === "TEACHER" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Oʻqituvchi
                 </button>
                 <button
                   onClick={() => { setActiveRole("RECTORATE"); setActivePage("dashboard"); }}
@@ -1757,11 +1826,22 @@ export default function KpiEnterpriseApp() {
               }`}>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>
-                  {currentUser.role === "HEAD_OF_DEPT" ? "Kafedra mudiri portali" : "Professor-oʻqituvchi portali"}
+                  {currentUser.role === "DEAN"
+                    ? "Fakultet dekani portali"
+                    : currentUser.role === "HEAD_OF_DEPT"
+                    ? "Kafedra mudiri portali"
+                    : currentUser.role === "RECTORATE"
+                    ? "Filial rahbariyati portali"
+                    : "Professor-oʻqituvchi portali"}
                 </span>
-                {currentUser.department && (
+                {(currentUser.department || currentUser.faculty) && (
                   <span className="hidden lg:inline text-[11px] text-slate-400 font-normal">
-                    • {currentUser.department}
+                    • {currentUser.role === "DEAN" ? currentUser.faculty : currentUser.department}
+                  </span>
+                )}
+                {currentUser.fte && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
+                    {currentUser.fte} stavka
                   </span>
                 )}
               </div>
@@ -3786,14 +3866,26 @@ export default function KpiEnterpriseApp() {
               {activeRole === "HEAD_OF_DEPT" && (
                 <div>
                   <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 mb-7">
-                    <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
                       <div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Dasturiy injiniring kafedrasi boshqaruvi</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Kafedra mudiri: Prof. Rahimov Ulugʻbek Shavkatovich</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300">
+                            Kafedra boshqaruvi
+                          </span>
+                          <span className="text-xs text-slate-400 font-medium">
+                            {currentUser?.faculty || "Fakultet"}
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                          {currentUser?.department || "Amaliy matematika"} kafedrasi
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                          Kafedra mudiri: <b className="text-slate-700 dark:text-slate-300">{currentUser?.name || "Kafedra mudiri"}</b> ({currentUser?.fte || 1.5} stavka)
+                        </p>
                       </div>
                       <div className="px-3.5 py-2 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-900 dark:text-sky-300 border border-sky-200 dark:border-sky-900/50 text-xs font-semibold flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-sky-700 dark:text-sky-400" />
-                        <span>Manfaatlar toʻqnashuvi nazorati faol: Mudir oʻz arizasini tasdiqlashi cheklangan</span>
+                        <ShieldCheck className="w-4 h-4 text-sky-700 dark:text-sky-400 flex-shrink-0" />
+                        <span>Manfaatlar toʻqnashuvi nazorati: Mudir oʻz arizasini baholashi taqiqlangan</span>
                       </div>
                     </div>
 
@@ -3867,28 +3959,54 @@ export default function KpiEnterpriseApp() {
                       </table>
                     </div>
 
-                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3">
-                      Kafedra professor-oʻqituvchilarining faoliyat reytingi
-                    </h4>
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                        Kafedra professor-oʻqituvchilarining faoliyat reytingi ({teachers.filter(t => !currentUser?.department || t.department.toLowerCase().includes(currentUser.department.toLowerCase()) || currentUser.department.toLowerCase().includes(t.department.toLowerCase())).length} nafar xodim)
+                      </h4>
+                      <div className="text-xs text-slate-500">
+                        Formula: <b>Umumiy ball / Shtat stavkasi = Normallashtirilgan yakuniy ball</b>
+                      </div>
+                    </div>
                     <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
                       <table className="w-full text-left text-sm">
                         <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
                           <tr>
                             <th className="py-3 px-4">F.I.Sh.</th>
                             <th className="py-3 px-4">Lavozimi</th>
-                            <th className="py-3 px-4">Shtat birligi</th>
+                            <th className="py-3 px-4">Shtat stavkasi</th>
+                            <th className="py-3 px-4">Oʻquv (30)</th>
+                            <th className="py-3 px-4">Ilmiy (40)</th>
+                            <th className="py-3 px-4">Xalqaro (20)</th>
+                            <th className="py-3 px-4">Maʼnaviy (10)</th>
                             <th className="py-3 px-4">Yakuniy ball</th>
                             <th className="py-3 px-4">Svetafor toifasi</th>
-                            <th className="py-3 px-4">Belgilangan ustama</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {teachers.filter(t => t.department.includes("Dasturiy injiniring")).map(t => (
+                          {teachers
+                            .filter(t => !currentUser?.department || t.department.toLowerCase().includes(currentUser.department.toLowerCase()) || currentUser.department.toLowerCase().includes(t.department.toLowerCase()))
+                            .map(t => (
                             <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                               <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{t.name}</td>
                               <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.position}</td>
-                              <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.fte} stavka</td>
-                              <td className="py-3.5 px-4 font-black text-slate-900 dark:text-slate-100">{t.scores.normalized_score}</td>
+                              <td className="py-3.5 px-4">
+                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                  t.fte >= 1.5
+                                    ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                    : t.fte >= 1.0
+                                    ? "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                }`}>
+                                  {t.fte} stavka
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.oqv}</td>
+                              <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.ilm}</td>
+                              <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.xal}</td>
+                              <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.man}</td>
+                              <td className="py-3.5 px-4 font-black text-slate-900 dark:text-slate-100">
+                                {t.scores.normalized_score}
+                              </td>
                               <td className="py-3.5 px-4">
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                                   t.scores.svetafor_zone === "green"
@@ -3903,6 +4021,191 @@ export default function KpiEnterpriseApp() {
                               <td className="py-3.5 px-4 font-bold text-blue-900 dark:text-blue-400">{t.scores.bonus_label}</td>
                             </tr>
                           ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* DEAN ROLE VIEW */}
+              {activeRole === "DEAN" && (
+                <div className="space-y-6">
+                  {/* Faculty Dean Banner */}
+                  <div className={`p-6 rounded-2xl border transition-all ${
+                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+                  }`}>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300">
+                            Fakultet dekanati
+                          </span>
+                          <span className="text-xs text-slate-400 font-medium">
+                            Oʻzbekiston Milliy universiteti Jizzax filiali
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                          {currentUser?.faculty || "Fakultet dekanati"}
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                          Dekan: <b className="text-slate-800 dark:text-slate-200">{currentUser?.name || "Dekan"}</b> ({currentUser?.fte || 1.25} stavka)
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setActivePage("structure")}
+                          className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm transition-all"
+                        >
+                          <Building className="w-4 h-4" />
+                          <span>Tashkiliy ierarxiya daraxti</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Faculty Overview Quick Stats */}
+                    {(() => {
+                      const facultyDepts = structureHierarchy?.faculties.find(f =>
+                        currentUser?.faculty ? f.name.toLowerCase().includes(currentUser.faculty.toLowerCase()) : false
+                      )?.departments || [];
+                      const facultyTeachers = teachers.filter(t =>
+                        !currentUser?.faculty || (t.department && facultyDepts.some(d => t.department.toLowerCase().includes(d.name.toLowerCase()) || d.name.toLowerCase().includes(t.department.toLowerCase())))
+                      );
+                      const fte15Teachers = facultyTeachers.filter(t => t.fte >= 1.5);
+                      const avgFacScore = facultyTeachers.length > 0
+                        ? Math.round((facultyTeachers.reduce((acc, t) => acc + (t.scores?.normalized_score || 0), 0) / facultyTeachers.length) * 10) / 10
+                        : 0;
+
+                      return (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
+                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                            <div className="text-xs text-slate-400 font-medium">Kafedralar</div>
+                            <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-0.5">
+                              {facultyDepts.length || 4} ta
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                            <div className="text-xs text-slate-400 font-medium">Fakultet xodimlari</div>
+                            <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-0.5">
+                              {facultyTeachers.length} nafar
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                            <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">1.50 stavkali pedagoglar</div>
+                            <div className="text-xl font-black text-purple-700 dark:text-purple-300 mt-0.5">
+                              {fte15Teachers.length} nafar
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                            <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">Fakultet oʻrtacha bali</div>
+                            <div className="text-xl font-black text-blue-800 dark:text-blue-300 mt-0.5">
+                              {avgFacScore} ball
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Faculty Teachers Table with FTE Filter */}
+                  <div className={`p-6 rounded-2xl border transition-all ${
+                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+                  }`}>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                          Fakultet pedagog xodimlari va ularning stavkalari
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Formula: Har bir oʻqituvchining yigʻgan balli shtat stavkasiga nisbatan meʼyorlashtiriladi
+                        </p>
+                      </div>
+
+                      {/* FTE Filter Buttons */}
+                      <div className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                        <button
+                          onClick={() => setFteFilter("ALL")}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                            fteFilter === "ALL" ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-300 shadow-xs" : "text-slate-500"
+                          }`}
+                        >
+                          Barchasi
+                        </button>
+                        <button
+                          onClick={() => setFteFilter("1.5")}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                            fteFilter === "1.5" ? "bg-purple-600 text-white shadow-xs" : "text-slate-500"
+                          }`}
+                        >
+                          1.50 stavka
+                        </button>
+                        <button
+                          onClick={() => setFteFilter("1.0")}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                            fteFilter === "1.0" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500"
+                          }`}
+                        >
+                          1.00 stavka
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+                          <tr>
+                            <th className="py-3 px-4">F.I.Sh.</th>
+                            <th className="py-3 px-4">Kafedrasi</th>
+                            <th className="py-3 px-4">Lavozimi</th>
+                            <th className="py-3 px-4">Shtat stavkasi</th>
+                            <th className="py-3 px-4">Yakuniy ball</th>
+                            <th className="py-3 px-4">Svetafor toifasi</th>
+                            <th className="py-3 px-4">Belgilangan ustama</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {teachers
+                            .filter(t => {
+                              if (fteFilter === "1.5") return t.fte >= 1.5;
+                              if (fteFilter === "1.0") return t.fte === 1.0;
+                              return true;
+                            })
+                            .map(t => (
+                              <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{t.name}</td>
+                                <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-xs">{t.department}</td>
+                                <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.position}</td>
+                                <td className="py-3.5 px-4">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                    t.fte >= 1.5
+                                      ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                      : t.fte >= 1.0
+                                      ? "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                      : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                  }`}>
+                                    {t.fte} stavka
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 font-black text-slate-900 dark:text-slate-100">
+                                  {t.scores?.normalized_score || 0}
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                    t.scores?.svetafor_zone === "green"
+                                      ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                      : t.scores?.svetafor_zone === "yellow"
+                                      ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                      : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                                  }`}>
+                                    {t.scores?.svetafor_label || "—"}
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 font-bold text-blue-900 dark:text-blue-400">
+                                  {t.scores?.bonus_label || "0%"}
+                                </td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>
@@ -4064,6 +4367,22 @@ export default function KpiEnterpriseApp() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* PAGE: ORGANIZATIONAL STRUCTURE HIERARCHY */}
+          {/* ========================================================================= */}
+          {activePage === "structure" && (
+            <StructureHierarchyView
+              theme={theme}
+              userRole={activeRole}
+              userFaculty={currentUser?.faculty}
+              userDepartment={currentUser?.department}
+              hierarchyData={structureHierarchy}
+              onSelectDepartment={(deptName) => {
+                setActivePage("dashboard");
+              }}
+            />
           )}
 
           {/* ========================================================================= */}
