@@ -1709,38 +1709,12 @@ export default function KpiEnterpriseApp() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Quick Profile Trigger Button */}
-            <button
-              onClick={() => setIsProfileModalOpen(true)}
-              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                theme === "dark"
-                  ? "bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-200"
-                  : "bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700"
-              }`}
-            >
-              <UserCog className="w-3.5 h-3.5 text-blue-500" />
-              <span className="hidden sm:inline">Profilim & Parol</span>
-            </button>
-
-            {/* Quick Dark Mode Switch */}
-            <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-lg border transition-colors ${
-                theme === "dark"
-                  ? "bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700"
-                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-              }`}
-              title={theme === "dark" ? "Yorugʻ rejimga oʻtish" : "Qorongʻi rejimga oʻtish"}
-            >
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-
-            {/* Role switcher for authorized inspection */}
-            <div className={`flex items-center gap-1.5 p-1 rounded-lg border ${
-              theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
-            }`}>
-              <span className="text-[11px] font-semibold text-slate-400 px-1.5 hidden md:inline">Koʻrinish:</span>
-              {currentUser.role === "ADMIN" && (
+            {/* Admin inspector view switcher (only visible to system admin) */}
+            {currentUser.role === "ADMIN" && (
+              <div className={`flex items-center gap-1.5 p-1 rounded-lg border ${
+                theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
+              }`}>
+                <span className="text-[11px] font-semibold text-slate-400 px-1.5 hidden md:inline">Koʻrinish:</span>
                 <button
                   onClick={() => { setActiveRole("ADMIN"); setActivePage("dashboard"); }}
                   className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
@@ -1749,32 +1723,49 @@ export default function KpiEnterpriseApp() {
                 >
                   Admin
                 </button>
-              )}
-              <button
-                onClick={() => { setActiveRole("TEACHER"); setActivePage("dashboard"); }}
-                className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                  activeRole === "TEACHER" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Oʻqituvchi
-              </button>
-              <button
-                onClick={() => { setActiveRole("HEAD_OF_DEPT"); setActivePage("dashboard"); }}
-                className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                  activeRole === "HEAD_OF_DEPT" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Mudir
-              </button>
-              <button
-                onClick={() => { setActiveRole("RECTORATE"); setActivePage("dashboard"); }}
-                className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                  activeRole === "RECTORATE" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Rektorat
-              </button>
-            </div>
+                <button
+                  onClick={() => { setActiveRole("TEACHER"); setActivePage("dashboard"); }}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
+                    activeRole === "TEACHER" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Oʻqituvchi
+                </button>
+                <button
+                  onClick={() => { setActiveRole("HEAD_OF_DEPT"); setActivePage("dashboard"); }}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
+                    activeRole === "HEAD_OF_DEPT" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Mudir
+                </button>
+                <button
+                  onClick={() => { setActiveRole("RECTORATE"); setActivePage("dashboard"); }}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
+                    activeRole === "RECTORATE" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Rektorat
+                </button>
+              </div>
+            )}
+
+            {/* Non-admin user role badge */}
+            {currentUser.role !== "ADMIN" && (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${
+                theme === "dark" ? "bg-slate-800/80 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"
+              }`}>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>
+                  {currentUser.role === "HEAD_OF_DEPT" ? "Kafedra mudiri portali" : "Professor-oʻqituvchi portali"}
+                </span>
+                {currentUser.department && (
+                  <span className="hidden lg:inline text-[11px] text-slate-400 font-normal">
+                    • {currentUser.department}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </header>
 
