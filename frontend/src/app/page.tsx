@@ -25,6 +25,7 @@ import {
   Settings,
   Users,
   ShieldAlert,
+  Shield,
   Save,
   Check,
   Building,
@@ -247,7 +248,7 @@ export default function KpiEnterpriseApp() {
   // Active Role and Navigation
   const [activeRole, setActiveRole] = useState<"ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE">("ADMIN");
   const [activePage, setActivePage] = useState<
-    "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators"
+    "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators" | "profile"
   >("dashboard");
   const [activeSvetaforFilter, setActiveSvetaforFilter] = useState<string>("ALL");
   const [selectedBlockFilter, setSelectedBlockFilter] = useState<string>("ALL");
@@ -1939,25 +1940,31 @@ export default function KpiEnterpriseApp() {
 
           {/* Profile & Password Button */}
           <button
-            onClick={() => setIsProfileModalOpen(true)}
-            title="Mening profilim va parolni yangilash"
+            onClick={() => setActivePage("profile")}
+            title="Mening profilim va hisob xavfsizligi"
             className={`w-full flex items-center ${
               sidebarCollapsed ? "justify-center p-2" : "gap-2.5 p-2 text-left"
             } rounded-lg border transition-all ${
-              theme === "dark"
+              activePage === "profile"
+                ? "bg-blue-900 text-white border-blue-800 shadow-md ring-2 ring-blue-500/20"
+                : theme === "dark"
                 ? "bg-slate-800/80 border-slate-700/80 hover:bg-slate-800 text-slate-200"
                 : "bg-white border-slate-200/80 hover:bg-slate-100 text-slate-800 shadow-xs"
             }`}
           >
-            <div className="w-8 h-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+              activePage === "profile" ? "bg-white text-blue-900 shadow-xs" : "bg-blue-900 text-white"
+            }`}>
               {currentUser.name.charAt(0)}
             </div>
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold truncate leading-tight">{currentUser.name}</div>
-                <div className="text-[10px] text-blue-500 font-medium truncate flex items-center gap-1 mt-0.5">
+                <div className={`text-[10px] font-medium truncate flex items-center gap-1 mt-0.5 ${
+                  activePage === "profile" ? "text-blue-200" : "text-blue-500"
+                }`}>
                   <UserCog className="w-3 h-3" />
-                  <span>Profil va parol</span>
+                  <span>Mening profilim</span>
                 </div>
               </div>
             )}
@@ -2010,6 +2017,7 @@ export default function KpiEnterpriseApp() {
               {activePage === "svetafor" && "Svetafor tizimi va moliya byudjeti monitoringi"}
               {activePage === "appeals" && "Apellyatsiya arizalarini koʻrib chiqish komissiyasi"}
               {activePage === "doc" && "OʻzMU JBNUU KPI Nizomi (13 bob, 6 ilova)"}
+              {activePage === "profile" && "Mening profilim va hisob xavfsizligi"}
             </h2>
 
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -3589,128 +3597,254 @@ export default function KpiEnterpriseApp() {
             </div>
           )}
 
-          {/* USER PROFILE & PASSWORD CHANGE MODAL */}
-          {isProfileModalOpen && currentUser && (
-            <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className={`rounded-2xl border shadow-2xl max-w-lg w-full p-6 animate-in fade-in duration-150 ${
-                theme === "dark" ? "bg-slate-900 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
-                <div className="flex justify-between items-center pb-3 border-b border-slate-200/60 dark:border-slate-800 mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-blue-900 text-white flex items-center justify-center font-bold text-sm">
-                      <UserCog className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-base font-bold leading-tight">Shaxsiy profil va xavfsizlik</h4>
-                      <p className="text-xs text-slate-400">Xodim maʼlumotlari va maxfiy parolni boshqarish</p>
-                    </div>
+          {/* ========================================================================= */}
+          {/* PAGE: USER PROFILE & SECURITY (DEDICATED PAGE) */}
+          {/* ========================================================================= */}
+          {activePage === "profile" && currentUser && (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              {/* Header card with gradient banner */}
+              <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                <div className="h-32 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 relative">
+                  <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
+                  <div className="absolute top-4 right-4">
+                    <button
+                      onClick={() => setActivePage("dashboard")}
+                      className="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-white/15"
+                    >
+                      <span>← Bosh sahifaga qaytish</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      setIsProfileModalOpen(false);
-                      setProfPasswordError("");
-                      setProfPasswordSuccess("");
-                      setProfCurrentPassword("");
-                      setProfNewPassword("");
-                      setProfConfirmPassword("");
-                    }}
-                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
                 </div>
 
-                {/* Employee Info Card */}
-                <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50 mb-5">
-                  <div className="flex items-center gap-3 mb-3 pb-3 border-b border-slate-200/60 dark:border-slate-700/60">
-                    <div className="w-12 h-12 rounded-xl bg-blue-900 text-white font-bold text-lg flex items-center justify-center shadow-sm">
+                <div className="px-6 pb-6 pt-0 relative flex flex-col md:flex-row md:items-end justify-between gap-4 -mt-12">
+                  <div className="flex items-end gap-4">
+                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-800 text-white font-black text-3xl flex items-center justify-center shadow-xl border-4 border-white dark:border-slate-900 flex-shrink-0">
                       {currentUser.name.charAt(0)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold truncate">{currentUser.name}</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                        HEMIS ID (Login): <b className="text-blue-600 dark:text-blue-400">{currentUser.username}</b>
+                    <div className="mb-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{currentUser.name}</h3>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-900 dark:bg-blue-900/60 dark:text-blue-200 border border-blue-200 dark:border-blue-800">
+                          {currentUser.role === "ADMIN" && "Tizim administratori"}
+                          {currentUser.role === "DEAN" && "Fakultet dekani"}
+                          {currentUser.role === "HEAD_OF_DEPT" && "Kafedra mudiri"}
+                          {currentUser.role === "TEACHER" && "Professor-oʻqituvchi"}
+                          {currentUser.role === "RECTORATE" && "Filial rahbariyati"}
+                        </span>
                       </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        HEMIS ID: <b className="text-blue-600 dark:text-blue-400 font-mono">{currentUser.username}</b> • {currentUser.department || "Kafedra koʻrsatilmagan"}
+                      </p>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-900 dark:bg-blue-900/60 dark:text-blue-200">
-                      {currentUser.role}
-                    </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5 text-xs">
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Kafedrasi:</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{currentUser.department || "Kafedra koʻrsatilmagan"}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/60 text-xs">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Tizim holati:</span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Faol seans
+                      </span>
                     </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Lavozimi:</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{currentUser.position || "Professor-oʻqituvchi"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 Stat Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+                    <span>HEMIS integratsiyasi</span>
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <div className="text-lg font-bold text-slate-900 dark:text-slate-100">Faol ulangan</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5 truncate">HEMIS ID: {currentUser.username}</div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+                    <span>Lavozimi va stavka</span>
+                    <Briefcase className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
+                    {currentUser.position || "Oʻqituvchi"}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{currentUser.fte || 1.0} pedagogik stavka</div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+                    <span>Ilmiy unvoni</span>
+                    <Award className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <div className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
+                    {currentUser.degree || "Darajasiz"}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{currentUser.faculty || "Filial tuzilmasi"}</div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
+                    <span>Hisob xavfsizligi</span>
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">Himoyalangan</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">Rate-limit & Lockout faol</div>
+                </div>
+              </div>
+
+              {/* Main Content Grid: Left Info & Right Password Change */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left 2 Cols: Details & Organization info */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Detailed Info Card */}
+                  <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                    <div className="flex items-center gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
+                      <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        Rasmiy xizmat va kadrlar maʼlumotlari
+                      </h4>
                     </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Ilmiy darajasi:</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{currentUser.degree || "Darajasiz"}</span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Toʻliq F.I.Sh:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">{currentUser.name}</span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">HEMIS login (Tizim ID):</span>
+                        <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-sm">{currentUser.username}</span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Fakultet:</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {currentUser.faculty || "Oʻzbekiston Milliy universiteti Jizzax filiali"}
+                        </span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Kafedra:</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {currentUser.department || "Kafedra biriktirilmagan"}
+                        </span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Lavozim:</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {currentUser.position || "Professor-oʻqituvchi"}
+                        </span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Pedagogik stavka:</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {currentUser.fte || 1.0} stavka
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Pedagogik stavka:</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{currentUser.fte || 1.0} stavka</span>
+                  </div>
+
+                  {/* Security Highlights */}
+                  <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                    <div className="flex items-center gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+                      <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        Faol xavfsizlik protokollari
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          Brute-force himoyasi
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                          5 marta xato terilganda hisob 15 daqiqaga muzlatiladi
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          IP Rate Limiting
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                          Shubhali IP manzillardan ommaviy soʻrovlar cheklangan
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          Avtomatik seans
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                          30 daqiqa harakatsizlikda seans xavfsiz yakunlanadi
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Password Change Form */}
-                <div className="border-t border-slate-200/60 dark:border-slate-800 pt-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                      Maxfiy parolni yangilash
-                    </h5>
-                  </div>
-
-                  {profPasswordError && (
-                    <div className="mb-3 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs rounded-lg font-medium flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      <span>{profPasswordError}</span>
-                    </div>
-                  )}
-
-                  {profPasswordSuccess && (
-                    <div className="mb-3 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs rounded-lg font-medium flex items-center gap-2">
-                      <Check className="w-4 h-4 flex-shrink-0 text-emerald-600" />
-                      <span>{profPasswordSuccess}</span>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleUpdateProfilePassword} className="space-y-3">
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          Joriy maxfiy parol
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setShowProfCurrentPassword(!showProfCurrentPassword)}
-                          className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-                        >
-                          {showProfCurrentPassword ? <><EyeOff className="w-3 h-3" /> Yashirish</> : <><Eye className="w-3 h-3" /> Koʻrish</>}
-                        </button>
+                {/* Right 1 Col: Password Change Card */}
+                <div className="space-y-6">
+                  <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                    <div className="flex items-center gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+                      <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                          Maxfiy parolni yangilash
+                        </h4>
+                        <p className="text-[11px] text-slate-400">Shaxsiy hisobingiz xavfsizligini taʼminlang</p>
                       </div>
-                      <div className="relative">
+                    </div>
+
+                    {profPasswordError && (
+                      <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs rounded-xl font-medium flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>{profPasswordError}</span>
+                      </div>
+                    )}
+
+                    {profPasswordSuccess && (
+                      <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs rounded-xl font-medium flex items-center gap-2">
+                        <Check className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+                        <span>{profPasswordSuccess}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleUpdateProfilePassword} className="space-y-4">
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Joriy maxfiy parol
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setShowProfCurrentPassword(!showProfCurrentPassword)}
+                            className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                          >
+                            {showProfCurrentPassword ? <><EyeOff className="w-3 h-3" /> Yashirish</> : <><Eye className="w-3 h-3" /> Koʻrish</>}
+                          </button>
+                        </div>
                         <input
                           type={showProfCurrentPassword ? "text" : "password"}
                           required
                           value={profCurrentPassword}
                           onChange={(e) => setProfCurrentPassword(e.target.value)}
-                          placeholder="Hozirgi parolingizni kiriting"
-                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
+                          placeholder="Hozirgi parolingiz"
+                          className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
                         />
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <div className="flex justify-between items-center mb-1">
+                        <div className="flex justify-between items-center mb-1.5">
                           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Yangi parol
+                            Yangi maxfiy parol
                           </label>
                           <button
                             type="button"
@@ -3725,15 +3859,15 @@ export default function KpiEnterpriseApp() {
                           required
                           value={profNewPassword}
                           onChange={(e) => setProfNewPassword(e.target.value)}
-                          placeholder="Kamida 6 belgi"
-                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
+                          placeholder="Kamida 6 ta belgi"
+                          className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
                         />
                       </div>
 
                       <div>
-                        <div className="flex justify-between items-center mb-1">
+                        <div className="flex justify-between items-center mb-1.5">
                           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Tasdiqlash
+                            Yangi parolni takrorlang
                           </label>
                           <button
                             type="button"
@@ -3749,33 +3883,20 @@ export default function KpiEnterpriseApp() {
                           value={profConfirmPassword}
                           onChange={(e) => setProfConfirmPassword(e.target.value)}
                           placeholder="Parolni qayta tering"
-                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
+                          className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
                         />
                       </div>
-                    </div>
 
-                    <div className="pt-2 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsProfileModalOpen(false);
-                          setProfPasswordError("");
-                          setProfPasswordSuccess("");
-                        }}
-                        className="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                      >
-                        Yopish
-                      </button>
                       <button
                         type="submit"
                         disabled={isProfPasswordSaving}
-                        className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-60"
+                        className="w-full py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60 mt-2"
                       >
                         <KeyRound className="w-3.5 h-3.5" />
-                        <span>{isProfPasswordSaving ? "Saqlanmoqda..." : "Yangi parolni saqlash"}</span>
+                        <span>{isProfPasswordSaving ? "Yangilanmoqda..." : "Yangi parolni saqlash"}</span>
                       </button>
-                    </div>
-                  </form>
+                    </form>
+                  </div>
                 </div>
               </div>
             </div>
