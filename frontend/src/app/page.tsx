@@ -1028,8 +1028,13 @@ export default function KpiEnterpriseApp() {
         <div className="w-full max-w-md z-10">
           {/* Official University Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-900 text-white font-black text-2xl shadow-xl border border-blue-700/50 mb-4 tracking-tighter">
-              OʻzMU
+            <div className="relative inline-flex items-center justify-center mb-4">
+              <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full scale-125" />
+              <img
+                src="/logo-kpi.png"
+                alt="OʻzMU JF KPI Tizimi Logotipi"
+                className="w-24 h-24 rounded-full shadow-2xl border-2 border-blue-400/50 object-contain bg-white dark:bg-slate-900 p-0.5 relative z-10 transition-transform hover:scale-105"
+              />
             </div>
             <h1 className="text-xl font-bold text-white tracking-tight">
               Oʻzbekiston Milliy Universiteti
@@ -1316,8 +1321,12 @@ export default function KpiEnterpriseApp() {
           sidebarCollapsed ? "p-3 flex-col gap-2 justify-center" : "p-4 justify-between"
         } ${theme === "dark" ? "border-slate-800" : "border-slate-100"}`}>
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-blue-900 flex items-center justify-center text-white font-black text-lg shadow-sm flex-shrink-0">
-              J
+            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-blue-500/30 bg-white dark:bg-slate-800 p-0.5 overflow-hidden transition-transform hover:scale-105">
+              <img
+                src="/logo-kpi.png"
+                alt="OʻzMU JF KPI"
+                className="w-full h-full object-contain"
+              />
             </div>
             {!sidebarCollapsed && (
               <div className="min-w-0">
@@ -4161,9 +4170,16 @@ export default function KpiEnterpriseApp() {
           {activePage === "doc" && (
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 max-w-4xl mx-auto">
               <div className="flex justify-between items-center pb-6 border-b border-slate-200 dark:border-slate-800 mb-6">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">OʻzMU JBNUU Rasmiy Nizomi (2026)</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">13 bob, 6 ilova, TerDU va TDSHU tajribalari sintezi asosida</p>
+                <div className="flex items-center gap-4">
+                  <img
+                    src="/logo-kpi.png"
+                    alt="OʻzMU JF Logotipi"
+                    className="w-14 h-14 rounded-full object-contain ring-2 ring-blue-500/20 shadow-sm flex-shrink-0 bg-white dark:bg-slate-800 p-0.5"
+                  />
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">OʻzMU JBNUU Rasmiy Nizomi (2026)</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">13 bob, 6 ilova, TerDU va TDSHU tajribalari sintezi asosida</p>
+                  </div>
                 </div>
                 <a
                   href="http://localhost:8080/api/download/nizom"
