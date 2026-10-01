@@ -238,8 +238,8 @@ interface HemisStatusInfo {
 export default function KpiEnterpriseApp() {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [loginUsername, setLoginUsername] = useState<string>("admin");
-  const [loginPassword, setLoginPassword] = useState<string>("admin123");
+  const [loginUsername, setLoginUsername] = useState<string>("");
+  const [loginPassword, setLoginPassword] = useState<string>("");
   const [loginError, setLoginError] = useState<string>("");
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
@@ -821,13 +821,6 @@ export default function KpiEnterpriseApp() {
     }
   };
 
-  // Fast Fill Demo Users
-  const handleFillDemo = (username: string, pass: string) => {
-    setLoginUsername(username);
-    setLoginPassword(pass);
-    setLoginError("");
-  };
-
   // Handle Logout
   const handleLogout = () => {
     setCurrentUser(null);
@@ -1244,75 +1237,6 @@ export default function KpiEnterpriseApp() {
                 )}
               </button>
             </form>
-
-            {/* Quick Fill / Demo Accounts */}
-            <div className="mt-6 pt-5 border-t border-slate-700/60">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 text-center">
-                Tezkor sinov uchun namunaviy profillar
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo("admin", "admin123")}
-                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-slate-700/80 rounded-lg text-left transition-colors"
-                >
-                  <div className="font-bold text-blue-300">Administrator</div>
-                  <div className="text-[10px] text-slate-400 font-mono">admin / admin123</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo("dekan_matematika", "dekan123")}
-                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-indigo-500/40 rounded-lg text-left transition-colors"
-                >
-                  <div className="font-bold text-indigo-300 flex items-center justify-between">
-                    <span>Dekan (Matematika)</span>
-                    <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1 rounded">1.5 st</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">dekan_matematika</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo("dekan", "dekan123")}
-                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-purple-500/40 rounded-lg text-left transition-colors"
-                >
-                  <div className="font-bold text-purple-300 flex items-center justify-between">
-                    <span>Dekan (Psixologiya)</span>
-                    <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1 rounded">1.25 st</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">dekan / dekan123</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo("mudir", "mudir123")}
-                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-sky-500/40 rounded-lg text-left transition-colors"
-                >
-                  <div className="font-bold text-sky-300 flex items-center justify-between">
-                    <span>Kafedra mudiri</span>
-                    <span className="text-[9px] bg-sky-500/20 text-sky-300 px-1 rounded">1.5 st</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">mudir / mudir123</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo("oqituvchi", "oqituvchi123")}
-                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-emerald-500/40 rounded-lg text-left transition-colors"
-                >
-                  <div className="font-bold text-emerald-300 flex items-center justify-between">
-                    <span>Oʻqituvchi (Dotsent)</span>
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded">1.50 st</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">oqituvchi / 123</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo("rektor", "rektor123")}
-                  className="p-2 bg-slate-900/60 hover:bg-slate-700/60 border border-slate-700/80 rounded-lg text-left transition-colors"
-                >
-                  <div className="font-bold text-amber-300">Filial rahbariyati</div>
-                  <div className="text-[10px] text-slate-400 font-mono">rektor / rektor123</div>
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Footer note */}

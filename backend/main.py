@@ -208,101 +208,13 @@ class SystemSettings(BaseModel):
 USERS_DB: Dict[str, Dict[str, Any]] = {
     "admin": {
         "id": 999,
-        "password": "admin123",
+        "password": "admin",
         "name": "Tizim Administratori",
         "role": "ADMIN",
         "department": "Raqamli taʼlim texnologiyalari markazi",
         "faculty": "Filial maʼmuriyati",
         "position": "Bosh administrator",
         "degree": "Texnika fanlari nomzodi",
-        "fte": 1.0
-    },
-    "dekan": {
-        "id": 7,
-        "password": "dekan123",
-        "name": "Dots. Aliqulov Saloxiddin Turdimuratovich",
-        "role": "DEAN",
-        "department": "Psixologiya dekanati",
-        "faculty": "Psixologiya fakulteti",
-        "position": "Fakultet dekani, dotsent",
-        "degree": "Falsafa doktori (PhD)",
-        "fte": 1.25
-    },
-    "dekan_matematika": {
-        "id": 4,
-        "password": "dekan123",
-        "name": "Dots. Alimov Salohiddin Hikmat oʻgʻli",
-        "role": "DEAN",
-        "department": "Amaliy matematika dekanati",
-        "faculty": "Amaliy matematika fakulteti",
-        "position": "Dekan muovini, dotsent",
-        "degree": "Falsafa doktori (PhD)",
-        "fte": 1.50
-    },
-    "mudir": {
-        "id": 1,
-        "password": "mudir123",
-        "name": "Dots. Sharipova Sadoqat Fazliddinovna",
-        "role": "HEAD_OF_DEPT",
-        "department": "Amaliy matematika",
-        "faculty": "Amaliy matematika fakulteti",
-        "position": "Kafedra mudiri, dotsent",
-        "degree": "Falsafa doktori (PhD)",
-        "fte": 1.50
-    },
-    "mudir_kompyuter": {
-        "id": 3,
-        "password": "mudir123",
-        "name": "Dots. Kuvandikov Joʻra Tursunbayevich",
-        "role": "HEAD_OF_DEPT",
-        "department": "Kompyuter ilmlari va dasturlashtirish",
-        "faculty": "Amaliy matematika fakulteti",
-        "position": "Kafedra mudiri, dotsent",
-        "degree": "Falsafa doktori (PhD)",
-        "fte": 1.50
-    },
-    "mudir_tillar": {
-        "id": 10,
-        "password": "mudir123",
-        "name": "Joʻrayev Muxammadraximxon Murod oʻgʻli",
-        "role": "HEAD_OF_DEPT",
-        "department": "Xorijiy tillar",
-        "faculty": "Psixologiya fakulteti",
-        "position": "Kafedra mudiri, assistent",
-        "degree": "Magistr",
-        "fte": 1.50
-    },
-    "oqituvchi": {
-        "id": 2,
-        "password": "oqituvchi123",
-        "name": "Dots. Hafizov Erkin Alimboy oʻgʻli",
-        "role": "TEACHER",
-        "department": "Axborot tizimlari va texnologiyalari",
-        "faculty": "Amaliy matematika fakulteti",
-        "position": "Dotsent",
-        "degree": "Falsafa doktori (PhD)",
-        "fte": 1.50
-    },
-    "yosh": {
-        "id": 6,
-        "password": "yosh123",
-        "name": "Abdullayev Sardor Ikrom oʻgʻli",
-        "role": "TEACHER",
-        "department": "Kompyuter ilmlari va dasturlashtirish",
-        "faculty": "Amaliy matematika fakulteti",
-        "position": "Assistent",
-        "degree": "Magistr",
-        "fte": 0.50
-    },
-    "rektor": {
-        "id": 888,
-        "password": "rektor123",
-        "name": "Filial Rahbariyati",
-        "role": "RECTORATE",
-        "department": "Filial rahbariyati",
-        "faculty": "Rektorat",
-        "position": "Filial direktori",
-        "degree": "Professor",
         "fte": 1.0
     }
 }
