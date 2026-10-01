@@ -1,8 +1,8 @@
 import os
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, status, UploadFile, File
+from fastapi import FastAPI, HTTPException, status, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 import uuid
@@ -36,6 +36,103 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==========================================
+# XAVFSIZLIK VA BRUTE-FORCE RATE LIMITING
+# ==========================================
+MAX_FAILED_PER_ACCOUNT = 5          # 1 ta hisobga 5 ta xato urinishdan so'ng hisob 15 daqiqaga bloklanadi
+MAX_FAILED_PER_IP = 20             # 1 ta IP dan 20 ta umumiy xato urinishdan so'ng IP bloklanadi
+LOCKOUT_DURATION_MINUTES = 15      # Bloklanish vaqti (daqiqa)
+ATTEMPT_WINDOW_MINUTES = 10        # 10 daqiqa ichidagi xatolar hisobga olinadi
+
+# In-memory tracking: { "ip:X.X.X.X": {...}, "user:username": {...} }
+FAILED_LOGIN_TRACKER: Dict[str, Dict[str, Any]] = {}
+
+def get_client_ip(request: Request) -> str:
+    """Klientning real IP manzilini xavfsiz aniqlash"""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "127.0.0.1"
+
+def check_login_rate_limit(ip: str, username: str):
+    """
+    IP yoki hisob bo'yicha bloklanganlik holatini tekshirish.
+    Agar bloklangan bo'lsa HTTP 429 xatosi qaytaradi.
+    """
+    now = datetime.now()
+    
+    # 1. IP bo'yicha umumiy blok tekshiruvi (IP-level DDoS/Brute-force)
+    ip_rec = FAILED_LOGIN_TRACKER.get(f"ip:{ip}")
+    if ip_rec and ip_rec.get("locked_until"):
+        if now < ip_rec["locked_until"]:
+            rem_sec = int((ip_rec["locked_until"] - now).total_seconds())
+            rem_min = max(1, (rem_sec + 59) // 60)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Xavfsizlik tizimi: Ushbu IP manzildan juda koʻp muvaffaqiyatsiz urinishlar aniqlandi! IP 15 daqiqaga cheklandi. Qolgan vaqt: {rem_min} daqiqa."
+            )
+        else:
+            FAILED_LOGIN_TRACKER.pop(f"ip:{ip}", None)
+
+    # 2. Aniq foydalanuvchi hisobi bo'yicha blok tekshiruvi (Account Lockout)
+    user_rec = FAILED_LOGIN_TRACKER.get(f"user:{username}")
+    if user_rec and user_rec.get("locked_until"):
+        if now < user_rec["locked_until"]:
+            rem_sec = int((user_rec["locked_until"] - now).total_seconds())
+            rem_min = max(1, (rem_sec + 59) // 60)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Xavfsizlik tizimi: '{username}' hisobiga ketma-ket xato parollar kiritilgani sababli ushbu hisob 15 daqiqaga bloklangan! Qolgan vaqt: {rem_min} daqiqa."
+            )
+        else:
+            FAILED_LOGIN_TRACKER.pop(f"user:{username}", None)
+
+def record_failed_login(ip: str, username: str) -> Dict[str, int]:
+    """
+    Muvaffaqiyatsiz urinishni qayd etish.
+    User va IP bo'yicha urinishlar sonini qaytaradi.
+    """
+    now = datetime.now()
+
+    # User tracker
+    user_key = f"user:{username}"
+    u_rec = FAILED_LOGIN_TRACKER.get(user_key)
+    if not u_rec or (now - u_rec["last_attempt"]).total_seconds() > ATTEMPT_WINDOW_MINUTES * 60:
+        FAILED_LOGIN_TRACKER[user_key] = {"count": 1, "last_attempt": now, "locked_until": None}
+        user_count = 1
+    else:
+        u_rec["count"] += 1
+        u_rec["last_attempt"] = now
+        user_count = u_rec["count"]
+
+    if user_count >= MAX_FAILED_PER_ACCOUNT:
+        FAILED_LOGIN_TRACKER[user_key]["locked_until"] = now + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+
+    # IP tracker
+    ip_key = f"ip:{ip}"
+    ip_rec = FAILED_LOGIN_TRACKER.get(ip_key)
+    if not ip_rec or (now - ip_rec["last_attempt"]).total_seconds() > ATTEMPT_WINDOW_MINUTES * 60:
+        FAILED_LOGIN_TRACKER[ip_key] = {"count": 1, "last_attempt": now, "locked_until": None}
+        ip_count = 1
+    else:
+        ip_rec["count"] += 1
+        ip_rec["last_attempt"] = now
+        ip_count = ip_rec["count"]
+
+    if ip_count >= MAX_FAILED_PER_IP:
+        FAILED_LOGIN_TRACKER[ip_key]["locked_until"] = now + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+
+    return {"user_count": user_count, "ip_count": ip_count}
+
+def reset_failed_login(ip: str, username: str):
+    """Muvaffaqiyatli kirilganda hisoblagichlarni tozalash"""
+    FAILED_LOGIN_TRACKER.pop(f"user:{username}", None)
 
 # ==========================================
 # MODELLAR (PYDANTIC SCHEMAS)
@@ -616,15 +713,60 @@ def get_uploaded_file(filename: str):
     return FileResponse(full_path, filename=clean_filename)
 
 @app.post("/api/auth/login", response_model=LoginResponse)
-def login(creds: LoginRequest):
+def login(creds: LoginRequest, request: Request):
+    client_ip = get_client_ip(request)
     username = creds.username.strip().lower()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # 1. Rate limiting va hisob bloklanishini tekshirish
+    check_login_rate_limit(client_ip, username)
+
     user_record = USERS_DB.get(username)
 
+    # 2. Agar foydalanuvchi topilmasa yoki parol noto'g'ri bo'lsa
     if not user_record or user_record["password"] != creds.password:
+        counts = record_failed_login(client_ip, username)
+        u_count = counts["user_count"]
+        ip_count = counts["ip_count"]
+
+        if ip_count >= MAX_FAILED_PER_IP:
+            lockout_msg = f"XAVFSIZLIK: Ushbu IP ({client_ip}) dan 20 marta xato login urinishi kuzatildi va IP 15 daqiqaga bloklandi!"
+            db_save_audit_log(now_str, "SYSTEM", lockout_msg)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Xavfsizlik tizimi: Ushbu IP manzildan xato soʻrovlar juda koʻp yuborilgani sababli kirish 15 daqiqaga bloklandi!"
+            )
+
+        if u_count >= MAX_FAILED_PER_ACCOUNT:
+            lockout_msg = f"XAVFSIZLIK: '{username}' hisobiga 5 marta notoʻgʻri parol kiritildi va hisob 15 daqiqaga bloklandi! (IP: {client_ip})"
+            db_save_audit_log(now_str, username or "unknown", lockout_msg)
+            AUDIT_LOGS.insert(0, {
+                "id": len(AUDIT_LOGS) + 1,
+                "time": now_str,
+                "user": username or "unknown",
+                "action": lockout_msg
+            })
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Xavfsizlik tizimi: Notoʻgʻri parol 5 marta kiritildi. '{username}' hisobi xavfsizlik maqsadida 15 daqiqaga vaqtincha bloklandi!"
+            )
+
+        remaining = MAX_FAILED_PER_ACCOUNT - u_count
+        fail_msg = f"Muvaffaqiyatsiz kirish urinishi (IP: {client_ip}, Urinish: {u_count}/{MAX_FAILED_PER_ACCOUNT})"
+        db_save_audit_log(now_str, username or "unknown", fail_msg)
+        AUDIT_LOGS.insert(0, {
+            "id": len(AUDIT_LOGS) + 1,
+            "time": now_str,
+            "user": username or "unknown",
+            "action": fail_msg
+        })
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Foydalanuvchi nomi (HEMIS ID) yoki maxfiy parol notoʻgʻri kiritildi"
+            detail=f"Foydalanuvchi nomi yoki maxfiy parol notoʻgʻri. Qolgan urinishlar: {remaining} ta (5 tadan soʻng hisob 15 daqiqaga bloklanadi)."
         )
+
+    # 3. Muvaffaqiyatli kirish - xato urinishlar hisoblagichini tozalash
+    reset_failed_login(client_ip, username)
 
     must_change = user_record.get("must_change_password", False)
 
@@ -642,11 +784,13 @@ def login(creds: LoginRequest):
         must_change_password=must_change
     )
 
+    success_msg = f"Tizimga muvaffaqiyatli kirdi (IP: {client_ip}, Rol: {user_record['role']}, Birlamchi parol holati: {'Almashtirish shart' if must_change else 'Faol'})"
+    db_save_audit_log(now_str, username, success_msg)
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
-        "time": "2026-10-01 21:35",
+        "time": now_str,
         "user": username,
-        "action": f"Tizimga muvaffaqiyatli kirdi (Rol: {user_record['role']}, Birlamchi parol holati: {'Almashtirish shart' if must_change else 'Faol'})"
+        "action": success_msg
     })
 
     return LoginResponse(
