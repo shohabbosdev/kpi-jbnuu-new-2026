@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KPI Axborot Tizimi | Oʻzbekiston Milliy Universiteti Jizzax Filiali</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Chap boshqaruv paneli -->
+    <aside class="sidebar">
+      <div class="brand-section">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>OʻzMU JBNUU</h1>
+          <p>KPI axborot tizimi</p>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-item active" data-page="dashboard" id="nav-dashboard">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span>Bosh sahifa</span>
+        </div>
+        <div class="nav-item" data-page="indicators" id="nav-indicators">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <span>Baholash mezonlari</span>
+        </div>
+        <div class="nav-item" data-page="svetafor" id="nav-svetafor">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Reyting monitoringi</span>
+        </div>
+        <div class="nav-item" data-page="appeals" id="nav-appeals">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+          <span>Apellyatsiya komissiyasi</span>
+        </div>
+        <div class="nav-item" data-page="doc" id="nav-doc">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Nizom hujjati</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile-badge">
+          <div class="avatar">R</div>
+          <div class="user-details">
+            <div class="user-name">Prof. Rahimov U.Sh.</div>
+            <div class="user-role-label" id="sidebar-user-role">Professor-oʻqituvchi</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Asosiy qism -->
+    <div class="main-wrapper">
+      <header class="top-header">
+        <div class="header-left">
+          <h2 class="page-title" id="page-main-heading">Professor-oʻqituvchilar faoliyatini baholash tizimi</h2>
+          <span class="academic-year-badge">2025/2026-oʻquv yili</span>
+        </div>
+
+        <div class="header-right">
+          <div class="role-switcher-container">
+            <span class="role-switch-label">Foydalanuvchi faoliyati:</span>
+            <button class="role-btn active" data-role="TEACHER" id="btn-role-teacher">
+              Oʻqituvchi
+            </button>
+            <button class="role-btn" data-role="HEAD_OF_DEPT" id="btn-role-head">
+              Kafedra mudiri
+            </button>
+            <button class="role-btn" data-role="RECTORATE" id="btn-role-rector">
+              Filial rahbariyati
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="content-area">
+        <!-- 1. Bosh sahifa bo'limi -->
+        <section class="page-section active" id="section-dashboard">
+          <div class="svetafor-banner" id="svetafor-summary-banner">
+            <!-- Svetafor kartochkalari -->
+          </div>
+          <div id="dynamic-role-content">
+            <!-- Rolga oid interfeys -->
+          </div>
+        </section>
+
+        <!-- 2. Baholash mezonlari katalogi -->
+        <section class="page-section" id="section-indicators">
+          <div class="actions-bar">
+            <div>
+              <h2 style="font-size: 1.25rem; font-weight: 700;">KPI Baholash mezonlari va indikatorlar katalogi (100 ball)</h2>
+              <p style="color: var(--text-muted); font-size: 0.85rem;">TerDU va TDSHU tajribasi asosida tasdiqlangan mezonlar, muddatlar va masʼul boʻlimlar</p>
+            </div>
+            <div>
+              <input type="text" id="indicator-search-input" class="search-input" placeholder="Mezon nomini qidirish...">
+            </div>
+          </div>
+
+          <div class="filter-tabs" id="indicator-filter-tabs">
+            <button class="filter-tab-btn active" data-block="ALL">Barcha mezonlar (41 ta)</button>
+            <button class="filter-tab-btn" data-block="oqv">I. Oʻquv-metodik (30 ball)</button>
+            <button class="filter-tab-btn" data-block="ilm">II. Ilmiy-innovatsion (40 ball)</button>
+            <button class="filter-tab-btn" data-block="xal">III. Xalqaro hamkorlik (20 ball)</button>
+            <button class="filter-tab-btn" data-block="man">IV. Maʼnaviy va bandlik (10 ball)</button>
+          </div>
+
+          <div class="data-table-container">
+            <table id="indicators-catalog-table">
+              <thead>
+                <tr>
+                  <th style="width: 70px;">Kodi</th>
+                  <th>Faoliyat turi va mezon mazmuni</th>
+                  <th style="width: 130px;">Amal qilish muddati</th>
+                  <th style="width: 110px;">Belgilangan ball</th>
+                  <th style="width: 220px;">Masʼul tasdiqlovchi boʻlim</th>
+                </tr>
+              </thead>
+              <tbody id="indicators-table-body">
+                <!-- JS orqali to'ldiriladi -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 3. Reyting va Svetafor monitoringi + Moliya (Budget Cap) -->
+        <section class="page-section" id="section-svetafor">
+          <div class="actions-bar">
+            <div>
+              <h2 style="font-size: 1.25rem; font-weight: 700;">Filial boʻyicha Svetafor monitoringi va moliya byudjeti</h2>
+              <p style="color: var(--text-muted); font-size: 0.85rem;">Xodimlar reytingi toifalari va talab etiladigan oylik ustama jamgʻarmasi tahlili</p>
+            </div>
+          </div>
+
+          <div class="budget-summary-grid">
+            <div class="budget-card">
+              <div class="budget-card-title">Jami pedagoglar</div>
+              <div class="budget-card-value" id="budget-total-teachers">6 nafar</div>
+              <div class="budget-card-desc">Asosiy shtat va oʻrindoshlar</div>
+            </div>
+            <div class="budget-card">
+              <div class="budget-card-title">Yashil toifa (70-100% ustama)</div>
+              <div class="budget-card-value" style="color: var(--svetafor-green-text);" id="budget-green-count">3 nafar (50%)</div>
+              <div class="budget-card-desc">Yuqori samaradorlik koʻrsatkichlari</div>
+            </div>
+            <div class="budget-card">
+              <div class="budget-card-title">Sariq toifa (40% ustama)</div>
+              <div class="budget-card-value" style="color: var(--svetafor-yellow-text);" id="budget-yellow-count">2 nafar (33%)</div>
+              <div class="budget-card-desc">Oʻrtacha meʼyordagi xodimlar</div>
+            </div>
+            <div class="budget-card">
+              <div class="budget-card-title">Qizil toifa (Ustamasiz)</div>
+              <div class="budget-card-value" style="color: var(--svetafor-red-text);" id="budget-red-count">1 nafar (17%)</div>
+              <div class="budget-card-desc">Tanqidiy koʻrib chiqiladi</div>
+            </div>
+          </div>
+
+          <div class="data-table-container">
+            <div class="table-header-title">
+              <h3>Fakultetlar va kafedralar boʻyicha oʻrtacha ballar monitoringi</h3>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Fakultet / Kafedra nomi</th>
+                  <th>Xodimlar soni</th>
+                  <th>Oʻrtacha ball</th>
+                  <th>Yashil toifa</th>
+                  <th>Sariq toifa</th>
+                  <th>Qizil toifa</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>Dasturiy injiniring kafedrasi</b></td>
+                  <td>3 nafar</td>
+                  <td><b>72.0 ball</b></td>
+                  <td><span class="svetafor-pill green" style="display:inline-flex;">1 nafar</span></td>
+                  <td><span class="svetafor-pill yellow" style="display:inline-flex;">2 nafar</span></td>
+                  <td>0</td>
+                </tr>
+                <tr>
+                  <td><b>Amaliy matematika va informatika kafedrasi</b></td>
+                  <td>1 nafar</td>
+                  <td><b>82.0 ball</b></td>
+                  <td><span class="svetafor-pill green" style="display:inline-flex;">1 nafar</span></td>
+                  <td>0</td>
+                  <td>0</td>
+                </tr>
+                <tr>
+                  <td><b>Xorijiy tillar kafedrasi</b></td>
+                  <td>1 nafar</td>
+                  <td><b>77.0 ball</b></td>
+                  <td><span class="svetafor-pill green" style="display:inline-flex;">1 nafar</span></td>
+                  <td>0</td>
+                  <td>0</td>
+                </tr>
+                <tr>
+                  <td><b>Iqtisodiyot kafedrasi</b></td>
+                  <td>1 nafar</td>
+                  <td><b>32.0 ball</b></td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td><span class="svetafor-pill red" style="display:inline-flex;">1 nafar</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 4. Apellyatsiya komissiyasi bo'limi -->
+        <section class="page-section" id="section-appeals">
+          <div class="actions-bar">
+            <div>
+              <h2 style="font-size: 1.25rem; font-weight: 700;">Apellyatsiya arizalarini taqdim etish va koʻrib chiqish</h2>
+              <p style="color: var(--text-muted); font-size: 0.85rem;">Reyting natijalari boʻyicha eʼtirozlarni 3 ish kuni ichida elektron taqdim etish tartibi</p>
+            </div>
+          </div>
+
+          <div class="appeal-alert">
+            <b>Eslatma:</b> Nizomning XI bobi 11.1-bandiga muvofiq, dastlabki reyting natijalari eʼlon qilingan kundan boshlab 3 (uch) ish kuni mobaynida xodim shaxsiy kabineti orqali aniq hujjat va mezon bandini koʻrsatgan holda apellyatsiya berishi mumkin. Asossiz shikoyatlar koʻrib chiqilmaydi.
+          </div>
+
+          <div class="appeal-card">
+            <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 16px;">Yangi apellyatsiya arizasini shakllantirish</h3>
+            <form id="form-appeal">
+              <div class="form-group">
+                <label class="form-label" for="appeal-indicator">Eʼtiroz bildirilayotgan koʻrsatkich (mezon)</label>
+                <select class="form-control" id="appeal-indicator" required>
+                  <option value="2.3">2.3. Scopus va Web of Science (Q1, Q2 jurnallarda maqola) – 8 ball</option>
+                  <option value="1.1">1.1. Nashr etilgan darslik – 6 ball</option>
+                  <option value="3.3">3.3. Xorijiy til sertifikati (C1/B2) – 3 ball</option>
+                  <option value="4.1">4.1. Bitiruvchi talabalarni ishga joylashtirish (YAMMT) – 4 ball</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appeal-reason">Eʼtirozning asosli sababi va tavsifi *</label>
+                <textarea class="form-control" id="appeal-reason" rows="3" placeholder="Masalan: Scopus Q1 jurnalidagi maqola DOI raqami tasdiqlangan boʻlsa-da, ekspert komissiyasi tomonidan koʻrib chiqilmagan..." required></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Qoʻshimcha tasdiqlovchi hujjat (PDF)</label>
+                <input type="file" class="form-control" accept=".pdf">
+              </div>
+
+              <button type="submit" class="btn-primary">Apellyatsiya arizasini yuborish</button>
+            </form>
+          </div>
+
+          <div class="data-table-container">
+            <div class="table-header-title">
+              <h3>Mening yuborgan apellyatsiya arizalarim</h3>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Ariza raqami</th>
+                  <th>Mezon</th>
+                  <th>Eʼtiroz mazmuni</th>
+                  <th>Yuborilgan sana</th>
+                  <th>Komissiya xulosasi</th>
+                  <th>Holati</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>#AP-2026-04</b></td>
+                  <td>2.3. Scopus Q1 maqola</td>
+                  <td>Kvartil tasdiqnomasi yangilangan havola orqali ilova qilindi</td>
+                  <td>2026-09-29</td>
+                  <td>Koʻrib chiqish jarayonida (Ekspert: Ilmiy boʻlim)</td>
+                  <td><span class="status-badge pending">Jarayonda</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 5. Nizom hujjati sahifasi -->
+        <section class="page-section" id="section-doc">
+          <div class="document-viewer-card">
+            <div class="document-header-box">
+              <div>
+                <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--primary-dark);">Oʻzbekiston Milliy Universiteti Jizzax Filiali KPI Nizomi</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Filial Kengashining 2026-yilgi qarori bilan tasdiqlangan rasmiy meʼyoriy hujjat</p>
+              </div>
+              <div>
+                <a href="O_zMU_Jizzax_filiali_KPI_Nizomi_2026.docx" download class="btn-primary" style="text-decoration: none;">
+                  <span>Word formatida yuklab olish (14pt)</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="document-text-content">
+              <div class="document-chapter-title">I BOB. UMUMIY QOIDALAR</div>
+              <p>1.1. Mazkur Nizom Mirzo Ulugʻbek nomidagi Oʻzbekiston Milliy universiteti Jizzax filiali professor-oʻqituvchilarining oʻquv-uslubiy, ilmiy-tadqiqot, xalqaro integratsiya, maʼnaviy-maʼrifiy faoliyati hamda mehnat intizomi va bitiruvchilar bandligini asosiy samaradorlik koʻrsatkichlari (KPI) asosida baholash va ragʻbatlantirish tartibini belgilaydi.</p>
+              <p>1.2. Oʻzbekiston Respublikasi Vazirlar Mahkamasining 2019-yil 24-dekabrdagi 1030-sonli qaroriga koʻra oylik maoshiga doimiy ustama belgilangan natijalar mazkur tizimga takroran kiritilmaydi (dublyaj taqiqlanadi).</p>
+
+              <div class="document-chapter-title">II BOB. KPI TIZIMINING STRUKTURAVIY BALANSI</div>
+              <p>2.1. Filialda 100 ballik shkala quyidagi 4 ta blok boʻyicha taqsimlanadi:</p>
+              <p>– I. Oʻquv va oʻquv-uslubiy faoliyat: maksimal 30 ball;</p>
+              <p>– II. Ilmiy-tadqiqot va innovatsion faoliyat: maksimal 40 ball;</p>
+              <p>– III. Xalqaro hamkorlik va integratsiya: maksimal 20 ball;</p>
+              <p>– IV. Ijtimoiy-maʼnaviy faoliyat va bandlik: maksimal 10 ball.</p>
+
+              <div class="document-chapter-title">III BOB. SHTAT KOEFFITSIYENTI (K_SHTAT)</div>
+              <p>3.1. Toʻliq boʻlmagan stavkalarda (0.25, 0.5, 0.75 shtat) ishlovchi xodimlar uchun: <b>Ball_yakuniy = Ball_amalda / Shtat_birligi</b> formulasi qoʻllaniladi.</p>
+
+              <div class="document-chapter-title">VI BOB. AKADEMIK TRAEKTORIYALAR VA YUTUQLAR KOMPENSATSIYASI</div>
+              <p>6.1. Scopus Q1/Q2 yoki xalqaro grant yutgan olimlarning ilmiy blok boʻyicha 40 balldan ortiq toʻplagan ballari uning maʼnaviy-maʼrifiy blokidagi yetishmovchiligini toʻliq qoplab beradi (Flex qoidasi).</p>
+
+              <div class="document-chapter-title">X BOB. AKADEMIK HALOLLIK VA PLAGIATGA QARSHI CHORALAR</div>
+              <p>10.1. Plagiat yoki soxta («yirtqich») jurnallarda maqola taqdim etilganligi aniqlanganda, umumiy balldan 20 ball chegiriladi va xodim 1 yilga barcha ustamalardan mahrum etiladi.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal: Yangi ko'rsatkich kiritish (DOI avtomatik tekshiruvi bilan) -->
+  <div class="modal-overlay" id="add-kpi-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Yangi faoliyat natijasi boʻyicha maʼlumot kiritish</h3>
+        <button class="modal-close-btn" id="modal-close-btn" aria-label="Yopish">&times;</button>
+      </div>
+
+      <form id="form-add-kpi">
+        <div class="form-group">
+          <label class="form-label" for="select-indicator">KPI faoliyat turi va mezoni *</label>
+          <select class="form-control" id="select-indicator" required>
+            <optgroup label="I. Oʻquv va oʻquv-uslubiy ishlar (30 ball)">
+              <option value="1.1">1.1. Nashr etilgan darslik (grif va ISBN bilan) – 6 ball</option>
+              <option value="1.2">1.2. Nashr etilgan oʻquv qoʻllanma (ISBN raqami bilan) – 4 ball</option>
+              <option value="1.3">1.3. TOP-300 xorijiy OTM adabiyotlarini tarjima qilganlik – 6 ball</option>
+              <option value="1.4">1.4. Videodars va virtual laboratoriya ishlab chiqqanlik – 3 ball</option>
+              <option value="1.5">1.5. HEMIS tizimiga sifatli oʻquv kontentlarini toʻliq yuklaganlik – 2 ball</option>
+            </optgroup>
+            <optgroup label="II. Ilmiy-tadqiqot va innovatsion faoliyat (40 ball)">
+              <option value="2.3">2.3. Scopus va Web of Science (Q1, Q2 kvartildagi jurnallarda maqola) – 8 ball</option>
+              <option value="2.4">2.4. Scopus va Web of Science (Q3, Q4 kvartildagi jurnallarda maqola) – 6 ball</option>
+              <option value="2.6">2.6. Scopus va Web of Science bazalaridagi Xirsh indeksi – har bir birlikka 1 ball</option>
+              <option value="2.7">2.7. OAK roʻyxatidagi nufuzli ilmiy jurnallarda maqola – 4 ball</option>
+              <option value="2.9">2.9. Ixtiro va foydali model uchun patent – 5 ball</option>
+              <option value="2.10">2.10. Dasturiy taʼminot uchun mualliflik guvohnomasi (DGU) – 3 ball</option>
+            </optgroup>
+            <optgroup label="III. Xalqaro hamkorlik va integratsiya (20 ball)">
+              <option value="3.1">3.1. Nufuzli xorijiy OTMda dars va maʼruzalar oʻtkazganlik – 4 ball</option>
+              <option value="3.3">3.3. Xorijiy tilni bilish boʻyicha xalqaro sertifikat (C1, B2) – 3 ball</option>
+              <option value="3.5">3.5. Xorijiy OTM yoki ilmiy markazlarda stajirovka oʻtaganlik – 4 ball</option>
+            </optgroup>
+            <optgroup label="IV. Maʼnaviy-maʼrifiy faoliyat va bandlik (10 ball)">
+              <option value="4.1">4.1. Bitiruvchi shogirdlarni mutaxassisligi boʻyicha ishga joylashtirganlik (YAMMT) – 4 ball</option>
+              <option value="4.2">4.2. Korxonalar bilan bitiruvchilarni ishga qabul qilish shartnomalari – 2 ball</option>
+              <option value="4.4">4.4. Talabalar toʻgaraklari rahbarligi – 2 ball</option>
+            </optgroup>
+          </select>
+          <div id="indicator-info-hint" style="font-size: 0.8rem; color: var(--primary); margin-top: 6px;">
+            Maksimal ball: <b>6 ball</b> | Amal qilish muddati: <b>2 kalendar yili</b> | Masʼul boʻlim: <b>Oʻquv-uslubiy boshqarma</b>
+          </div>
+        </div>
+
+        <!-- DOI qidiruv maydoni -->
+        <div class="form-group">
+          <label class="form-label" for="input-kpi-doi">DOI raqami yoki xalqaro identifikator (mavjud boʻlsa)</label>
+          <div class="input-with-button">
+            <input type="text" class="form-control" id="input-kpi-doi" placeholder="Masalan: 10.1016/j.eswa.2026.123456">
+            <button type="button" class="btn-inline" id="btn-doi-lookup">Avtomatik toʻldirish</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="input-kpi-title">Natija / Nashrning rasmiy nomi *</label>
+          <input type="text" class="form-control" id="input-kpi-title" placeholder="Masalan: «Sunʼiy intellekt algoritmlari» darsligi, ISBN 978-9943-..." required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="input-kpi-date">Nashr / Tasdiqlangan sana *</label>
+            <input type="date" class="form-control" id="input-kpi-date" value="2026-03-15" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-kpi-authors">Mualliflar soni</label>
+            <input type="number" class="form-control" id="input-kpi-authors" value="1" min="1" max="10">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tasdiqlovchi hujjat (PDF shaklida) *</label>
+          <div class="file-dropzone" onclick="document.getElementById('file-upload-input').click()">
+            <input type="file" id="file-upload-input" style="display: none;" accept=".pdf">
+            <p class="dropzone-text">Tasdiqlovchi hujjatni (PDF) yuklash uchun bu yerga bosing yoki faylni tanlang</p>
+            <p style="font-size: 0.74rem; color: var(--text-light); margin-top: 4px;">Faqat PDF formati (hajmi 20 MB gacha). Skanerlangan hujjat sifati aniq boʻlishi lozim.</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="btn-cancel-modal">Bekor qilish</button>
+          <button type="submit" class="btn-primary">Arizani topshirish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
