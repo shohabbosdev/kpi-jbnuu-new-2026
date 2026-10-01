@@ -45,7 +45,8 @@ import {
   Menu,
   Eye,
   EyeOff,
-  UserCog
+  UserCog,
+  AlertTriangle
 } from "lucide-react";
 
 interface TeacherScoreDetail {
@@ -98,9 +99,15 @@ interface Submission {
   authors_count: number;
   submitted_date: string;
   status: string;
+  claimed_ball?: number;
   ball: number;
   file_name: string;
   dept: string;
+  description?: string;
+  reviewer_name?: string;
+  reviewed_date?: string;
+  reviewer_comment?: string;
+  rejection_reason?: string;
 }
 
 interface Appeal {
@@ -272,11 +279,24 @@ export default function KpiEnterpriseApp() {
   // Modal State for New KPI entry
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [doiInput, setDoiInput] = useState("");
+  const [modalBlockFilter, setModalBlockFilter] = useState<string>("ALL");
   const [modalIndicator, setModalIndicator] = useState("1.1");
   const [modalTitle, setModalTitle] = useState("");
   const [modalAuthors, setModalAuthors] = useState(1);
   const [modalDate, setModalDate] = useState("2026-03-15");
+  const [modalClaimedBall, setModalClaimedBall] = useState<number>(6.0);
+  const [modalDescription, setModalDescription] = useState<string>("");
   const [isDoiLoading, setIsDoiLoading] = useState(false);
+
+  // Reviewer Verification Modal State (Mudir, Dekan, Admin uchun)
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState<boolean>(false);
+  const [selectedSubForReview, setSelectedSubForReview] = useState<Submission | null>(null);
+  const [verifyActionType, setVerifyActionType] = useState<"approved" | "rejected">("approved");
+  const [verifyManualScore, setVerifyManualScore] = useState<number>(0);
+  const [verifyRejectionReason, setVerifyRejectionReason] = useState<string>("");
+  const [verifyComment, setVerifyComment] = useState<string>("");
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [verifyError, setVerifyError] = useState<string>("");
 
   // Appeal Form State
   const [appealIndicator, setAppealIndicator] = useState("2.3");
@@ -880,6 +900,11 @@ export default function KpiEnterpriseApp() {
     e.preventDefault();
     if (!currentTeacher) return;
 
+    if (!systemSettings.submissions_open) {
+      alert(`Hozirda KPI hujjatlarini qabul qilish muddati yakunlangan yoki administrator tomonidan vaqtincha yopilgan.\nBelgilangan oxirgi muddat: ${systemSettings.deadline_date}`);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/submissions`, {
         method: "POST",
@@ -891,44 +916,88 @@ export default function KpiEnterpriseApp() {
           doi: doiInput || undefined,
           authors_count: Number(modalAuthors),
           submitted_date: modalDate,
+          claimed_ball: Number(modalClaimedBall),
+          description: modalDescription.trim() || undefined,
           file_name: "tasdiqlovchi_hujjat.pdf"
         })
       });
-      const newSub = await res.json();
-      setSubmissions([newSub, ...submissions]);
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.detail || "Arizani yuborishda xatolik yuz berdi.");
+        return;
+      }
+      setSubmissions([data, ...submissions]);
       setIsAddModalOpen(false);
       setModalTitle("");
       setDoiInput("");
-      alert("Arizangiz qabul qilindi va ekspert komissiyasiga yoʻnaltirildi.");
+      setModalDescription("");
+      alert(`Arizangiz muvaffaqiyatli qabul qilindi!\nDaʻvo qilingan ball: ${data.claimed_ball} ball.\nHolati: Ekspert komissiyasi koʻrib chiqishi kutilmoqda.`);
     } catch {
       alert("Arizani yuborishda xatolik yuz berdi.");
     }
   };
 
-  // Verify submission (Anti Self-Approval check)
-  const handleVerify = async (subId: number, newStatus: string) => {
+  // Open Reviewer Verification Modal
+  const openVerifyModal = (sub: Submission, initialStatus: "approved" | "rejected" = "approved") => {
+    setSelectedSubForReview(sub);
+    setVerifyActionType(initialStatus);
+    setVerifyManualScore(sub.claimed_ball ?? sub.ball ?? 0);
+    setVerifyRejectionReason("");
+    setVerifyComment(initialStatus === "approved" ? "Hujjatlar toʻliq va mezon talablariga mos deb topildi." : "");
+    setVerifyError("");
+    setIsVerifyModalOpen(true);
+  };
+
+  // Submit Verification Decision (Tasdiqlash yoki Majburiy rad etish sababi bilan)
+  const handleVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSubForReview) return;
+
+    if (verifyActionType === "rejected" && (!verifyRejectionReason.trim() || verifyRejectionReason.trim().length < 5)) {
+      setVerifyError("Arizani rad etishda rad etish sababini aniq va batafsil yozish SHART (kamida 5 ta belgi)!");
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerifyError("");
+
     const reviewerId = currentUser ? currentUser.id : (currentTeacher?.id || 1);
     const reviewerName = currentUser ? currentUser.name : (currentTeacher?.name || "Mudir");
 
     try {
-      const res = await fetch(`${API_BASE}/submissions/${subId}/verify`, {
+      const res = await fetch(`${API_BASE}/submissions/${selectedSubForReview.id}/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reviewer_id: reviewerId,
           reviewer_name: reviewerName,
-          status: newStatus
+          status: verifyActionType,
+          score: verifyActionType === "approved" ? Number(verifyManualScore) : 0,
+          rejection_reason: verifyActionType === "rejected" ? verifyRejectionReason.trim() : undefined,
+          comment: verifyComment.trim() || undefined
         })
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.detail || "Xatolik yuz berdi");
+        setVerifyError(data.detail || "Tekshiruv xatoligi");
         return;
       }
-      setSubmissions(submissions.map(s => s.id === subId ? { ...s, status: newStatus } : s));
+      setSubmissions(submissions.map(s => s.id === selectedSubForReview.id ? data.submission : s));
+      setIsVerifyModalOpen(false);
+      setSelectedSubForReview(null);
       alert(data.message);
     } catch {
-      alert("Tekshiruv xatoligi");
+      setVerifyError("Server bilan bogʻlanishda xatolik yuz berdi");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Verify submission fallback
+  const handleVerify = async (subId: number, newStatus: string) => {
+    const sub = submissions.find(s => s.id === subId);
+    if (sub) {
+      openVerifyModal(sub, newStatus as "approved" | "rejected");
     }
   };
 
@@ -3577,50 +3646,145 @@ export default function KpiEnterpriseApp() {
                     </div>
                   </div>
 
+                  {/* Submissions Open / Closed Notice */}
+                  {!systemSettings.submissions_open && (
+                    <div className="mb-5 p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center gap-2.5 shadow-sm">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-500" />
+                      <div>
+                        <b>Hujjatlar qabuli vaqtincha toʻxtatilgan:</b> Tizim konfiguratsiyasiga binoan joriy baholash davri uchun qabul muddati ({systemSettings.deadline_date}) yakunlangan yoki yopilgan. Faqat avval topshirilgan arizalar holatini koʻrishingiz mumkin.
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Yuklangan faoliyat natijalari va tasdiqlar</h4>
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Yuklangan faoliyat natijalari va verifikatsiya holati</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Oʻzingiz daʻvo qilgan ballar hamda ekspert komissiyasi tomonidan tasdiqlangan baholar</p>
+                    </div>
+
                     <button
-                      onClick={() => setIsAddModalOpen(true)}
-                      className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-2"
+                      onClick={() => {
+                        if (!systemSettings.submissions_open) {
+                          alert(`Hujjatlar qabuli yopiq. Oxirgi muddat: ${systemSettings.deadline_date}`);
+                          return;
+                        }
+                        const firstInd = indicators[0] || { id: "1.1", max_ball: 6 };
+                        setModalIndicator(firstInd.id);
+                        setModalClaimedBall(firstInd.max_ball);
+                        setModalTitle("");
+                        setModalDescription("");
+                        setIsAddModalOpen(true);
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-2 ${
+                        systemSettings.submissions_open
+                          ? "bg-blue-900 hover:bg-blue-800 text-white cursor-pointer"
+                          : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700"
+                      }`}
+                      title={systemSettings.submissions_open ? "Yangi KPI natijasini kiritish" : "Qabul yopilgan"}
                     >
                       <span>+ Yangi natija kiritish</span>
                     </button>
                   </div>
 
-                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-6">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">
                         <tr>
                           <th className="py-3 px-4">Kodi</th>
                           <th className="py-3 px-4">Hujjat va natija nomi</th>
                           <th className="py-3 px-4">Sana</th>
-                          <th className="py-3 px-4">Ball</th>
-                          <th className="py-3 px-4">Holati</th>
+                          <th className="py-3 px-4">Oʻqituvchi daʻvosi</th>
+                          <th className="py-3 px-4">Tasdiqlangan ball</th>
+                          <th className="py-3 px-4">Holati va xulosa</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {submissions.filter(s => s.teacher_id === currentTeacher.id).map(sub => (
-                          <tr key={sub.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                            <td className="py-3.5 px-4 font-mono text-xs font-bold text-slate-600 dark:text-slate-400">{sub.indicator_id}</td>
-                            <td className="py-3.5 px-4">
-                              <div className="font-semibold text-slate-900 dark:text-slate-100">{sub.title}</div>
-                              <div className="text-xs text-slate-400 dark:text-slate-500">Asoslovchi: {sub.file_name}</div>
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">{sub.submitted_date}</td>
-                            <td className="py-3.5 px-4 font-bold text-blue-900 dark:text-blue-400">{sub.ball} ball</td>
-                            <td className="py-3.5 px-4">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                sub.status === "approved"
-                                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                                  : sub.status === "pending"
-                                  ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
-                                  : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
-                              }`}>
-                                {sub.status === "approved" ? "Tasdiqlangan" : sub.status === "pending" ? "Koʻrib chiqilmoqda" : "Rad etilgan"}
-                              </span>
+                        {submissions.filter(s => s.teacher_id === currentTeacher.id).length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+                              Hozircha yuklangan KPI natijalari mavjud emas. Yuqoridagi "+ Yangi natija kiritish" tugmasi orqali ariza topshiring.
                             </td>
                           </tr>
-                        ))}
+                        ) : (
+                          submissions.filter(s => s.teacher_id === currentTeacher.id).map(sub => (
+                            <tr key={sub.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                              <td className="py-3.5 px-4 font-mono text-xs font-bold text-slate-600 dark:text-slate-400">
+                                {sub.indicator_id}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <div className="font-semibold text-slate-900 dark:text-slate-100">{sub.title}</div>
+                                <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 flex items-center gap-1.5">
+                                  <FileText className="w-3.5 h-3.5 text-blue-500" />
+                                  <span>{sub.file_name}</span>
+                                  {sub.authors_count > 1 && (
+                                    <span className="text-[11px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                      {sub.authors_count} nafar muallif
+                                    </span>
+                                  )}
+                                </div>
+                                {sub.description && (
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 italic">
+                                    "{sub.description}"
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-xs">{sub.submitted_date}</td>
+                              <td className="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300">
+                                {sub.claimed_ball ?? sub.ball} ball
+                              </td>
+                              <td className="py-3.5 px-4">
+                                {sub.status === "approved" ? (
+                                  <span className="font-black text-emerald-600 dark:text-emerald-400 text-base">
+                                    {sub.ball} ball
+                                  </span>
+                                ) : sub.status === "rejected" ? (
+                                  <span className="font-black text-rose-600 dark:text-rose-400">
+                                    0 ball
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
+                                    Kutilmoqda
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 max-w-xs">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                  sub.status === "approved"
+                                    ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                    : sub.status === "pending"
+                                    ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                    : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                                }`}>
+                                  {sub.status === "approved" ? "Tasdiqlangan" : sub.status === "pending" ? "Koʻrib chiqilmoqda" : "Rad etilgan"}
+                                </span>
+
+                                {sub.status === "approved" && (
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                                    Masʼul: <b>{sub.reviewer_name || "Ekspert komissiyasi"}</b>
+                                    {sub.reviewer_comment && <div className="italic">"{sub.reviewer_comment}"</div>}
+                                  </div>
+                                )}
+
+                                {sub.status === "rejected" && (
+                                  <div className="mt-1.5 p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/40 text-[11px] text-rose-700 dark:text-rose-300">
+                                    <div className="font-bold">Rad etish sababi:</div>
+                                    <div className="mt-0.5 leading-tight">{sub.rejection_reason || "Hujjat talablarga mos emas"}</div>
+                                    <button
+                                      onClick={() => {
+                                        setActivePage("appeals");
+                                        setAppealIndicator(sub.indicator_id);
+                                        setAppealReason(`«${sub.title}» boʻyicha rad etilgan qarorga eʼtiroz: `);
+                                      }}
+                                      className="text-blue-600 dark:text-blue-400 font-semibold underline mt-1.5 inline-block hover:text-blue-800"
+                                    >
+                                      Apellyatsiya arizasi berish →
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -3643,7 +3807,7 @@ export default function KpiEnterpriseApp() {
                     </div>
 
                     <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3">
-                      Kafedra aʼzolarining tasdiqlash kutilayotgan arizalari
+                      Kafedra aʼzolarining tasdiqlash kutilayotgan arizalari (Ekspert tekshiruvi)
                     </h4>
                     <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden mb-6">
                       <table className="w-full text-left text-sm">
@@ -3652,9 +3816,9 @@ export default function KpiEnterpriseApp() {
                             <th className="py-3 px-4">Oʻqituvchi</th>
                             <th className="py-3 px-4">Mezon</th>
                             <th className="py-3 px-4">Natija nomi</th>
-                            <th className="py-3 px-4">Ball</th>
+                            <th className="py-3 px-4">Daʻvo bali</th>
                             <th className="py-3 px-4">Asoslovchi hujjat</th>
-                            <th className="py-3 px-4">Amallar</th>
+                            <th className="py-3 px-4">Ekspertiza amallari</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -3669,12 +3833,17 @@ export default function KpiEnterpriseApp() {
                               <tr key={sub.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                 <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{sub.teacher_name}</td>
                                 <td className="py-3.5 px-4 font-mono text-xs font-bold text-slate-600 dark:text-slate-400">{sub.indicator_id}</td>
-                                <td className="py-3.5 px-4 text-slate-800 dark:text-slate-200">{sub.title}</td>
-                                <td className="py-3.5 px-4 font-bold text-blue-900 dark:text-blue-400">{sub.ball} ball</td>
+                                <td className="py-3.5 px-4">
+                                  <div className="text-slate-800 dark:text-slate-200 font-medium">{sub.title}</div>
+                                  {sub.description && (
+                                    <div className="text-xs text-slate-400 dark:text-slate-500 italic mt-0.5">"{sub.description}"</div>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 font-bold text-blue-900 dark:text-blue-400">{sub.claimed_ball ?? sub.ball} ball</td>
                                 <td className="py-3.5 px-4">
                                   <button
                                     onClick={() => alert(`PDF hujjat tekshirildi: ${sub.file_name}`)}
-                                    className="text-xs text-blue-700 dark:text-blue-400 font-semibold underline flex items-center gap-1"
+                                    className="text-xs text-blue-700 dark:text-blue-400 font-semibold underline flex items-center gap-1 hover:text-blue-900"
                                   >
                                     <FileText className="w-3.5 h-3.5" />
                                     <span>{sub.file_name}</span>
@@ -3683,16 +3852,20 @@ export default function KpiEnterpriseApp() {
                                 <td className="py-3.5 px-4">
                                   <div className="flex gap-2">
                                     <button
-                                      onClick={() => handleVerify(sub.id, "approved")}
-                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold"
+                                      onClick={() => openVerifyModal(sub, "approved")}
+                                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-sm transition-all"
+                                      title="Arizani tekshirib, bahosini qoʻlda tasdiqlash"
                                     >
-                                      Tasdiqlash
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>Tasdiqlash & Baholash</span>
                                     </button>
                                     <button
-                                      onClick={() => handleVerify(sub.id, "rejected")}
-                                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-semibold"
+                                      onClick={() => openVerifyModal(sub, "rejected")}
+                                      className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-sm transition-all"
+                                      title="Rad etish (sababi majburiy)"
                                     >
-                                      Rad etish
+                                      <X className="w-3.5 h-3.5" />
+                                      <span>Rad etish</span>
                                     </button>
                                   </div>
                                 </td>
@@ -4220,21 +4393,30 @@ export default function KpiEnterpriseApp() {
         </main>
       </div>
 
-      {/* MODAL: ADD KPI ENTRY */}
+      {/* ========================================================================= */}
+      {/* MODAL 1: ADD KPI ENTRY (O'QITUVCHI TOMONIDAN NATIJA YUKLASH VA O'ZIGA BALL QO'YISH) */}
+      {/* ========================================================================= */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 my-8">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Yangi KPI natijasini kiritish</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Yangi KPI faoliyat natijasini kiritish</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Mezonni tanlang, oʻzingiz daʻvo qilayotgan ballni koʻrsating va asoslovchi hujjatni biriktiring</p>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleFormSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  DOI orqali avtomatik toʻldirish (Scopus / Web of Science uchun)
+              {/* DOI Lookup Box (Scopus/WoS uchun) */}
+              <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50">
+                <label className="block text-xs font-bold text-blue-950 dark:text-blue-300 mb-1">
+                  DOI orqali avtomatik toʻldirish (Scopus / Web of Science maqolalari uchun)
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -4242,51 +4424,124 @@ export default function KpiEnterpriseApp() {
                     value={doiInput}
                     onChange={(e) => setDoiInput(e.target.value)}
                     placeholder="Masalan: 10.1016/j.eswa.2025.123456"
-                    className="flex-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                    className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-900"
                   />
                   <button
                     type="button"
                     onClick={handleDoiLookup}
                     disabled={isDoiLoading}
-                    className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+                    className="px-3 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-60"
                   >
                     {isDoiLoading ? "Qidirilmoqda..." : "Tekshirish"}
                   </button>
                 </div>
               </div>
 
+              {/* Blok Tanlash Filtrlari */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Baholash mezoni *</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Baholash yoʻnalishi (Blok)
+                </label>
+                <div className="grid grid-cols-5 gap-1.5 text-xs font-semibold">
+                  {[
+                    { id: "ALL", label: "Barchasi" },
+                    { id: "oqv", label: "I. Oʻquv" },
+                    { id: "ilm", label: "II. Ilmiy" },
+                    { id: "xal", label: "III. Xalqaro" },
+                    { id: "man", label: "IV. Maʼnaviy" }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setModalBlockFilter(tab.id)}
+                      className={`py-1.5 px-2 rounded-lg text-center transition-all ${
+                        modalBlockFilter === tab.id
+                          ? "bg-blue-900 text-white shadow-sm"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mezonni Tanlash */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Baholash mezoni *
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    Tanlangan mezon maksimal bali: <b>{indicators.find(i => i.id === modalIndicator)?.max_ball || 0} ball</b>
+                  </span>
+                </div>
                 <select
                   value={modalIndicator}
-                  onChange={(e) => setModalIndicator(e.target.value)}
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                  onChange={(e) => {
+                    setModalIndicator(e.target.value);
+                    const ind = indicators.find(i => i.id === e.target.value);
+                    if (ind) {
+                      setModalClaimedBall(ind.max_ball);
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
                 >
-                  <option value="1.1">1.1. Nashr etilgan darslik (6 ball)</option>
-                  <option value="1.2">1.2. Nashr etilgan oʻquv qoʻllanma (4 ball)</option>
-                  <option value="2.3">2.3. Scopus va Web of Science (Q1, Q2) (8 ball)</option>
-                  <option value="2.4">2.4. Scopus va Web of Science (Q3, Q4) (6 ball)</option>
-                  <option value="2.10">2.10. Dasturiy vosita guvohnomasi (DGU) (3 ball)</option>
-                  <option value="3.3">3.3. Xorijiy til sertifikati (IELTS/CEFR) (3 ball)</option>
-                  <option value="4.1">4.1. Bitiruvchilarni ishga joylashtirish (YAMMT) (4 ball)</option>
+                  {indicators
+                    .filter(i => modalBlockFilter === "ALL" || i.block.toLowerCase() === modalBlockFilter.toLowerCase())
+                    .map(ind => (
+                      <option key={ind.id} value={ind.id}>
+                        {ind.id}. {ind.name} (maks. {ind.max_ball} ball) — {ind.dept}
+                      </option>
+                    ))}
                 </select>
               </div>
 
+              {/* Faoliyat Nomi */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Faoliyat natijasi nomi *</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Faoliyat natijasi nomi *
+                </label>
                 <input
                   type="text"
                   required
                   value={modalTitle}
                   onChange={(e) => setModalTitle(e.target.value)}
-                  placeholder="Maqola, darslik yoki loyiha nomini toʻliq kiriting..."
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                  placeholder="Maqola, darslik, til sertifikati yoki loyiha nomini toʻliq kiriting..."
+                  className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* O'qituvchi o'ziga da'vo qilayotgan ball & Hammualliflar soni */}
+              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Hammualliflar soni *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-bold text-blue-950 dark:text-blue-300">
+                      Daʻvo qilinayotgan ball *
+                    </label>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      (maks. {indicators.find(i => i.id === modalIndicator)?.max_ball || 10})
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max={(indicators.find(i => i.id === modalIndicator)?.max_ball || 10) * 2}
+                    required
+                    value={modalClaimedBall}
+                    onChange={(e) => setModalClaimedBall(Number(e.target.value))}
+                    className="w-full p-2 border border-blue-300 dark:border-blue-700 rounded-lg text-xs font-black text-blue-950 dark:text-blue-200 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                  />
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                    Default: mezon toʻliq bali. Agar qisman boʻlsa, ballni tahrirlashingiz mumkin.
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Hammualliflar soni *
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -4294,28 +4549,47 @@ export default function KpiEnterpriseApp() {
                     required
                     value={modalAuthors}
                     onChange={(e) => setModalAuthors(Number(e.target.value))}
-                    className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
                   />
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                    Yakka muallif boʻlsa: 1 nafar
+                  </div>
                 </div>
+              </div>
+
+              {/* Sana & Qo'shimcha Izoh */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Sana *</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Topshirilgan sana *</label>
                   <input
                     type="date"
                     required
                     value={modalDate}
                     onChange={(e) => setModalDate(e.target.value)}
-                    className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tasdiqlovchi hujjat (PDF) *</label>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    required
+                    className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-2 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-100 dark:file:bg-blue-950/80 file:text-blue-900 dark:file:text-blue-300"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tasdiqlovchi hujjat (PDF) *</label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  required
-                  className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300"
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Ekspert uchun qoʻshimcha izoh yoki havola (ixtiyoriy)
+                </label>
+                <textarea
+                  rows={2}
+                  value={modalDescription}
+                  onChange={(e) => setModalDescription(e.target.value)}
+                  placeholder="Hujjat haqida qoʻshimcha maʼlumot, jurnal veb-sayti havolasi yoki nashr betlari..."
+                  className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none"
                 />
               </div>
 
@@ -4323,15 +4597,228 @@ export default function KpiEnterpriseApp() {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   Bekor qilish
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5"
                 >
-                  Arizani yuborish
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Arizani yuborish</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: REVIEWER VERIFICATION MODAL (TEKSHIRISH, QO'LDA BAHOLASH VA RAD ETISH SABABI) */}
+      {/* ========================================================================= */}
+      {isVerifyModalOpen && selectedSubForReview && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 my-8">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-blue-600" />
+                  <span>Ariza ekspertizasi va verifikatsiyasi (#{selectedSubForReview.id})</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Hujjatni koʻzdan kechiring, bahoni qoʻlda tasdiqlang yoki asosli sabab bilan rad eting
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsVerifyModalOpen(false);
+                  setSelectedSubForReview(null);
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Ariza ma'lumotlari xulosasi */}
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 mb-4 text-xs space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Oʻqituvchi:</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{selectedSubForReview.teacher_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Mezon kodi:</span>
+                <span className="font-mono font-bold text-blue-900 dark:text-blue-400">{selectedSubForReview.indicator_id}</span>
+              </div>
+              <div>
+                <div className="text-slate-500 dark:text-slate-400 mb-0.5">Faoliyat natijasi nomi:</div>
+                <div className="font-semibold text-slate-900 dark:text-slate-100 leading-snug">{selectedSubForReview.title}</div>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-700">
+                <span className="text-slate-500 dark:text-slate-400">Oʻqituvchi daʻvo qilgan ball:</span>
+                <span className="font-bold text-blue-950 dark:text-blue-300 text-sm">
+                  {selectedSubForReview.claimed_ball ?? selectedSubForReview.ball} ball
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-slate-500 dark:text-slate-400">Asoslovchi PDF:</span>
+                <button
+                  type="button"
+                  onClick={() => alert(`PDF hujjat ekspert tomonidan ochildi va tekshirildi: ${selectedSubForReview.file_name}`)}
+                  className="text-xs text-blue-700 dark:text-blue-400 font-semibold underline flex items-center gap-1 hover:text-blue-900"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>{selectedSubForReview.file_name}</span>
+                </button>
+              </div>
+              {selectedSubForReview.description && (
+                <div className="pt-1 border-t border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 italic">
+                  Muallif izohi: "{selectedSubForReview.description}"
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleVerifySubmit} className="space-y-4">
+              {/* Ekspert qarorini tanlash (Tasdiqlash / Rad etish) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Ekspert komissiyasi qarori *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVerifyActionType("approved");
+                      setVerifyError("");
+                    }}
+                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                      verifyActionType === "approved"
+                        ? "bg-emerald-50 dark:bg-emerald-950/70 border-emerald-500 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/30"
+                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                    }`}
+                  >
+                    <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Tasdiqlash (Qoʻlda baho qoʻyish)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVerifyActionType("rejected");
+                      setVerifyError("");
+                    }}
+                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                      verifyActionType === "rejected"
+                        ? "bg-rose-50 dark:bg-rose-950/70 border-rose-500 text-rose-800 dark:text-rose-300 ring-2 ring-rose-500/30"
+                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                    }`}
+                  >
+                    <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                    <span>Rad etish (Sababi shart)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* QAROR 1: TASDIQLASH HOLATI */}
+              {verifyActionType === "approved" && (
+                <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-3">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                        Tasdiqlanayotgan yakuniy ball (qoʻlda belgilash) *
+                      </label>
+                      <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-mono">
+                        Daʻvo: {selectedSubForReview.claimed_ball ?? selectedSubForReview.ball} ball
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      required
+                      value={verifyManualScore}
+                      onChange={(e) => setVerifyManualScore(Number(e.target.value))}
+                      className="w-full p-2.5 border border-emerald-300 dark:border-emerald-700 rounded-lg text-sm font-black text-emerald-950 dark:text-emerald-200 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                    />
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                      Mezon talablariga toʻliq mos boʻlsa oʻqituvchi daʻvo qilgan ballni qoldiring yoki asosli ravishda boshqa qiymat kiriting.
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Ekspert xulosasi / tavsifi
+                    </label>
+                    <input
+                      type="text"
+                      value={verifyComment}
+                      onChange={(e) => setVerifyComment(e.target.value)}
+                      placeholder="Masalan: Maqola Scopus Q1 bazasida tekshirildi, OʻzMU JF afiliatsiyasi tasdiqlandi"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* QAROR 2: RAD ETISH HOLATI (RAD ETISH SABABI MAJBURIY!) */}
+              {verifyActionType === "rejected" && (
+                <div className="p-3.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 space-y-2">
+                  <div className="flex items-center gap-1.5 text-rose-800 dark:text-rose-300 text-xs font-bold">
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                    <span>Rad etish sababi (Oʻqituvchiga koʻrinishi shart) *</span>
+                  </div>
+
+                  <textarea
+                    rows={3}
+                    required
+                    value={verifyRejectionReason}
+                    onChange={(e) => setVerifyRejectionReason(e.target.value)}
+                    placeholder="Masalan: Taqdim etilgan PDF hujjatda mualliflar roʻyxatida OʻzMU JBNUU afiliatsiyasi koʻrsatilmagan yoki ilmiy ish belgilangan davrga tegishli emas..."
+                    className="w-full p-2.5 border border-rose-300 dark:border-rose-700 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-600"
+                  />
+
+                  <div className="text-[11px] text-rose-700 dark:text-rose-300 leading-tight">
+                    <b>Muhim qoida:</b> Ariza rad etilganda unga <b>0 ball</b> beriladi. Siz kiritgan rad etish sababi oʻqituvchi profilida qizil ogohlantirishda toʻliq koʻrinadi va agar u rozi boʻlmasa, apellyatsiya arizasiga asos boʻladi.
+                  </div>
+                </div>
+              )}
+
+              {verifyError && (
+                <div className="p-3 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{verifyError}</span>
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsVerifyModalOpen(false);
+                    setSelectedSubForReview(null);
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVerifying}
+                  className={`px-5 py-2 rounded-lg text-xs font-bold text-white shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-60 ${
+                    verifyActionType === "approved"
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : "bg-rose-600 hover:bg-rose-700"
+                  }`}
+                >
+                  {isVerifying ? (
+                    <span>Saqlanmoqda...</span>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{verifyActionType === "approved" ? "Qarorni tasdiqlash va ballni qoʻyish" : "Rad etish qarorini qayd etish"}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

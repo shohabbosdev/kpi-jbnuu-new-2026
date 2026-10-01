@@ -1,5 +1,6 @@
 import os
 import io
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -135,6 +136,8 @@ class SubmissionCreate(BaseModel):
     authors_count: int = 1
     submitted_date: str
     file_name: str
+    claimed_ball: Optional[float] = None
+    description: Optional[str] = None
 
 class Submission(BaseModel):
     id: int
@@ -146,14 +149,22 @@ class Submission(BaseModel):
     authors_count: int
     submitted_date: str
     status: str
+    claimed_ball: float
     ball: float
     file_name: str
     dept: str
+    description: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    reviewed_date: Optional[str] = None
+    reviewer_comment: Optional[str] = None
+    rejection_reason: Optional[str] = None
 
 class VerificationAction(BaseModel):
     reviewer_id: int
     reviewer_name: str
-    status: str
+    status: str  # 'approved' | 'rejected'
+    score: Optional[float] = None  # Tekshiruvchi qo'lda qo'ygan ball
+    rejection_reason: Optional[str] = None  # Rad etilganda majburiy sabab
     comment: Optional[str] = None
 
 class AppealCreate(BaseModel):
@@ -435,9 +446,11 @@ SUBMISSIONS_DB: List[Submission] = [
         authors_count=1,
         submitted_date="2026-09-28",
         status="pending",
+        claimed_ball=3.0,
         ball=3.0,
         file_name="videodarslar_dalolatnomasi.pdf",
-        dept="Raqamli taʼlim texnologiyalari markazi"
+        dept="Raqamli taʼlim texnologiyalari markazi",
+        description="Oʻquv portaliga joylashtirilgan 12 ta videodarslik"
     ),
     Submission(
         id=102,
@@ -449,9 +462,13 @@ SUBMISSIONS_DB: List[Submission] = [
         authors_count=2,
         submitted_date="2026-09-29",
         status="approved",
+        claimed_ball=8.0,
         ball=8.0,
         file_name="scopus_q1_maqola_doi_10_1016.pdf",
-        dept="Ilmiy-tadqiqotlar boʻlimi"
+        dept="Ilmiy-tadqiqotlar boʻlimi",
+        reviewer_name="Prof. Alimov K.T. (Dekan)",
+        reviewed_date="2026-09-30 11:20",
+        reviewer_comment="Scopus va Web of Science bazasida tekshirildi, Q1 toifasiga toʻliq mos."
     ),
     Submission(
         id=103,
@@ -463,9 +480,11 @@ SUBMISSIONS_DB: List[Submission] = [
         authors_count=1,
         submitted_date="2026-09-30",
         status="pending",
+        claimed_ball=3.0,
         ball=3.0,
         file_name="ielts_7_sertifikati.pdf",
-        dept="Xalqaro hamkorlik boʻlimi"
+        dept="Xalqaro hamkorlik boʻlimi",
+        description="British Council tomonidan berilgan rasmiy TRF sertifikati"
     )
 ]
 
@@ -692,28 +711,48 @@ def get_submissions(teacher_id: Optional[int] = None, status: Optional[str] = No
 
 @app.post("/api/submissions", response_model=Submission)
 def create_submission(sub_in: SubmissionCreate):
+    global SYSTEM_SETTINGS
+    if not SYSTEM_SETTINGS.submissions_open:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Hozirda KPI hujjatlarini qabul qilish muddati yakunlangan yoki administrator tomonidan vaqtincha yopilgan. Belgilangan muddat: {SYSTEM_SETTINGS.deadline_date}"
+        )
+
     teacher = next((t for t in RAW_TEACHERS if t["id"] == sub_in.teacher_id), None)
     if not teacher:
         raise HTTPException(status_code=404, detail="Oʻqituvchi topilmadi")
     
     ind = next((i for i in INDICATORS_DB if i.id == sub_in.indicator_id), None)
-    ball = ind.max_ball if ind else 2.0
+    default_ball = ind.max_ball if ind else 2.0
+    
+    # O'qituvchi o'ziga da'vo qilayotgan ball (kiritilmagan bo'lsa default mezon bali)
+    claimed = float(sub_in.claimed_ball) if sub_in.claimed_ball is not None else float(default_ball)
 
     new_sub = Submission(
         id=len(SUBMISSIONS_DB) + 101,
         teacher_id=sub_in.teacher_id,
         teacher_name=teacher["name"],
         indicator_id=sub_in.indicator_id,
-        title=sub_in.title,
-        doi=sub_in.doi,
+        title=sub_in.title.strip(),
+        doi=sub_in.doi.strip() if sub_in.doi else None,
         authors_count=sub_in.authors_count,
         submitted_date=sub_in.submitted_date,
         status="pending",
-        ball=ball,
+        claimed_ball=claimed,
+        ball=claimed,
         file_name=sub_in.file_name,
-        dept=ind.dept if ind else "Oʻquv-uslubiy boshqarma"
+        dept=ind.dept if ind else "Oʻquv-uslubiy boshqarma",
+        description=sub_in.description.strip() if sub_in.description else None
     )
     SUBMISSIONS_DB.append(new_sub)
+
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "user": teacher["name"],
+        "action": f"Yangi KPI faoliyat natijasi yuklandi (#{new_sub.id}, Mezon: {new_sub.indicator_id}, Daʻvo qilingan ball: {new_sub.claimed_ball} ball)"
+    })
+
     return new_sub
 
 @app.post("/api/submissions/{sub_id}/verify")
@@ -725,11 +764,71 @@ def verify_submission(sub_id: int, action: VerificationAction):
     if sub.teacher_id == action.reviewer_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Manfaatlar toʻqnashuvi taqiqlanadi: Muallif oʻz arizasini tasdiqlashi mumkin emas. Ariza dekanatga yoʻnaltiriladi."
+            detail="Manfaatlar toʻqnashuvi taqiqlanadi: Muallif oʻz arizasini tasdiqlashi mumkin emas. Ariza fakultet dekani yoki ilmiy boʻlimga yoʻnaltiriladi."
         )
 
-    sub.status = action.status
-    return {"message": f"Ariza holati '{action.status}' deb muvaffaqiyatli belgilandi", "submission": sub}
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    sub.reviewer_name = action.reviewer_name
+    sub.reviewed_date = current_time_str
+
+    if action.status == "rejected":
+        # Rad etilganda rad etish sababi majburiy!
+        reason = action.rejection_reason.strip() if action.rejection_reason else ""
+        if len(reason) < 5:
+            raise HTTPException(
+                status_code=400,
+                detail="Arizani rad etishda rad etish sababini aniq va batafsil kiritish SHART (kamida 5 ta belgi)!"
+            )
+        sub.status = "rejected"
+        sub.ball = 0.0
+        sub.rejection_reason = reason
+        sub.reviewer_comment = action.comment.strip() if action.comment else None
+
+        AUDIT_LOGS.insert(0, {
+            "id": len(AUDIT_LOGS) + 1,
+            "time": current_time_str,
+            "user": action.reviewer_name,
+            "action": f"#{sub.id} arizasi rad etildi (Muallif: {sub.teacher_name}). Rad etish sababi: «{reason}»"
+        })
+        return {
+            "success": True,
+            "message": f"Ariza muvaffaqiyatli rad etildi. Sababi oʻqituvchi profilida koʻrsatiladi.",
+            "submission": sub
+        }
+
+    elif action.status == "approved":
+        sub.status = "approved"
+        # Tekshiruvchi qo'lda belgilagan ball yoki o'qituvchi da'vo qilgan ball
+        if action.score is not None and action.score >= 0:
+            final_ball = float(action.score)
+        else:
+            final_ball = float(sub.claimed_ball)
+        
+        sub.ball = final_ball
+        sub.rejection_reason = None
+        sub.reviewer_comment = action.comment.strip() if action.comment else "Ekspert komissiyasi tomonidan tekshirilib tasdiqlandi"
+
+        # O'qituvchining jami ballari blokini yangilash
+        teacher = next((t for t in RAW_TEACHERS if t["id"] == sub.teacher_id), None)
+        ind = next((i for i in INDICATORS_DB if i.id == sub.indicator_id), None)
+        if teacher and ind:
+            block_key = ind.block.lower()
+            if block_key in teacher:
+                teacher[block_key] = round((teacher[block_key] + final_ball) * 10) / 10
+
+        AUDIT_LOGS.insert(0, {
+            "id": len(AUDIT_LOGS) + 1,
+            "time": current_time_str,
+            "user": action.reviewer_name,
+            "action": f"#{sub.id} arizasi tasdiqlandi (Muallif: {sub.teacher_name}, Qoʻyilgan ball: {final_ball} ball)"
+        })
+        return {
+            "success": True,
+            "message": f"Ariza tasdiqlandi va {final_ball} ball belgilandi.",
+            "submission": sub
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Notoʻgʻri holat tanlandi")
 
 @app.post("/api/doi/lookup")
 def lookup_doi(req: DoiLookupRequest):
@@ -777,6 +876,7 @@ def create_appeal(appeal_in: AppealCreate):
 # ADMIN ENDPOINTS
 # ==========================================
 
+@app.get("/api/settings", response_model=SystemSettings)
 @app.get("/api/admin/settings", response_model=SystemSettings)
 def get_system_settings():
     return SYSTEM_SETTINGS
