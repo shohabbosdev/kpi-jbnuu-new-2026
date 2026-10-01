@@ -1477,12 +1477,14 @@ export default function KpiEnterpriseApp() {
 
         {/* Navigation */}
         <nav className="p-2.5 flex-1 flex flex-col gap-1 overflow-y-auto">
-          {/* Admin Dedicated Section */}
+          {/* ========================================= */}
+          {/* ROLE: ADMIN NAVIGATION */}
+          {/* ========================================= */}
           {activeRole === "ADMIN" && (
-            <div className="mb-2">
+            <div className="flex flex-col gap-1">
               {!sidebarCollapsed && (
                 <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Boshqaruv paneli
+                  Administrator boshqaruvi
                 </div>
               )}
               <button
@@ -1500,6 +1502,20 @@ export default function KpiEnterpriseApp() {
                 {!sidebarCollapsed && <span>Admin bosh sahifasi</span>}
               </button>
               <button
+                onClick={() => setActivePage("structure")}
+                title="Tashkiliy tuzilma (Ierarxiya)"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "structure"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <Building className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Tashkiliy tuzilma</span>}
+              </button>
+              <button
                 onClick={() => setActivePage("admin_hemis")}
                 title="HEMIS integratsiyasi"
                 className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
@@ -1512,6 +1528,20 @@ export default function KpiEnterpriseApp() {
               >
                 <Database className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                 {!sidebarCollapsed && <span>HEMIS integratsiyasi</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("admin_users")}
+                title="Foydalanuvchilar va rollar"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "admin_users"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <Users className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Foydalanuvchilar va rollar</span>}
               </button>
               <button
                 onClick={() => setActivePage("admin_settings")}
@@ -1538,22 +1568,8 @@ export default function KpiEnterpriseApp() {
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <Sliders className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <Sliders className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Baholash mezonlari (CRUD)</span>}
-              </button>
-              <button
-                onClick={() => setActivePage("admin_users")}
-                title="Foydalanuvchilar va rollar"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "admin_users"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
-                    ? "text-slate-300 hover:bg-slate-800"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                <Users className="w-4 h-4 flex-shrink-0" />
-                {!sidebarCollapsed && <span>Foydalanuvchilar va rollar</span>}
               </button>
               <button
                 onClick={() => setActivePage("admin_logs")}
@@ -1572,90 +1588,393 @@ export default function KpiEnterpriseApp() {
             </div>
           )}
 
-          {/* Standard Navigation */}
-          {activeRole !== "ADMIN" && (
-            <button
-              onClick={() => setActivePage("dashboard")}
-              title="Bosh sahifa"
-              className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                activePage === "dashboard"
-                  ? "bg-blue-900 text-white shadow-sm"
-                  : theme === "dark"
-                  ? "text-slate-300 hover:bg-slate-800"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
-              {!sidebarCollapsed && <span>Bosh sahifa</span>}
-            </button>
+          {/* ========================================= */}
+          {/* ROLE: HEAD_OF_DEPT NAVIGATION */}
+          {/* ========================================= */}
+          {activeRole === "HEAD_OF_DEPT" && (
+            <div className="flex flex-col gap-1">
+              {!sidebarCollapsed && (
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Kafedra boshqaruvi
+                </div>
+              )}
+              <button
+                onClick={() => setActivePage("dashboard")}
+                title="Kafedra boshqaruvi"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "dashboard"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Kafedra monitoringi</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("structure")}
+                title="Tashkiliy ierarxiya"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "structure"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <Building className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Tashkiliy tuzilma</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("svetafor")}
+                title="Kafedra svetafori"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "svetafor"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Kafedra svetafori</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("indicators")}
+                title="Baholash mezonlari (41 ta)"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "indicators"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <CheckSquare className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Baholash mezonlari</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("appeals")}
+                title="Apellyatsiya arizalari"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "appeals"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <FileQuestion className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Apellyatsiyalar</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("doc")}
+                title="Rasmiy Nizom"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "doc"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <FileText className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Rasmiy Nizom</span>}
+              </button>
+            </div>
           )}
 
-          <div className="pt-2 border-t border-slate-200/50 dark:border-slate-800">
-            {!sidebarCollapsed && (
-              <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                KPI monitoringi
-              </div>
-            )}
-            <button
-              onClick={() => setActivePage("indicators")}
-              title="Baholash mezonlari (41 ta)"
-              className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                activePage === "indicators"
-                  ? "bg-blue-900 text-white shadow-sm"
-                  : theme === "dark"
-                  ? "text-slate-300 hover:bg-slate-800"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              <CheckSquare className="w-4 h-4 flex-shrink-0" />
-              {!sidebarCollapsed && <span>Baholash mezonlari (41 ta)</span>}
-            </button>
+          {/* ========================================= */}
+          {/* ROLE: DEAN NAVIGATION */}
+          {/* ========================================= */}
+          {activeRole === "DEAN" && (
+            <div className="flex flex-col gap-1">
+              {!sidebarCollapsed && (
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Dekanat portali
+                </div>
+              )}
+              <button
+                onClick={() => setActivePage("dashboard")}
+                title="Fakultet KPI portali"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "dashboard"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Fakultet boshqaruvi</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("structure")}
+                title="Tashkiliy ierarxiya"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "structure"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <GraduationCap className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Kafedralar tuzilmasi</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("svetafor")}
+                title="Fakultet svetafori"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "svetafor"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Fakultet svetafori</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("indicators")}
+                title="Baholash mezonlari (41 ta)"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "indicators"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <CheckSquare className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Baholash mezonlari</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("appeals")}
+                title="Apellyatsiyalar"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "appeals"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <FileQuestion className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Apellyatsiyalar</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("doc")}
+                title="Rasmiy Nizom"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "doc"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <FileText className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Rasmiy Nizom</span>}
+              </button>
+            </div>
+          )}
 
-            <button
-              onClick={() => setActivePage("svetafor")}
-              title="Svetafor monitoringi"
-              className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                activePage === "svetafor"
-                  ? "bg-blue-900 text-white shadow-sm"
-                  : theme === "dark"
-                  ? "text-slate-300 hover:bg-slate-800"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              <BarChart3 className="w-4 h-4 flex-shrink-0" />
-              {!sidebarCollapsed && <span>Svetafor monitoringi</span>}
-            </button>
+          {/* ========================================= */}
+          {/* ROLE: RECTORATE NAVIGATION */}
+          {/* ========================================= */}
+          {activeRole === "RECTORATE" && (
+            <div className="flex flex-col gap-1">
+              {!sidebarCollapsed && (
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Filial rahbariyati
+                </div>
+              )}
+              <button
+                onClick={() => setActivePage("dashboard")}
+                title="Integral KPI boshqaruv portali"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "dashboard"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Integral KPI portali</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("structure")}
+                title="Filial tashkiliy ierarxiyasi"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "structure"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <Building className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Tashkiliy ierarxiya</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("svetafor")}
+                title="Filial svetafor monitoringi"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "svetafor"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Filial svetafori</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("indicators")}
+                title="Baholash mezonlari (41 ta)"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "indicators"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <CheckSquare className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Baholash mezonlari</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("appeals")}
+                title="Apellyatsiyalar hisoboti"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "appeals"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <FileQuestion className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Apellyatsiyalar</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("doc")}
+                title="Rasmiy Nizom"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "doc"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <FileText className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Rasmiy Nizom</span>}
+              </button>
+            </div>
+          )}
 
-            <button
-              onClick={() => setActivePage("appeals")}
-              title="Apellyatsiya komissiyasi"
-              className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                activePage === "appeals"
-                  ? "bg-blue-900 text-white shadow-sm"
-                  : theme === "dark"
-                  ? "text-slate-300 hover:bg-slate-800"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              <FileQuestion className="w-4 h-4 flex-shrink-0" />
-              {!sidebarCollapsed && <span>Apellyatsiya komissiyasi</span>}
-            </button>
-
-            <button
-              onClick={() => setActivePage("doc")}
-              title="Rasmiy Nizom"
-              className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                activePage === "doc"
-                  ? "bg-blue-900 text-white shadow-sm"
-                  : theme === "dark"
-                  ? "text-slate-300 hover:bg-slate-800"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              <FileText className="w-4 h-4 flex-shrink-0" />
-              {!sidebarCollapsed && <span>Rasmiy Nizom</span>}
-            </button>
-          </div>
+          {/* ========================================= */}
+          {/* ROLE: TEACHER NAVIGATION */}
+          {/* ========================================= */}
+          {activeRole === "TEACHER" && (
+            <div className="flex flex-col gap-1">
+              {!sidebarCollapsed && (
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Pedagogik kabinet
+                </div>
+              )}
+              <button
+                onClick={() => setActivePage("dashboard")}
+                title="Shaxsiy kabinet"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "dashboard"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Shaxsiy kabinet</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("structure")}
+                title="Filial va kafedra tuzilmasi"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "structure"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <Building className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Tashkiliy tuzilma</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("indicators")}
+                title="Baholash mezonlari (41 ta)"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "indicators"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <CheckSquare className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Baholash mezonlari (41)</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("svetafor")}
+                title="Svetafor reytingi"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "svetafor"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Svetafor reytingi</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("appeals")}
+                title="Apellyatsiya berish"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "appeals"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <FileQuestion className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Apellyatsiya berish</span>}
+              </button>
+              <button
+                onClick={() => setActivePage("doc")}
+                title="Rasmiy Nizom"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "doc"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <FileText className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Rasmiy Nizom</span>}
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Bottom Actions: Dark Mode, Profile & Logout */}
