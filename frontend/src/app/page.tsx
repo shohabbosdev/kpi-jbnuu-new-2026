@@ -306,6 +306,10 @@ export default function KpiEnterpriseApp() {
   const [isHemisLoading, setIsHemisLoading] = useState<boolean>(false);
   const [hemisFilterText, setHemisFilterText] = useState<string>("");
 
+  // Kafedra va o'qituvchini dinamik tanlash statelari
+  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>("ALL");
+  const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null);
+
   // Modal State for New KPI entry
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [doiInput, setDoiInput] = useState("");
@@ -885,10 +889,20 @@ export default function KpiEnterpriseApp() {
     }
   };
 
-  // Identify current teacher based on user
-  const currentTeacher = currentUser
-    ? teachers.find(t => t.id === currentUser.id) || teachers[0]
-    : teachers[0] || null;
+  // Barcha mavjud kafedralar ro'yxati
+  const allDepartmentNames = Array.from(new Set(teachers.map(t => t.department))).filter(Boolean);
+
+  // Tanlangan kafedra bo'yicha filtrlangan o'qituvchilar
+  const filteredTeachersByDept = teachers.filter(t => {
+    if (!selectedDeptFilter || selectedDeptFilter === "ALL") return true;
+    return t.department.toLowerCase().includes(selectedDeptFilter.toLowerCase()) ||
+           selectedDeptFilter.toLowerCase().includes(t.department.toLowerCase());
+  });
+
+  // Tanlangan yoki joriy o'qituvchini aniqlash
+  const currentTeacher = (selectedTeacherId ? teachers.find(t => t.id === selectedTeacherId) : null) ||
+    (currentUser && selectedDeptFilter === "ALL" ? teachers.find(t => t.id === currentUser.id) : null) ||
+    (filteredTeachersByDept.length > 0 ? filteredTeachersByDept[0] : teachers[0]) || null;
 
   // Svetafor stats
   const totalTeachersCount = teachers.length;
@@ -3935,6 +3949,47 @@ export default function KpiEnterpriseApp() {
               {/* TEACHER ROLE VIEW */}
               {activeRole === "TEACHER" && currentTeacher && (
                 <div>
+                  {/* Dinamik Kafedra va O'qituvchi tanlash paneli */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm mb-6">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                        Kafedra:
+                      </span>
+                      <select
+                        value={selectedDeptFilter}
+                        onChange={(e) => {
+                          const newDept = e.target.value;
+                          setSelectedDeptFilter(newDept);
+                          const match = teachers.find(t => newDept === "ALL" || t.department.toLowerCase().includes(newDept.toLowerCase()) || newDept.toLowerCase().includes(t.department.toLowerCase()));
+                          if (match) setSelectedTeacherId(match.id);
+                        }}
+                        className="w-full sm:w-auto flex-1 max-w-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                      >
+                        <option value="ALL">Barcha kafedralar ({teachers.length} nafar)</option>
+                        {allDepartmentNames.map(dept => (
+                          <option key={dept} value={dept}>{dept}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                        Oʻqituvchi:
+                      </span>
+                      <select
+                        value={currentTeacher.id}
+                        onChange={(e) => setSelectedTeacherId(Number(e.target.value))}
+                        className="w-full sm:w-auto flex-1 max-w-sm px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                      >
+                        {filteredTeachersByDept.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.fte} st — {t.scores?.normalized_score || 0} ball)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 mb-7">
                     <div className="flex justify-between items-start pb-5 border-b border-slate-100 dark:border-slate-800 mb-5">
                       <div>
@@ -4699,6 +4754,12 @@ export default function KpiEnterpriseApp() {
               userDepartment={currentUser?.department}
               hierarchyData={structureHierarchy}
               onSelectDepartment={(deptName) => {
+                setSelectedDeptFilter(deptName);
+                const match = teachers.find(t => 
+                  t.department.toLowerCase().includes(deptName.toLowerCase()) || 
+                  deptName.toLowerCase().includes(t.department.toLowerCase())
+                );
+                if (match) setSelectedTeacherId(match.id);
                 setActivePage("dashboard");
               }}
             />
