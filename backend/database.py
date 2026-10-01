@@ -33,9 +33,14 @@ def init_db():
             fte REAL DEFAULT 1.0,
             employee_id_number TEXT,
             must_change_password INTEGER DEFAULT 0,
+            image TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN image TEXT;")
+    except Exception:
+        pass
     
     # 2. Submissions / Applications table
     cursor.execute("""
@@ -94,8 +99,8 @@ def db_save_user(username: str, data: Dict[str, Any]):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO users (username, id, password, name, role, department, faculty, position, degree, fte, employee_id_number, must_change_password)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (username, id, password, name, role, department, faculty, position, degree, fte, employee_id_number, must_change_password, image)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(username) DO UPDATE SET
             id = excluded.id,
             password = excluded.password,
@@ -107,7 +112,8 @@ def db_save_user(username: str, data: Dict[str, Any]):
             degree = excluded.degree,
             fte = excluded.fte,
             employee_id_number = excluded.employee_id_number,
-            must_change_password = excluded.must_change_password
+            must_change_password = excluded.must_change_password,
+            image = excluded.image
     """, (
         username,
         data.get("id"),
@@ -120,7 +126,8 @@ def db_save_user(username: str, data: Dict[str, Any]):
         data.get("degree", ""),
         data.get("fte", 1.0),
         data.get("employee_id_number"),
-        1 if data.get("must_change_password") else 0
+        1 if data.get("must_change_password") else 0,
+        data.get("image")
     ))
     conn.commit()
     conn.close()

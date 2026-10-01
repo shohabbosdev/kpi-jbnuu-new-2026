@@ -159,6 +159,7 @@ class UserProfile(BaseModel):
     degree: Optional[str] = None
     fte: float = 1.0
     employee_id_number: Optional[str] = None
+    image: Optional[str] = None
     must_change_password: bool = False
 
 class LoginResponse(BaseModel):
@@ -231,6 +232,7 @@ class Teacher(BaseModel):
     track: str
     is_first_year: bool
     is_head_of_dept: bool
+    image: Optional[str] = None
     scores: TeacherScoreDetail
 
 class SubmissionCreate(BaseModel):
@@ -648,6 +650,21 @@ else:
     for u_name, u_data in USERS_DB.items():
         db_save_user(u_name, u_data)
 
+# RAW_TEACHERS dagi o'qituvchilarga USERS_DB dagi rasmlarni bog'lash
+for t in RAW_TEACHERS:
+    t_name_clean = t.get("name", "").strip().lower().replace("dots.", "").replace("prof.", "").strip()
+    for u in USERS_DB.values():
+        if not u.get("image"):
+            continue
+        u_name_clean = u.get("name", "").strip().lower().replace("dots.", "").replace("prof.", "").strip()
+        if (
+            t.get("employee_id_number") and str(t.get("employee_id_number")) == str(u.get("username"))
+            or (t_name_clean and u_name_clean and (t_name_clean == u_name_clean or t_name_clean in u_name_clean or u_name_clean in t_name_clean))
+        ):
+            t["image"] = u["image"]
+            break
+
+
 existing_db_submissions = db_load_submissions()
 if existing_db_submissions:
     SUBMISSIONS_DB = [Submission(**s) for s in existing_db_submissions]
@@ -770,6 +787,13 @@ def login(creds: LoginRequest, request: Request):
 
     must_change = user_record.get("must_change_password", False)
 
+    user_img = user_record.get("image")
+    if not user_img:
+        for t in RAW_TEACHERS:
+            if t.get("name") and user_record.get("name") and t["name"].strip().lower() == user_record["name"].strip().lower():
+                user_img = t.get("image")
+                break
+
     profile = UserProfile(
         id=user_record["id"],
         username=username,
@@ -781,6 +805,7 @@ def login(creds: LoginRequest, request: Request):
         degree=user_record.get("degree"),
         fte=user_record.get("fte", 1.0),
         employee_id_number=user_record.get("employee_id_number"),
+        image=user_img,
         must_change_password=must_change
     )
 
@@ -1076,6 +1101,7 @@ def get_teachers():
             track=t["track"],
             is_first_year=t["is_first_year"],
             is_head_of_dept=t["is_head_of_dept"],
+            image=t.get("image"),
             scores=detail
         ))
     return result
@@ -1678,8 +1704,14 @@ def deduplicate_and_clean_hemis_employees(raw_items: List[Dict[str, Any]]) -> Di
                 "position": clean_item["position"],
                 "degree": clean_item["degree"],
                 "fte": clean_item["fte"],
-                "employee_id_number": emp_id
+                "employee_id_number": emp_id,
+                "image": clean_item.get("image")
             }
+            db_save_user(emp_id.lower(), USERS_DB[emp_id.lower()])
+        elif emp_id and emp_id.lower() in USERS_DB:
+            if clean_item.get("image") and not USERS_DB[emp_id.lower()].get("image"):
+                USERS_DB[emp_id.lower()]["image"] = clean_item["image"]
+                db_save_user(emp_id.lower(), USERS_DB[emp_id.lower()])
 
     clean_employees.sort(key=lambda x: x["full_name"])
 
@@ -1779,6 +1811,8 @@ def sync_hemis_teachers():
                     t["position"] = pos_name
                     t["fte"] = fte_val
                     t["degree"] = degree_name
+                    if emp.get("image"):
+                        t["image"] = emp.get("image")
                     found = True
                     break
 
@@ -1795,6 +1829,7 @@ def sync_hemis_teachers():
                     "track": "Umumiy pedagogik",
                     "is_first_year": False,
                     "is_head_of_dept": "mudir" in pos_name.lower(),
+                    "image": emp.get("image"),
                     "oqv": 0.0,
                     "ilm": 0.0,
                     "xal": 0.0,

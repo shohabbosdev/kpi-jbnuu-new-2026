@@ -48,7 +48,11 @@ import {
   Eye,
   EyeOff,
   UserCog,
-  AlertTriangle
+  AlertTriangle,
+  Upload,
+  Sparkles,
+  Calculator,
+  Paperclip
 } from "lucide-react";
 
 interface TeacherScoreDetail {
@@ -77,6 +81,7 @@ interface Teacher {
   track: string;
   is_first_year: boolean;
   is_head_of_dept: boolean;
+  image?: string;
   scores: TeacherScoreDetail;
 }
 
@@ -134,6 +139,7 @@ interface AuthUser {
   degree?: string;
   fte: number;
   employee_id_number?: string;
+  image?: string;
   must_change_password?: boolean;
 }
 
@@ -238,7 +244,17 @@ interface HemisStatusInfo {
 
 export default function KpiEnterpriseApp() {
   // Authentication State
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("kpi_session_user");
+        if (saved) return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
   const [loginUsername, setLoginUsername] = useState<string>("");
   const [loginPassword, setLoginPassword] = useState<string>("");
   const [showLoginPassword, setShowLoginPassword] = useState<boolean>(false);
@@ -246,10 +262,36 @@ export default function KpiEnterpriseApp() {
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
   // Active Role and Navigation
-  const [activeRole, setActiveRole] = useState<"ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE">("ADMIN");
+  const [activeRole, setActiveRole] = useState<"ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE">(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedUser = localStorage.getItem("kpi_session_user");
+        if (savedUser) {
+          const u = JSON.parse(savedUser);
+          if (u.role === "ADMIN") {
+            const savedRole = localStorage.getItem("kpi_active_role");
+            return (savedRole as any) || "ADMIN";
+          }
+          return u.role;
+        }
+      } catch {
+        return "ADMIN";
+      }
+    }
+    return "ADMIN";
+  });
+
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
   const [activePage, setActivePage] = useState<
     "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators" | "profile"
-  >("dashboard");
+  >(() => {
+    if (typeof window !== "undefined") {
+      const savedPage = localStorage.getItem("kpi_active_page");
+      if (savedPage) return savedPage as any;
+    }
+    return "dashboard";
+  });
   const [activeSvetaforFilter, setActiveSvetaforFilter] = useState<string>("ALL");
   const [selectedBlockFilter, setSelectedBlockFilter] = useState<string>("ALL");
   const [fteFilter, setFteFilter] = useState<"ALL" | "1.5" | "1.0" | "PART">("ALL");
@@ -316,6 +358,7 @@ export default function KpiEnterpriseApp() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [doiInput, setDoiInput] = useState("");
   const [modalBlockFilter, setModalBlockFilter] = useState<string>("ALL");
+  const [modalIndicatorSearch, setModalIndicatorSearch] = useState<string>("");
   const [modalIndicator, setModalIndicator] = useState("1.1");
   const [modalTitle, setModalTitle] = useState("");
   const [modalAuthors, setModalAuthors] = useState(1);
@@ -323,6 +366,9 @@ export default function KpiEnterpriseApp() {
   const [modalClaimedBall, setModalClaimedBall] = useState<number>(6.0);
   const [modalDescription, setModalDescription] = useState<string>("");
   const [isDoiLoading, setIsDoiLoading] = useState(false);
+  const [modalUploadedFile, setModalUploadedFile] = useState<File | null>(null);
+  const [modalUploadedFileName, setModalUploadedFileName] = useState<string>("");
+  const [isSubmittingNewKpi, setIsSubmittingNewKpi] = useState<boolean>(false);
 
   // Reviewer Verification Modal State (Mudir, Dekan, Admin uchun)
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState<boolean>(false);
@@ -397,6 +443,8 @@ export default function KpiEnterpriseApp() {
       setSidebarCollapsed(true);
     }
 
+    setIsMounted(true);
+
     // 3. Timeout notice
     const savedNotice = localStorage.getItem("kpi_timeout_notice");
     if (savedNotice) {
@@ -410,18 +458,19 @@ export default function KpiEnterpriseApp() {
       try {
         const parsed = JSON.parse(saved);
         setCurrentUser(parsed);
-        const savedRole = localStorage.getItem("kpi_active_role");
-        if (savedRole) {
-          setActiveRole(savedRole as any);
+        // Faqat ADMIN ga boshqa rollarni inspeksiya qilish ruxsati bor.
+        // Oddiy foydalanuvchilar (TEACHER, HEAD_OF_DEPT, DEAN, RECTORATE) uchun rol qatʼiy oʻziniki boʻladi!
+        if (parsed.role === "ADMIN") {
+          const savedRole = localStorage.getItem("kpi_active_role");
+          setActiveRole((savedRole as any) || "ADMIN");
         } else {
           setActiveRole(parsed.role);
+          localStorage.setItem("kpi_active_role", parsed.role);
         }
 
         const savedPage = localStorage.getItem("kpi_active_page");
         if (savedPage) {
           setActivePage(savedPage as any);
-        } else if (parsed.role === "ADMIN") {
-          setActivePage("dashboard");
         }
       } catch {
         localStorage.removeItem("kpi_session_user");
@@ -430,18 +479,24 @@ export default function KpiEnterpriseApp() {
     fetchInitialData();
   }, []);
 
-  // Save activePage and activeRole on changes
+  // Save activePage on changes (faqat dastlabki hydrationdan so'ng saqlaymiz!)
   useEffect(() => {
-    if (activePage) {
+    if (isMounted && activePage) {
       localStorage.setItem("kpi_active_page", activePage);
     }
-  }, [activePage]);
+  }, [activePage, isMounted]);
 
   useEffect(() => {
+    // Xavfsizlik nazorati: Agar foydalanuvchi ADMIN boʻlmasa, uning roli qatʼiy oʻziniki boʻlishi shart!
+    if (currentUser && currentUser.role !== "ADMIN" && activeRole !== currentUser.role) {
+      setActiveRole(currentUser.role);
+      localStorage.setItem("kpi_active_role", currentUser.role);
+      return;
+    }
     if (activeRole) {
       localStorage.setItem("kpi_active_role", activeRole);
     }
-  }, [activeRole]);
+  }, [activeRole, currentUser]);
 
   // Toggle Theme handler
   const toggleTheme = () => {
@@ -553,6 +608,21 @@ export default function KpiEnterpriseApp() {
         fetch(`${API_BASE}/structure/hierarchy`).then(r => r.json()).catch(() => null)
       ]);
       setTeachers(tRes);
+      if (Array.isArray(tRes)) {
+        setCurrentUser(prevUser => {
+          if (!prevUser) return null;
+          const matched = tRes.find((t: Teacher) => 
+            t.id === prevUser.id || 
+            (t.name && prevUser.name && t.name.trim().toLowerCase() === prevUser.name.trim().toLowerCase())
+          );
+          if (matched && matched.image && matched.image !== prevUser.image) {
+            const updated = { ...prevUser, image: matched.image };
+            localStorage.setItem("kpi_session_user", JSON.stringify(updated));
+            return updated;
+          }
+          return prevUser;
+        });
+      }
       setIndicators(iRes);
       setSubmissions(sRes);
       setAppeals(aRes);
@@ -762,6 +832,16 @@ export default function KpiEnterpriseApp() {
       setCurrentUser(user);
       setActiveRole(user.role);
       localStorage.setItem("kpi_session_user", JSON.stringify(user));
+      localStorage.setItem("kpi_active_role", user.role);
+      
+      // Agar oʻqituvchi yoki kafedra mudiri boʻlsa, filtrlarni oʻziga moslab mustahkamlaymiz
+      if (user.role === "TEACHER") {
+        setSelectedTeacherId(user.id);
+        setSelectedDeptFilter(user.department || "ALL");
+      } else if (user.role === "HEAD_OF_DEPT") {
+        setSelectedDeptFilter(user.department || "ALL");
+      }
+
       setActivePage("dashboard");
 
       if (user.must_change_password) {
@@ -899,10 +979,43 @@ export default function KpiEnterpriseApp() {
            selectedDeptFilter.toLowerCase().includes(t.department.toLowerCase());
   });
 
-  // Tanlangan yoki joriy o'qituvchini aniqlash
-  const currentTeacher = (selectedTeacherId ? teachers.find(t => t.id === selectedTeacherId) : null) ||
-    (currentUser && selectedDeptFilter === "ALL" ? teachers.find(t => t.id === currentUser.id) : null) ||
-    (filteredTeachersByDept.length > 0 ? filteredTeachersByDept[0] : teachers[0]) || null;
+  // Tanlangan yoki joriy oʻqituvchini aniqlash (Rollar boʻyicha qatʼiy chegaralangan)
+  const currentTeacher = (() => {
+    // 1. Agar TEACHER roli boʻlsa, u FAQAT OʻZINING hisobi boʻlishi shart!
+    if (activeRole === "TEACHER" && currentUser) {
+      const match = teachers.find(t => 
+        t.id === currentUser.id || 
+        (t.name && currentUser.name && t.name.toLowerCase().trim() === currentUser.name.toLowerCase().trim())
+      );
+      if (match) return match;
+      return {
+        id: currentUser.id,
+        name: currentUser.name,
+        department: currentUser.department || "Kafedra koʻrsatilmagan",
+        faculty: currentUser.faculty || "Fakultet",
+        position: currentUser.position || "Professor-oʻqituvchi",
+        degree: currentUser.degree || "Darajasiz",
+        fte: currentUser.fte || 1.0,
+        track: "Taʼlim",
+        is_first_year: false,
+        scores: {
+          normalized_score: 0,
+          svetafor_zone: "red" as const,
+          svetafor_label: "Baholanmagan",
+          bonus_label: "Belgilanmagan",
+          oqv: 0, ilm: 0, xal: 0, man: 0, jarima: 0, flex_applied: 0, raw_total: 0
+        }
+      };
+    }
+
+    // 2. Admin yoki Rektorat inspeksiyasi uchun
+    if (selectedTeacherId) {
+      const match = teachers.find(t => t.id === selectedTeacherId);
+      if (match) return match;
+    }
+    if (filteredTeachersByDept.length > 0) return filteredTeachersByDept[0];
+    return teachers[0] || null;
+  })();
 
   // Svetafor stats
   const totalTeachersCount = teachers.length;
@@ -951,7 +1064,28 @@ export default function KpiEnterpriseApp() {
       return;
     }
 
+    setIsSubmittingNewKpi(true);
     try {
+      let finalFileName = modalUploadedFileName || "tasdiqlovchi_hujjat.pdf";
+
+      // Agar haqiqiy fayl tanlangan bo'lsa, uni serverga yuklaymiz
+      if (modalUploadedFile) {
+        try {
+          const formData = new FormData();
+          formData.append("file", modalUploadedFile);
+          const upRes = await fetch(`${API_BASE}/upload`, {
+            method: "POST",
+            body: formData
+          });
+          const upData = await upRes.json();
+          if (upRes.ok && upData.filename) {
+            finalFileName = upData.filename;
+          }
+        } catch (uploadErr) {
+          console.warn("Fayl yuklashda xatolik:", uploadErr);
+        }
+      }
+
       const res = await fetch(`${API_BASE}/submissions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -964,7 +1098,7 @@ export default function KpiEnterpriseApp() {
           submitted_date: modalDate,
           claimed_ball: Number(modalClaimedBall),
           description: modalDescription.trim() || undefined,
-          file_name: "tasdiqlovchi_hujjat.pdf"
+          file_name: finalFileName
         })
       });
       const data = await res.json();
@@ -977,9 +1111,13 @@ export default function KpiEnterpriseApp() {
       setModalTitle("");
       setDoiInput("");
       setModalDescription("");
+      setModalUploadedFile(null);
+      setModalUploadedFileName("");
       alert(`Arizangiz muvaffaqiyatli qabul qilindi!\nDaʻvo qilingan ball: ${data.claimed_ball} ball.\nHolati: Ekspert komissiyasi koʻrib chiqishi kutilmoqda.`);
     } catch {
       alert("Arizani yuborishda xatolik yuz berdi.");
+    } finally {
+      setIsSubmittingNewKpi(false);
     }
   };
 
@@ -1952,9 +2090,21 @@ export default function KpiEnterpriseApp() {
                 : "bg-white border-slate-200/80 hover:bg-slate-100 text-slate-800 shadow-xs"
             }`}
           >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+            {currentUser.image ? (
+              <img
+                src={currentUser.image}
+                alt={currentUser.name}
+                className="w-8 h-8 rounded-full object-cover border border-white/20 shadow-xs flex-shrink-0 bg-blue-900"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = "none";
+                  const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (fb) fb.style.display = "flex";
+                }}
+              />
+            ) : null}
+            <div className={`w-8 h-8 rounded-full items-center justify-center font-bold text-xs flex-shrink-0 ${
               activePage === "profile" ? "bg-white text-blue-900 shadow-xs" : "bg-blue-900 text-white"
-            }`}>
+            } ${currentUser.image ? "hidden" : "flex"}`}>
               {currentUser.name.charAt(0)}
             </div>
             {!sidebarCollapsed && (
@@ -3618,8 +3768,29 @@ export default function KpiEnterpriseApp() {
 
                 <div className="px-6 pb-6 pt-0 relative flex flex-col md:flex-row md:items-end justify-between gap-4 -mt-12">
                   <div className="flex items-end gap-4">
-                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-800 text-white font-black text-3xl flex items-center justify-center shadow-xl border-4 border-white dark:border-slate-900 flex-shrink-0">
-                      {currentUser.name.charAt(0)}
+                    <div className="relative flex-shrink-0">
+                      {currentUser.image ? (
+                        <img
+                          src={currentUser.image}
+                          alt={currentUser.name}
+                          className="w-24 h-24 rounded-2xl object-cover shadow-xl border-4 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                            const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fb) fb.style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className={`w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-800 text-white font-black text-3xl items-center justify-center shadow-xl border-4 border-white dark:border-slate-900 ${
+                          currentUser.image ? "hidden" : "flex"
+                        }`}
+                      >
+                        {currentUser.name.charAt(0)}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 flex items-center justify-center text-white" title="Faol seans">
+                        <Check className="w-3.5 h-3.5" />
+                      </div>
                     </div>
                     <div className="mb-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -3947,62 +4118,64 @@ export default function KpiEnterpriseApp() {
           {/* ========================================================================= */}
           {activePage === "dashboard" && activeRole !== "ADMIN" && (
             <div>
-              {/* Svetafor Banner */}
-              <div className="grid grid-cols-3 gap-5 mb-7">
-                <div
-                  onClick={() => setActiveSvetaforFilter(activeSvetaforFilter === "green" ? "ALL" : "green")}
-                  className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${
-                    activeSvetaforFilter === "green"
-                      ? "ring-2 ring-emerald-500 border-slate-200 dark:border-slate-700"
-                      : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                  } border-l-4 border-l-emerald-600`}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">Yashil toifa (71 – 100 ball)</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" />
+              {/* Svetafor Banner (Faqat filial miqyosidagi rahbarlar - RECTORATE va DEAN uchun) */}
+              {(activeRole === "RECTORATE" || activeRole === "DEAN") && (
+                <div className="grid grid-cols-3 gap-5 mb-7">
+                  <div
+                    onClick={() => setActiveSvetaforFilter(activeSvetaforFilter === "green" ? "ALL" : "green")}
+                    className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${
+                      activeSvetaforFilter === "green"
+                        ? "ring-2 ring-emerald-500 border-slate-200 dark:border-slate-700"
+                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                    } border-l-4 border-l-emerald-600`}
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">Yashil toifa (71 – 100 ball)</span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" />
+                    </div>
+                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-1">
+                      {greenTeachers.length} nafar ({greenPct}%)
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">70% dan 100% gacha oylik ustama toʻlanadi</div>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-1">
-                    {greenTeachers.length} nafar ({greenPct}%)
-                  </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">70% dan 100% gacha oylik ustama toʻlanadi</div>
-                </div>
 
-                <div
-                  onClick={() => setActiveSvetaforFilter(activeSvetaforFilter === "yellow" ? "ALL" : "yellow")}
-                  className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${
-                    activeSvetaforFilter === "yellow"
-                      ? "ring-2 ring-amber-500 border-slate-200 dark:border-slate-700"
-                      : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                  } border-l-4 border-l-amber-500`}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">Sariq toifa (40 – 70 ball)</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm" />
+                  <div
+                    onClick={() => setActiveSvetaforFilter(activeSvetaforFilter === "yellow" ? "ALL" : "yellow")}
+                    className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${
+                      activeSvetaforFilter === "yellow"
+                        ? "ring-2 ring-amber-500 border-slate-200 dark:border-slate-700"
+                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                    } border-l-4 border-l-amber-500`}
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">Sariq toifa (40 – 70 ball)</span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm" />
+                    </div>
+                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-1">
+                      {yellowTeachers.length} nafar ({yellowPct}%)
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">40% ustama yoki bir martalik mukofot</div>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-1">
-                    {yellowTeachers.length} nafar ({yellowPct}%)
-                  </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">40% ustama yoki bir martalik mukofot</div>
-                </div>
 
-                <div
-                  onClick={() => setActiveSvetaforFilter(activeSvetaforFilter === "red" ? "ALL" : "red")}
-                  className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${
-                    activeSvetaforFilter === "red"
-                      ? "ring-2 ring-rose-500 border-slate-200 dark:border-slate-700"
-                      : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                  } border-l-4 border-l-rose-500`}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-400">Qizil toifa (40 balldan past)</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
+                  <div
+                    onClick={() => setActiveSvetaforFilter(activeSvetaforFilter === "red" ? "ALL" : "red")}
+                    className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${
+                      activeSvetaforFilter === "red"
+                        ? "ring-2 ring-rose-500 border-slate-200 dark:border-slate-700"
+                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                    } border-l-4 border-l-rose-500`}
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-400">Qizil toifa (40 balldan past)</span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
+                    </div>
+                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-1">
+                      {redTeachers.length} nafar ({redPct}%)
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Ustama belgilanmaydi (tanqidiy tahlil)</div>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-1">
-                    {redTeachers.length} nafar ({redPct}%)
-                  </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Ustama belgilanmaydi (tanqidiy tahlil)</div>
                 </div>
-              </div>
+              )}
 
               {/* TEACHER ROLE VIEW */}
               {activeRole === "TEACHER" && currentTeacher && (
@@ -4296,14 +4469,23 @@ export default function KpiEnterpriseApp() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {submissions.filter(s => s.status === "pending" && s.teacher_id !== currentTeacher?.id).length === 0 ? (
-                            <tr>
-                              <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
-                                Hozirda tasdiqlash kutilayotgan arizalar mavjud emas
-                              </td>
-                            </tr>
-                          ) : (
-                            submissions.filter(s => s.status === "pending" && s.teacher_id !== currentTeacher?.id).map(sub => (
+                          {(() => {
+                            const mudirDept = currentUser?.department || "";
+                            const mudirSubs = submissions.filter(s => 
+                              s.status === "pending" && 
+                              s.teacher_id !== currentUser?.id && 
+                              (!mudirDept || (s.dept && (s.dept.toLowerCase().includes(mudirDept.toLowerCase()) || mudirDept.toLowerCase().includes(s.dept.toLowerCase()))))
+                            );
+                            if (mudirSubs.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+                                    {currentUser?.department ? `"${currentUser.department}" kafedrasi boʻyicha hozirda tasdiqlash kutilayotgan arizalar mavjud emas` : "Hozirda tasdiqlash kutilayotgan arizalar mavjud emas"}
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            return mudirSubs.map(sub => (
                               <tr key={sub.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                 <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{sub.teacher_name}</td>
                                 <td className="py-3.5 px-4 font-mono text-xs font-bold text-slate-600 dark:text-slate-400">{sub.indicator_id}</td>
@@ -4344,8 +4526,8 @@ export default function KpiEnterpriseApp() {
                                   </div>
                                 </td>
                               </tr>
-                            ))
-                          )}
+                            ));
+                          })()}
                         </tbody>
                       </table>
                     </div>
@@ -5101,225 +5283,393 @@ export default function KpiEnterpriseApp() {
       </div>
 
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
       {/* MODAL 1: ADD KPI ENTRY (O'QITUVCHI TOMONIDAN NATIJA YUKLASH VA O'ZIGA BALL QO'YISH) */}
       {/* ========================================================================= */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 my-8">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Yangi KPI faoliyat natijasini kiritish</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Mezonni tanlang, oʻzingiz daʻvo qilayotgan ballni koʻrsating va asoslovchi hujjatni biriktiring</p>
-              </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
+      {isAddModalOpen && (() => {
+        const currentSelectedInd = indicators.find(i => i.id === modalIndicator);
+        const maxPossibleBall = currentSelectedInd ? currentSelectedInd.max_ball : 10;
+        const recommendedAuthorBall = currentSelectedInd 
+          ? Number((currentSelectedInd.max_ball / Math.max(1, modalAuthors)).toFixed(1)) 
+          : 0;
 
-            <form onSubmit={handleFormSubmit} className="space-y-4">
-              {/* DOI Lookup Box (Scopus/WoS uchun) */}
-              <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50">
-                <label className="block text-xs font-bold text-blue-950 dark:text-blue-300 mb-1">
-                  DOI orqali avtomatik toʻldirish (Scopus / Web of Science maqolalari uchun)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={doiInput}
-                    onChange={(e) => setDoiInput(e.target.value)}
-                    placeholder="Masalan: 10.1016/j.eswa.2025.123456"
-                    className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleDoiLookup}
-                    disabled={isDoiLoading}
-                    className="px-3 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-60"
-                  >
-                    {isDoiLoading ? "Qidirilmoqda..." : "Tekshirish"}
-                  </button>
-                </div>
-              </div>
+        const filteredModalIndicators = indicators.filter(i => {
+          const matchBlock = modalBlockFilter === "ALL" || i.block.toLowerCase() === modalBlockFilter.toLowerCase();
+          const q = modalIndicatorSearch.trim().toLowerCase();
+          const matchSearch = !q || i.name.toLowerCase().includes(q) || i.id.toLowerCase().includes(q) || (i.dept && i.dept.toLowerCase().includes(q));
+          return matchBlock && matchSearch;
+        });
 
-              {/* Blok Tanlash Filtrlari */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Baholash yoʻnalishi (Blok)
-                </label>
-                <div className="grid grid-cols-5 gap-1.5 text-xs font-semibold">
-                  {[
-                    { id: "ALL", label: "Barchasi" },
-                    { id: "oqv", label: "I. Oʻquv" },
-                    { id: "ilm", label: "II. Ilmiy" },
-                    { id: "xal", label: "III. Xalqaro" },
-                    { id: "man", label: "IV. Maʼnaviy" }
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setModalBlockFilter(tab.id)}
-                      className={`py-1.5 px-2 rounded-lg text-center transition-all ${
-                        modalBlockFilter === tab.id
-                          ? "bg-blue-900 text-white shadow-sm"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 my-6">
+              {/* Header */}
+              <div className="flex justify-between items-start pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-md flex-shrink-0">
+                    <Sparkles className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <span>Yangi KPI natijasi kiritish</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
+                        2025/2026-oʻquv yili
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {currentTeacher ? (
+                        <span>Topshiruvchi: <b>{currentTeacher.name}</b> ({currentTeacher.department})</span>
+                      ) : (
+                        "Mezonni tanlang, asoslovchi hujjatni biriktiring va natijangizni tasdiqlashga yuboring"
+                      )}
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Mezonni Tanlash */}
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Baholash mezoni *
-                  </label>
-                  <span className="text-[11px] text-slate-400">
-                    Tanlangan mezon maksimal bali: <b>{indicators.find(i => i.id === modalIndicator)?.max_ball || 0} ball</b>
-                  </span>
-                </div>
-                <select
-                  value={modalIndicator}
-                  onChange={(e) => {
-                    setModalIndicator(e.target.value);
-                    const ind = indicators.find(i => i.id === e.target.value);
-                    if (ind) {
-                      setModalClaimedBall(ind.max_ball);
-                    }
-                  }}
-                  className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
-                  {indicators
-                    .filter(i => modalBlockFilter === "ALL" || i.block.toLowerCase() === modalBlockFilter.toLowerCase())
-                    .map(ind => (
-                      <option key={ind.id} value={ind.id}>
-                        {ind.id}. {ind.name} (maks. {ind.max_ball} ball) — {ind.dept}
-                      </option>
-                    ))}
-                </select>
+                  ✕
+                </button>
               </div>
 
-              {/* Faoliyat Nomi */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Faoliyat natijasi nomi *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={modalTitle}
-                  onChange={(e) => setModalTitle(e.target.value)}
-                  placeholder="Maqola, darslik, til sertifikati yoki loyiha nomini toʻliq kiriting..."
-                  className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                />
-              </div>
-
-              {/* O'qituvchi o'ziga da'vo qilayotgan ball & Hammualliflar soni */}
-              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs font-bold text-blue-950 dark:text-blue-300">
-                      Daʻvo qilinayotgan ball *
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                {/* 1-qism: Blok tanlash va Mezon qidiruvi */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      1. Baholash yoʻnalishi va mezoni *
                     </label>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      (maks. {indicators.find(i => i.id === modalIndicator)?.max_ball || 10})
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">
+                      Jami 41 ta rasmiy mezon
                     </span>
                   </div>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max={(indicators.find(i => i.id === modalIndicator)?.max_ball || 10) * 2}
-                    required
-                    value={modalClaimedBall}
-                    onChange={(e) => setModalClaimedBall(Number(e.target.value))}
-                    className="w-full p-2 border border-blue-300 dark:border-blue-700 rounded-lg text-xs font-black text-blue-950 dark:text-blue-200 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                  />
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                    Default: mezon toʻliq bali. Agar qisman boʻlsa, ballni tahrirlashingiz mumkin.
+
+                  {/* Blok filtri tugmalari */}
+                  <div className="grid grid-cols-5 gap-1 text-xs font-semibold">
+                    {[
+                      { id: "ALL", label: "Barchasi" },
+                      { id: "oqv", label: "I. Oʻquv" },
+                      { id: "ilm", label: "II. Ilmiy" },
+                      { id: "xal", label: "III. Xalqaro" },
+                      { id: "man", label: "IV. Maʼnaviy" }
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setModalBlockFilter(tab.id)}
+                        className={`py-1.5 px-2 rounded-lg text-center text-xs transition-all ${
+                          modalBlockFilter === tab.id
+                            ? "bg-blue-900 text-white shadow-xs font-bold"
+                            : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Tezkor qidiruv inputi */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={modalIndicatorSearch}
+                      onChange={(e) => setModalIndicatorSearch(e.target.value)}
+                      placeholder="Mezon nomi, kodi (masalan: 1.1, 2.3) yoki kalit soʻz boʻyicha tezkor qidirish..."
+                      className="w-full pl-9 pr-8 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 transition-all placeholder-slate-400"
+                    />
+                    {modalIndicatorSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setModalIndicatorSearch("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Mezonlar select ro'yxati */}
+                  <select
+                    value={modalIndicator}
+                    onChange={(e) => {
+                      setModalIndicator(e.target.value);
+                      const ind = indicators.find(i => i.id === e.target.value);
+                      if (ind) {
+                        const defaultShare = Number((ind.max_ball / Math.max(1, modalAuthors)).toFixed(1));
+                        setModalClaimedBall(defaultShare);
+                      }
+                    }}
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium leading-relaxed"
+                  >
+                    {filteredModalIndicators.length === 0 ? (
+                      <option disabled value="">Qidiruv boʻyicha mezon topilmadi</option>
+                    ) : (
+                      filteredModalIndicators.map(ind => (
+                        <option key={ind.id} value={ind.id}>
+                          {ind.id}. {ind.name} — [Maks. {ind.max_ball} ball]
+                        </option>
+                      ))
+                    )}
+                  </select>
+
+                  {/* Tanlangan mezon kartochkasi */}
+                  {currentSelectedInd && (
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-600" />
+                          <span>Mezon #{currentSelectedInd.id}: {currentSelectedInd.name}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Masʼul boʻlim: <b>{currentSelectedInd.dept}</b>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-800 self-start sm:self-auto">
+                        <Award className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <span>Maks: {currentSelectedInd.max_ball} ball</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* DOI avtomatik to'ldirish (Scopus / Web of Science uchun) */}
+                <div className="p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-900/50">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-blue-950 dark:text-blue-300 flex items-center gap-1">
+                      <ExternalLink className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>DOI orqali avtomatik toʻldirish (Scopus / Web of Science)</span>
+                    </label>
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Ixtiyoriy tezkor toʻldirish</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={doiInput}
+                      onChange={(e) => setDoiInput(e.target.value)}
+                      placeholder="Masalan: 10.1016/j.eswa.2025.123456"
+                      className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleDoiLookup}
+                      disabled={isDoiLoading}
+                      className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-60 flex-shrink-0"
+                    >
+                      {isDoiLoading ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Qidirilmoqda...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Tekshirish</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
+                {/* 2-qism: Faoliyat nomi */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Hammualliflar soni *
+                    2. Faoliyat natijasi nomi *
                   </label>
                   <input
-                    type="number"
-                    min="1"
-                    max="20"
+                    type="text"
                     required
-                    value={modalAuthors}
-                    onChange={(e) => setModalAuthors(Number(e.target.value))}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                    value={modalTitle}
+                    onChange={(e) => setModalTitle(e.target.value)}
+                    placeholder="Ilmiy maqola nomi, darslik, xalqaro sertifikat yoki loyiha nomini toʻliq kiriting..."
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium"
                   />
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                    Yakka muallif boʻlsa: 1 nafar
+                </div>
+
+                {/* 3-qism: Hammualliflar soni va Avtomatik kalkulyator */}
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <Calculator className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>3. Mualliflar soni va ball taqsimoti kalkulyatori</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                      Mezon maksimal: <b>{maxPossibleBall} ball</b>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Mualliflar soni */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Hammualliflar soni (jami) *
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        required
+                        value={modalAuthors}
+                        onChange={(e) => {
+                          const count = Math.max(1, parseInt(e.target.value) || 1);
+                          setModalAuthors(count);
+                          if (currentSelectedInd) {
+                            const rec = Number((currentSelectedInd.max_ball / count).toFixed(1));
+                            setModalClaimedBall(rec);
+                          }
+                        }}
+                        className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                      />
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        {modalAuthors === 1 ? "Yakka muallif (100% toʻliq ball)" : `${modalAuthors} nafar teng huquqli muallif`}
+                      </div>
+                    </div>
+
+                    {/* Da'vo qilinayotgan ball */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-semibold text-blue-950 dark:text-blue-300">
+                          Oʻzingizga daʻvo qilinayotgan ball *
+                        </label>
+                        <span className="text-[10px] text-slate-400 font-mono">maks. {maxPossibleBall}</span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max={maxPossibleBall}
+                        required
+                        value={modalClaimedBall}
+                        onChange={(e) => setModalClaimedBall(Number(e.target.value))}
+                        className="w-full p-2 border border-blue-300 dark:border-blue-700 rounded-lg text-xs font-black text-blue-900 dark:text-blue-200 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                      />
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
+                        <span>Tavsiya: <b>{recommendedAuthorBall} ball</b></span>
+                        {modalClaimedBall !== recommendedAuthorBall && (
+                          <button
+                            type="button"
+                            onClick={() => setModalClaimedBall(recommendedAuthorBall)}
+                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            ⚡ Tavsiya ballini qoʻllash
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Sana & Qo'shimcha Izoh */}
-              <div className="grid grid-cols-2 gap-3">
+                {/* 4-qism: Sana va Fayl biriktirish */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      4. Topshirilgan / eʼlon qilingan sana *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={modalDate}
+                      onChange={(e) => setModalDate(e.target.value)}
+                      className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      5. Tasdiqlovchi hujjat (PDF / DOCX) *
+                    </label>
+                    <label className="cursor-pointer flex flex-col items-center justify-center p-2.5 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 rounded-lg bg-slate-50/60 dark:bg-slate-800/40 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-all text-center">
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.zip,.png,.jpg"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setModalUploadedFile(file);
+                            setModalUploadedFileName(file.name);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      {modalUploadedFileName ? (
+                        <div className="flex items-center gap-2 text-xs font-semibold text-blue-900 dark:text-blue-300 truncate max-w-full">
+                          <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                          <span className="truncate">{modalUploadedFileName}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setModalUploadedFile(null);
+                              setModalUploadedFileName("");
+                            }}
+                            className="text-xs text-rose-500 hover:text-rose-700 ml-1 font-bold"
+                            title="Faylni olib tashlash"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                          <Upload className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          <span className="font-semibold">Faylni tanlang yoki shu yerga tashlang</span>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                {/* 5-qism: Ekspert uchun izoh */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Topshirilgan sana *</label>
-                  <input
-                    type="date"
-                    required
-                    value={modalDate}
-                    onChange={(e) => setModalDate(e.target.value)}
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    6. Ekspert komissiyasi uchun qoʻshimcha izoh yoki havola (ixtiyoriy)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={modalDescription}
+                    onChange={(e) => setModalDescription(e.target.value)}
+                    placeholder="Jurnal veb-sahifasi havolasi, Scopus profili yoki nashr toʻgʻrisida qisqacha izoh..."
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tasdiqlovchi hujjat (PDF) *</label>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    required
-                    className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-2 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-100 dark:file:bg-blue-950/80 file:text-blue-900 dark:file:text-blue-300"
-                  />
+
+                {/* Footer tugmalari */}
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Arizangiz masʼul ekspert tomonidan tekshirilib, baholanadi.
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddModalOpen(false)}
+                      className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      Bekor qilish
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingNewKpi}
+                      className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-md transition-all flex items-center gap-2 disabled:opacity-60"
+                    >
+                      {isSubmittingNewKpi ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Yuborilmoqda...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Arizani yuborish</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Ekspert uchun qoʻshimcha izoh yoki havola (ixtiyoriy)
-                </label>
-                <textarea
-                  rows={2}
-                  value={modalDescription}
-                  onChange={(e) => setModalDescription(e.target.value)}
-                  placeholder="Hujjat haqida qoʻshimcha maʼlumot, jurnal veb-sayti havolasi yoki nashr betlari..."
-                  className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                >
-                  Bekor qilish
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Arizani yuborish</span>
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* MODAL 2: REVIEWER VERIFICATION MODAL (TEKSHIRISH, QO'LDA BAHOLASH VA RAD ETISH SABABI) */}
