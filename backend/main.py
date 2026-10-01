@@ -664,6 +664,43 @@ for t in RAW_TEACHERS:
             t["image"] = u["image"]
             break
 
+DEPT_TO_FACULTY_MAP = {
+    "amaliy matematika": "Amaliy matematika fakulteti",
+    "kompyuter": "Amaliy matematika fakulteti",
+    "axborot tizimlari": "Amaliy matematika fakulteti",
+    "biotexnologiya": "Amaliy matematika fakulteti",
+    "psixologiya": "Psixologiya fakulteti",
+    "oʻzbek tili": "Psixologiya fakulteti",
+    "o'zbek tili": "Psixologiya fakulteti",
+    "ijtimoiy": "Psixologiya fakulteti",
+    "iqtisodiyot": "Psixologiya fakulteti",
+    "turizm": "Psixologiya fakulteti",
+    "xorijiy tillar": "Psixologiya fakulteti",
+    "ingliz": "Psixologiya fakulteti",
+    "sirtqi": "Sirtqi fakultet"
+}
+
+def resolve_faculty_from_dept(dept_name: Optional[str]) -> str:
+    if not dept_name:
+        return "Amaliy matematika fakulteti"
+    d_clean = dept_name.lower()
+    for k, fac in DEPT_TO_FACULTY_MAP.items():
+        if k in d_clean:
+            return fac
+    return "Amaliy matematika fakulteti"
+
+# USERS_DB va RAW_TEACHERS da fakultet nomlarini kafedrasiga muvofiq to'ldirish
+for u in USERS_DB.values():
+    if not u.get("faculty") or u.get("faculty") in ["Filial fakultetlari", "Filial tuzilmasi", "Fakultet koʻrsatilmagan"]:
+        u["faculty"] = resolve_faculty_from_dept(u.get("department"))
+        if u.get("username"):
+            db_save_user(u["username"].lower(), u)
+
+for t in RAW_TEACHERS:
+    if not t.get("faculty") or t.get("faculty") in ["Filial fakultetlari", "Filial tuzilmasi"]:
+        t["faculty"] = resolve_faculty_from_dept(t.get("department"))
+
+
 
 existing_db_submissions = db_load_submissions()
 if existing_db_submissions:
@@ -1700,7 +1737,7 @@ def deduplicate_and_clean_hemis_employees(raw_items: List[Dict[str, Any]]) -> Di
                 "name": clean_item["full_name"],
                 "role": "HEAD_OF_DEPT" if is_head else "TEACHER",
                 "department": clean_item["department"],
-                "faculty": "Filial fakultetlari",
+                "faculty": resolve_faculty_from_dept(clean_item["department"]),
                 "position": clean_item["position"],
                 "degree": clean_item["degree"],
                 "fte": clean_item["fte"],
@@ -1821,7 +1858,7 @@ def sync_hemis_teachers():
                 new_teacher = {
                     "id": emp["id"],
                     "name": emp_name,
-                    "faculty": "Filial fakultetlari",
+                    "faculty": resolve_faculty_from_dept(dept_name),
                     "department": dept_name,
                     "position": pos_name,
                     "degree": degree_name,

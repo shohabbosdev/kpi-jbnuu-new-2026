@@ -615,10 +615,21 @@ export default function KpiEnterpriseApp() {
             t.id === prevUser.id || 
             (t.name && prevUser.name && t.name.trim().toLowerCase() === prevUser.name.trim().toLowerCase())
           );
-          if (matched && matched.image && matched.image !== prevUser.image) {
-            const updated = { ...prevUser, image: matched.image };
-            localStorage.setItem("kpi_session_user", JSON.stringify(updated));
-            return updated;
+          if (matched) {
+            let changed = false;
+            const updated = { ...prevUser };
+            if (matched.image && matched.image !== prevUser.image) {
+              updated.image = matched.image;
+              changed = true;
+            }
+            if (matched.faculty && (!prevUser.faculty || prevUser.faculty === "Filial fakultetlari" || prevUser.faculty !== matched.faculty)) {
+              updated.faculty = matched.faculty;
+              changed = true;
+            }
+            if (changed) {
+              localStorage.setItem("kpi_session_user", JSON.stringify(updated));
+              return updated;
+            }
           }
           return prevUser;
         });
@@ -3803,8 +3814,12 @@ export default function KpiEnterpriseApp() {
                           {currentUser.role === "RECTORATE" && "Filial rahbariyati"}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        HEMIS ID: <b className="text-blue-600 dark:text-blue-400 font-mono">{currentUser.username}</b> • {currentUser.department || "Kafedra koʻrsatilmagan"}
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span>HEMIS ID: <b className="text-blue-600 dark:text-blue-400 font-mono">{currentUser.username}</b></span>
+                        <span>•</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">{currentUser.faculty || "Filial fakulteti"}</span>
+                        <span>•</span>
+                        <span className="text-slate-600 dark:text-slate-400">{currentUser.department || "Kafedra koʻrsatilmagan"}</span>
                       </p>
                     </div>
                   </div>
@@ -3890,14 +3905,14 @@ export default function KpiEnterpriseApp() {
 
                       <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Fakultet:</span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">
-                          {currentUser.faculty || "Oʻzbekiston Milliy universiteti Jizzax filiali"}
+                        <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                          {currentUser.faculty || "Filial fakulteti"}
                         </span>
                       </div>
 
                       <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Kafedra:</span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
                           {currentUser.department || "Kafedra biriktirilmagan"}
                         </span>
                       </div>
