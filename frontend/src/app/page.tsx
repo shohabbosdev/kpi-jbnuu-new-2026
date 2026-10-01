@@ -496,7 +496,7 @@ export default function KpiEnterpriseApp() {
     if (activeRole) {
       localStorage.setItem("kpi_active_role", activeRole);
     }
-  }, [activeRole, currentUser]);
+  }, [activeRole, currentUser?.role]);
 
   // Toggle Theme handler
   const toggleTheme = () => {
@@ -543,7 +543,7 @@ export default function KpiEnterpriseApp() {
       events.forEach(evt => window.removeEventListener(evt, recordActivity));
       clearInterval(checkInterval);
     };
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
   // Handle password change from user profile modal
   const handleUpdateProfilePassword = async (e: React.FormEvent) => {
@@ -797,7 +797,7 @@ export default function KpiEnterpriseApp() {
     if (currentUser?.role === "ADMIN" || activeRole === "ADMIN") {
       fetchAdminData();
     }
-  }, [currentUser, activeRole]);
+  }, [currentUser?.role, activeRole]);
 
   useEffect(() => {
     if (activePage === "admin_hemis") {
