@@ -95,8 +95,22 @@ export const HemisIntegrationPanel: React.FC<HemisIntegrationPanelProps> = ({
 }) => {
   // Asosiy HEMIS kichik bo'limlari (Tablari)
   const [activeHemisTab, setActiveHemisTab] = useState<"employees" | "workloads" | "curriculums" | "scientific">("employees");
+  const [scientificSearch, setScientificSearch] = useState("");
+  const [scientificPlatformFilter, setScientificPlatformFilter] = useState("ALL");
 
   const totalEmployeePages = Math.ceil(filteredHemisEmployees.length / hemisPerPage) || 1;
+
+  const filteredScientificActivities = (hemisScientificActivities || []).filter((s) => {
+    const q = scientificSearch.toLowerCase().trim();
+    const matchSearch =
+      !q ||
+      (s.employee_name && s.employee_name.toLowerCase().includes(q)) ||
+      (s.scientific_platform && s.scientific_platform.toLowerCase().includes(q));
+    const matchPlatform =
+      scientificPlatformFilter === "ALL" ||
+      (s.scientific_platform && s.scientific_platform.toLowerCase() === scientificPlatformFilter.toLowerCase());
+    return matchSearch && matchPlatform;
+  });
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -810,6 +824,41 @@ export const HemisIntegrationPanel: React.FC<HemisIntegrationPanelProps> = ({
                   </p>
                 </div>
               </div>
+
+              {/* Jonli qidiruv va platforma filtri */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={scientificSearch}
+                    onChange={(e) => setScientificSearch(e.target.value)}
+                    placeholder="Olim yoki platforma boʻyicha qidirish..."
+                    className={`pl-8 pr-3 py-1.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all w-56 ${
+                      theme === "dark"
+                        ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
+                        : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400"
+                    }`}
+                  />
+                </div>
+
+                <div className="flex items-center gap-1 text-[11px]">
+                  {["ALL", "Google Scholar", "Scopus", "ResearchGate"].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setScientificPlatformFilter(p)}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        scientificPlatformFilter === p
+                          ? "bg-amber-600 text-white shadow-2xs"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      {p === "ALL" ? "Barchasi" : p}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Ilmiy faoliyat jadvali */}
@@ -833,37 +882,54 @@ export const HemisIntegrationPanel: React.FC<HemisIntegrationPanelProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {hemisScientificActivities.map((s, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">{s.employee_name}</td>
-                      <td className="py-2.5 px-3">
-                        <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 text-[10px] font-bold">
-                          {s.scientific_platform}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-bold text-amber-600 font-mono">
-                        {s.h_index || 0}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-bold font-mono">{s.citation_count || 0}</td>
-                      <td className="py-2.5 px-3 text-center font-bold font-mono">{s.publication_work_count || 0}</td>
-                      <td className="py-2.5 px-3 text-center text-slate-500 font-mono">{s.education_year}</td>
-                      <td className="py-2.5 px-3 text-center">
-                        {s.profile_link ? (
-                          <a
-                            href={s.profile_link}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-blue-600 hover:underline text-[11px]"
-                          >
-                            <span>Ochish</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
+                  {filteredScientificActivities.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-400">
+                        Qidiruv boʻyicha maʼlumot topilmadi
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredScientificActivities.map((s, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-2.5 px-3">
+                          <div className="font-bold text-slate-900 dark:text-white">
+                            {s.employee_name || `Olim #${s.employee_id || idx + 1}`}
+                          </div>
+                          {s.employee_id && (
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              ID: {s.employee_id}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 text-[10px] font-bold">
+                            {s.scientific_platform}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-bold text-amber-600 font-mono">
+                          {s.h_index || 0}
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-bold font-mono">{s.citation_count || 0}</td>
+                        <td className="py-2.5 px-3 text-center font-bold font-mono">{s.publication_work_count || 0}</td>
+                        <td className="py-2.5 px-3 text-center text-slate-500 font-mono">{s.education_year}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          {s.profile_link ? (
+                            <a
+                              href={s.profile_link}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-blue-600 hover:underline text-[11px]"
+                            >
+                              <span>Ochish</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

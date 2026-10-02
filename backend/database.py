@@ -1532,12 +1532,32 @@ def db_get_hemis_subject_teachers(employee_name: Optional[str] = None, subject_n
 # -------------------------------------------------------------
 # HEMIS Ilmiy faoliyat va iqtiboslik (Scientific Activity)
 # -------------------------------------------------------------
-def db_save_hemis_scientific_activities(items: List[Dict[str, Any]], clear_existing: bool = False) -> int:
+def db_save_hemis_scientific_activities(
+    items: List[Dict[str, Any]],
+    clear_existing: bool = False,
+    emp_name_map: Optional[Dict[int, str]] = None
+) -> int:
     conn = get_connection()
     cursor = conn.cursor()
     if clear_existing:
         cursor.execute("DELETE FROM hemis_scientific_activity")
     
+    # 1. Bazadagi o'quv yuklamalaridan o'qituvchilar nomini olish
+    cursor.execute("SELECT DISTINCT employee_id, employee_name FROM teacher_workloads WHERE employee_id IS NOT NULL")
+    db_emp_map: Dict[int, str] = {int(r[0]): r[1] for r in cursor.fetchall() if r[0] and r[1]}
+
+    # 2. Users jadvalidan ham qo'shimcha nomlarni olish
+    cursor.execute("SELECT id, name FROM users WHERE id IS NOT NULL")
+    for r in cursor.fetchall():
+        if r[0] and r[1] and int(r[0]) not in db_emp_map:
+            db_emp_map[int(r[0])] = r[1]
+
+    # 3. Tashqaridan berilgan emp_name_map bilan boyitish
+    if emp_name_map:
+        for eid, ename in emp_name_map.items():
+            if eid and ename:
+                db_emp_map[int(eid)] = ename
+
     rows = []
     for it in items:
         # Platform nomi mapping
@@ -1552,9 +1572,17 @@ def db_save_hemis_scientific_activities(items: List[Dict[str, Any]], clear_exist
         elif p_code == "14":
             p_name = "Web of Science"
             
-        emp_id = it.get("_employee")
+        emp_id = it.get("_employee") or it.get("employee_id")
         emp_obj = it.get("employee") or {}
-        emp_name = emp_obj.get("name") or it.get("employee_name") or ""
+        emp_name = (
+            emp_obj.get("name") or 
+            it.get("employee_name") or 
+            (db_emp_map.get(int(emp_id)) if emp_id else "") or 
+            ""
+        )
+
+        if not emp_name and emp_id:
+            emp_name = f"Olim #{emp_id}"
         
         rows.append((
             it.get("id"),
@@ -1565,7 +1593,7 @@ def db_save_hemis_scientific_activities(items: List[Dict[str, Any]], clear_exist
             int(it.get("h_index") or 0),
             int(it.get("publication_work_count") or 0),
             int(it.get("citation_count") or 0),
-            str(it.get("_education_year") or ""),
+            str(it.get("_education_year") or it.get("education_year") or ""),
             1 if it.get("is_checked") else 0
         ))
     cursor.executemany("""

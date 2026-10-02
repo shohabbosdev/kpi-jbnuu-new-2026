@@ -2627,7 +2627,17 @@ def fetch_all_hemis_scientific_activities():
             print(f"Error fetching scientific activities: {e}")
             break
     if items:
-        db_save_hemis_scientific_activities(items, clear_existing=True)
+        emp_name_map = {}
+        try:
+            all_emps = fetch_all_hemis_raw_employees(employee_type="all")
+            for e in all_emps:
+                eid = e.get("id")
+                ename = e.get("name") or e.get("full_name") or e.get("short_name")
+                if eid and ename:
+                    emp_name_map[int(eid)] = ename
+        except Exception as ex:
+            print(f"Error building emp_name_map for scientific activities: {ex}")
+        db_save_hemis_scientific_activities(items, clear_existing=True, emp_name_map=emp_name_map)
     return items
 
 def fetch_all_hemis_doctorate_students():
