@@ -161,6 +161,23 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
+
+    # 8. Teacher Workloads table (HEMIS O'quv yuklamalari)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS teacher_workloads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_id INTEGER NOT NULL,
+            employee_name TEXT NOT NULL,
+            department_name TEXT,
+            subject_name TEXT NOT NULL,
+            education_type_code TEXT,
+            education_type_name TEXT,
+            total_hours INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_workload_emp_id ON teacher_workloads(employee_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_workload_emp_name ON teacher_workloads(employee_name);")
     
     conn.commit()
     conn.close()
@@ -587,6 +604,85 @@ def db_delete_evaluator(evaluator_id: int):
     cursor.execute("DELETE FROM evaluators WHERE id = ?", (evaluator_id,))
     conn.commit()
     conn.close()
+
+# -------------------------------------------------------------
+# HEMIS O'quv yuklamalari (Teacher Workloads) boshqaruvi
+# -------------------------------------------------------------
+def db_save_workloads(items: List[Dict[str, Any]]) -> int:
+    """HEMIS o'quv yuklamalarini saqlash (tozalab qayta yozish)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM teacher_workloads")
+    
+    rows = []
+    for item in items:
+        emp = item.get("employee", {}) or {}
+        emp_id = emp.get("id") or 0
+        emp_name = (emp.get("full_name") or "").strip()
+        dept = (item.get("department", {}) or {}).get("name", "")
+        subj = (item.get("subject", {}) or {}).get("name", "")
+        edu = item.get("educationType", {}) or {}
+        edu_code = str(edu.get("code") or "")
+        edu_name = edu.get("name") or "Bakalavr"
+        hours = int(item.get("total_hours") or 0)
+        
+        if emp_name and subj:
+            rows.append((emp_id, emp_name, dept, subj, edu_code, edu_name, hours))
+            
+    cursor.executemany("""
+        INSERT INTO teacher_workloads (
+            employee_id, employee_name, department_name, subject_name,
+            education_type_code, education_type_name, total_hours
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, rows)
+    
+    conn.commit()
+    inserted_count = cursor.rowcount
+    conn.close()
+    return inserted_count
+
+def db_get_teacher_workloads(employee_id: Optional[int] = None, employee_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Muayyan o'qituvchining HEMIS o'quv yuklamasini olish"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if employee_id:
+        cursor.execute("SELECT * FROM teacher_workloads WHERE employee_id = ? ORDER BY total_hours DESC", (employee_id,))
+    elif employee_name:
+        clean_name = f"%{employee_name.strip()}%"
+        cursor.execute("SELECT * FROM teacher_workloads WHERE employee_name LIKE ? ORDER BY total_hours DESC", (clean_name,))
+    else:
+        cursor.execute("SELECT * FROM teacher_workloads ORDER BY employee_name ASC, total_hours DESC")
+        
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def db_get_workloads_summary() -> Dict[str, Any]:
+    """Umumiy o'quv yuklamasi statistikasi"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_items,
+            COUNT(DISTINCT employee_id) as total_teachers,
+            COALESCE(SUM(total_hours), 0) as total_hours,
+            COALESCE(SUM(CASE WHEN education_type_name = 'Bakalavr' OR education_type_code = '11' THEN total_hours ELSE 0 END), 0) as bachelor_hours,
+            COALESCE(SUM(CASE WHEN education_type_name = 'Magistr' OR education_type_code = '12' THEN total_hours ELSE 0 END), 0) as master_hours
+        FROM teacher_workloads
+    """)
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return {
+        "total_items": 0,
+        "total_teachers": 0,
+        "total_hours": 0,
+        "bachelor_hours": 0,
+        "master_hours": 0
+    }
 
 # Bazani ishga tushirish
 init_db()

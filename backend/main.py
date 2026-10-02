@@ -24,7 +24,8 @@ from database import (
     db_load_settings, db_save_settings,
     db_load_indicators, db_save_indicator,
     db_load_appeals, db_save_appeal, db_review_appeal,
-    db_load_evaluators, db_add_evaluator, db_delete_evaluator
+    db_load_evaluators, db_add_evaluator, db_delete_evaluator,
+    db_save_workloads, db_get_teacher_workloads, db_get_workloads_summary
 )
 
 
@@ -2364,6 +2365,124 @@ def sync_hemis_teachers():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Sinxronizatsiya xatoligi: {str(e)}")
+
+
+# -------------------------------------------------------------
+# HEMIS O'QUV YUKLAMALARI (TEACHER WORKLOAD) XIZMATI
+# -------------------------------------------------------------
+
+def fetch_all_hemis_workloads():
+    """HEMIS API dan barcha o'quv yuklamalarini pagination orqali to'liq yuklab olish"""
+    items = []
+    page = 1
+    page_size = 200
+    while True:
+        url = f"{HEMIS_BASE_URL}/data/teacher-workload?page={page}&limit={page_size}"
+        try:
+            res = requests.get(url, headers=get_hemis_headers(), timeout=15)
+            if res.status_code != 200:
+                break
+            data = res.json()
+            page_items = data.get("data", {}).get("items", [])
+            if not page_items:
+                break
+            items.extend(page_items)
+            pagination = data.get("data", {}).get("pagination", {})
+            total_pages = pagination.get("pageCount", 1)
+            if page >= total_pages:
+                break
+            page += 1
+        except Exception:
+            break
+            
+    if items:
+        db_save_workloads(items)
+    return items
+
+@app.get("/api/hemis/workloads")
+def get_hemis_workloads(employee_id: Optional[int] = None, employee_name: Optional[str] = None):
+    """
+    HEMIS o'quv yuklamalari ro'yxati va statistikasi.
+    Agar bazada hali ma'lumot bo'lmasa, avtomatik ravishda HEMIS dan yuklab oladi.
+    """
+    summary = db_get_workloads_summary()
+    if summary["total_items"] == 0:
+        fetch_all_hemis_workloads()
+        summary = db_get_workloads_summary()
+
+    workloads = db_get_teacher_workloads(employee_id=employee_id, employee_name=employee_name)
+    return {
+        "success": True,
+        "summary": summary,
+        "total_items": len(workloads),
+        "items": workloads
+    }
+
+@app.post("/api/hemis/sync-workloads")
+def sync_hemis_workloads():
+    """HEMIS dan o'quv yuklamalarini majburiy qayta sinxronlashtirish"""
+    try:
+        items = fetch_all_hemis_workloads()
+        summary = db_get_workloads_summary()
+        
+        # Audit jurnali
+        audit_msg = f"HEMIS oʻquv yuklamalari sinxronlandi: {summary['total_items']} ta fan/yuklama, {summary['total_teachers']} nafar oʻqituvchi, jami {summary['total_hours']} soat."
+        db_save_audit_log(datetime.now().strftime("%Y-%m-%d %H:%M"), "ADMIN", audit_msg)
+        AUDIT_LOGS.insert(0, {
+            "id": len(AUDIT_LOGS) + 1,
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "user": "ADMIN",
+            "action": audit_msg
+        })
+        
+        return {
+            "success": True,
+            "message": f"HEMIS dan {len(items)} ta oʻquv yuklamasi muvaffaqiyatli yuklandi!",
+            "summary": summary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Oʻquv yuklamalarini sinxronlashda xatolik: {str(e)}")
+
+@app.get("/api/hemis/teacher-workload/{emp_id_or_name}")
+def get_single_teacher_workload(emp_id_or_name: str):
+    """
+    Muayyan bitta o'qituvchining HEMIS o'quv yuklamasi tahlili:
+    - ID yoki Ism bo'yicha qidirish
+    - Fanlar kesimi, bakalavr/magistr soatlari taqsimoti
+    """
+    summary = db_get_workloads_summary()
+    if summary["total_items"] == 0:
+        fetch_all_hemis_workloads()
+
+    emp_id = None
+    emp_name = None
+    if emp_id_or_name.isdigit():
+        emp_id = int(emp_id_or_name)
+    else:
+        emp_name = emp_id_or_name
+
+    items = db_get_teacher_workloads(employee_id=emp_id, employee_name=emp_name)
+
+    total_hours = sum(r.get("total_hours", 0) for r in items)
+    bachelor_hours = sum(r.get("total_hours", 0) for r in items if r.get("education_type_name") == "Bakalavr" or str(r.get("education_type_code")) == "11")
+    master_hours = sum(r.get("total_hours", 0) for r in items if r.get("education_type_name") == "Magistr" or str(r.get("education_type_code")) == "12")
+    
+    # O'qituvchi nomi va kafedrasi
+    teacher_name = items[0]["employee_name"] if items else emp_id_or_name
+    department_name = items[0]["department_name"] if items else ""
+
+    return {
+        "success": True,
+        "employee_id": emp_id,
+        "employee_name": teacher_name,
+        "department_name": department_name,
+        "total_hours": total_hours,
+        "bachelor_hours": bachelor_hours,
+        "master_hours": master_hours,
+        "subjects_count": len(items),
+        "subjects": items
+    }
+
 
 
 

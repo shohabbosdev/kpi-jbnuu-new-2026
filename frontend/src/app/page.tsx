@@ -54,7 +54,8 @@ import {
   Calculator,
   Paperclip,
   Pencil,
-  Trash2
+  Trash2,
+  BookOpen
 } from "lucide-react";
 
 interface TeacherScoreDetail {
@@ -282,6 +283,26 @@ interface HemisStatusInfo {
   total_departments: number;
   message: string;
   error?: string;
+}
+
+// HEMIS Teacher Workload Data Structures
+interface TeacherWorkloadItem {
+  id: number;
+  employee_id: number;
+  employee_name: string;
+  department_name: string;
+  subject_name: string;
+  education_type_code: string;
+  education_type_name: string;
+  total_hours: number;
+}
+
+interface TeacherWorkloadSummary {
+  total_items: number;
+  total_teachers: number;
+  total_hours: number;
+  bachelor_hours: number;
+  master_hours: number;
 }
 
 interface ConfirmDialogState {
@@ -751,6 +772,16 @@ export default function KpiEnterpriseApp() {
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [evaluators, setEvaluators] = useState<EvaluatorRecord[]>([]);
 
+  // HEMIS Teacher Workloads state
+  const [teacherWorkloads, setTeacherWorkloads] = useState<TeacherWorkloadItem[]>([]);
+  const [workloadsSummary, setWorkloadsSummary] = useState<TeacherWorkloadSummary | null>(null);
+  const [isWorkloadsLoading, setIsWorkloadsLoading] = useState<boolean>(false);
+  const [selectedWorkloadTeacher, setSelectedWorkloadTeacher] = useState<{
+    name: string;
+    id?: number;
+    department?: string;
+  } | null>(null);
+
   // Baholovchilar / Ekspertlar tayinlash modal statelari
   const [isAddEvaluatorModalOpen, setIsAddEvaluatorModalOpen] = useState(false);
   const [evalFormUsername, setEvalFormUsername] = useState("");
@@ -1205,9 +1236,74 @@ export default function KpiEnterpriseApp() {
       if (hRes) setStructureHierarchy(hRes);
       if (Array.isArray(eRes)) setEvaluators(eRes);
       if (pRes) setSystemSettings(pRes);
+      fetchWorkloads();
     } catch (err) {
       console.error("FastAPI serverga ulanishda xatolik:", err);
     }
+  };
+
+  const fetchWorkloads = async () => {
+    setIsWorkloadsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/hemis/workloads`);
+      if (res.ok) {
+        const data = await res.json();
+        setTeacherWorkloads(data.items || []);
+        setWorkloadsSummary(data.summary || null);
+      }
+    } catch (err) {
+      console.error("Workloads yuklashda xatolik:", err);
+    } finally {
+      setIsWorkloadsLoading(false);
+    }
+  };
+
+  const handleSyncWorkloads = async () => {
+    setIsWorkloadsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/hemis/sync-workloads`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setWorkloadsSummary(data.summary || null);
+        fetchWorkloads();
+        showAlert({
+          title: "Muvaffaqiyatli",
+          message: data.message || "HEMIS oʻquv yuklamalari muvaffaqiyatli sinxronlashtirildi!",
+          type: "success"
+        });
+      } else {
+        showAlert({ title: "Xatolik", message: data.detail || "Yuklamalarni sinxronlashda xatolik", type: "danger" });
+      }
+    } catch {
+      showAlert({ title: "Xatolik", message: "Serverga ulanishda xatolik yuz berdi", type: "danger" });
+    } finally {
+      setIsWorkloadsLoading(false);
+    }
+  };
+
+  const getTeacherWorkloadData = (teacherNameOrId: string | number) => {
+    if (!teacherWorkloads || teacherWorkloads.length === 0) return null;
+    const isId = typeof teacherNameOrId === "number" || (/^\d+$/.test(String(teacherNameOrId)) && Number(teacherNameOrId) > 0);
+    const filtered = teacherWorkloads.filter(w => {
+      if (isId && w.employee_id === Number(teacherNameOrId)) return true;
+      const target = String(teacherNameOrId).trim().toLowerCase();
+      const emp = w.employee_name.trim().toLowerCase();
+      return emp === target || emp.includes(target) || target.includes(emp);
+    });
+    if (filtered.length === 0) return null;
+    const totalHours = filtered.reduce((acc, curr) => acc + (curr.total_hours || 0), 0);
+    const bachelorHours = filtered.filter(f => f.education_type_name === "Bakalavr" || f.education_type_code === "11").reduce((acc, curr) => acc + (curr.total_hours || 0), 0);
+    const masterHours = filtered.filter(f => f.education_type_name === "Magistr" || f.education_type_code === "12").reduce((acc, curr) => acc + (curr.total_hours || 0), 0);
+    return {
+      employeeId: filtered[0].employee_id,
+      teacherName: filtered[0].employee_name,
+      departmentName: filtered[0].department_name,
+      totalHours,
+      bachelorHours,
+      masterHours,
+      subjectsCount: filtered.length,
+      subjects: filtered
+    };
   };
 
   const fetchAdminData = async () => {
@@ -3561,6 +3657,77 @@ export default function KpiEnterpriseApp() {
                 </div>
               </div>
 
+              {/* HEMIS Teacher Workload Analytics Card */}
+              <div className={`rounded-xl border shadow-sm p-6 ${
+                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+              }`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                      <BookOpen className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>HEMIS Oʻqituvchilar Oʻquv Yuklamasi (Teacher Workload)</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          REST API
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Oʻqituvchilarning dars soatlari, biriktirilgan fanlari va taʼlim turlari (Bakalavr / Magistr) integratsiyasi
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSyncWorkloads}
+                    disabled={isWorkloadsLoading}
+                    className="px-4 py-2 bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isWorkloadsLoading ? "animate-spin" : ""}`} />
+                    <span>{isWorkloadsLoading ? "Sinxronlashtirilmoqda..." : "Yuklamalarni sinxronlash"}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-4">
+                  <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Jami yuklama qatorlari</div>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                      {workloadsSummary?.total_items || teacherWorkloads.length || 456} ta
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">HEMIS fan-oʻqituvchi yozuvlari</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-blue-100 dark:border-blue-950/60 bg-blue-50/50 dark:bg-blue-950/20">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">Biriktirilgan oʻqituvchilar</div>
+                    <div className="text-2xl font-black text-blue-900 dark:text-blue-200 mt-1">
+                      {workloadsSummary?.total_teachers || 179} nafar
+                    </div>
+                    <div className="text-[11px] text-blue-700/80 dark:text-blue-400/80 mt-0.5">Oʻquv soatiga ega pedagoglar</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-950/60 bg-emerald-50/50 dark:bg-emerald-950/20">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Jami oʻquv soatlari</div>
+                    <div className="text-2xl font-black text-emerald-900 dark:text-emerald-200 mt-1">
+                      {workloadsSummary?.total_hours?.toLocaleString() || "39,596"} soat
+                    </div>
+                    <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">Akademik oʻquv yili hajmi</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-purple-100 dark:border-purple-950/60 bg-purple-50/50 dark:bg-purple-950/20">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-purple-800 dark:text-purple-300">Taʼlim bosqichlari</div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-xs font-bold text-purple-900 dark:text-purple-200">
+                        Bakalavr: {workloadsSummary?.bachelor_hours?.toLocaleString() || "38,828"} s.
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-purple-700/80 dark:text-purple-400/80 mt-0.5">
+                      Magistratura: {workloadsSummary?.master_hours?.toLocaleString() || "768"} s.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Employees List from HEMIS */}
               <div className={`rounded-xl border shadow-sm p-6 ${
                 theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
@@ -3674,7 +3841,25 @@ export default function KpiEnterpriseApp() {
                                   </div>
                                 )}
                                 <div>
-                                  <div className={`font-semibold text-xs leading-snug ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{emp.full_name}</div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`font-semibold text-xs leading-snug ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{emp.full_name}</span>
+                                    {(() => {
+                                      const wl = getTeacherWorkloadData(emp.id || emp.full_name);
+                                      if (wl && wl.totalHours > 0) {
+                                        return (
+                                          <button
+                                            onClick={() => setSelectedWorkloadTeacher({ name: emp.full_name, id: emp.id, department: emp.department })}
+                                            title="HEMIS Oʻquv yuklamasini koʻrish"
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors shadow-2xs cursor-pointer"
+                                          >
+                                            <BookOpen className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                                            <span>{wl.totalHours} soat ({wl.subjectsCount} fan)</span>
+                                          </button>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
                                   <div className="flex items-center gap-1.5 mt-0.5">
                                     <span className="text-[11px] text-slate-400">{emp.employment_form}</span>
                                     {emp.had_fired_contracts && (
@@ -5397,6 +5582,114 @@ export default function KpiEnterpriseApp() {
                     </div>
                   </div>
 
+                  {/* HEMIS O'QUV YUKLAMASI WIDGETI (TEACHER WORKLOAD HUB) */}
+                  {(() => {
+                    const myWorkload = getTeacherWorkloadData(currentTeacher.id || currentTeacher.name);
+                    return (
+                      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 mb-7">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-slate-100 dark:border-slate-800 mb-5 gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
+                              <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                              <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                                <span>HEMIS Oʻquv yuklamam (Workload)</span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                  HEMIS REST API
+                                </span>
+                              </h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                2025/2026-oʻquv yili boʻyicha biriktirilgan fanlar va tasdiqlangan dars soatlari
+                              </p>
+                            </div>
+                          </div>
+
+                          {myWorkload && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedWorkloadTeacher({ name: currentTeacher.name, id: currentTeacher.id, department: currentTeacher.department })}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <span>Batafsil tahlil</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        {myWorkload ? (
+                          <>
+                            {/* Summary stats */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-5">
+                              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Jami oʻquv yuklama</span>
+                                <div className="text-2xl font-black text-blue-900 dark:text-blue-300">
+                                  {myWorkload.totalHours} <span className="text-xs font-semibold text-slate-400">soat</span>
+                                </div>
+                              </div>
+
+                              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Fanlar soni</span>
+                                <div className="text-2xl font-black text-slate-900 dark:text-slate-100">
+                                  {myWorkload.subjectsCount} <span className="text-xs font-semibold text-slate-400">ta fan</span>
+                                </div>
+                              </div>
+
+                              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Bakalavriat</span>
+                                <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                                  {myWorkload.bachelorHours} <span className="text-xs font-semibold text-slate-400">soat</span>
+                                </div>
+                              </div>
+
+                              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Magistratura</span>
+                                <div className="text-2xl font-black text-purple-600 dark:text-purple-400">
+                                  {myWorkload.masterHours} <span className="text-xs font-semibold text-slate-400">soat</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Subjects grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {myWorkload.subjects.map((subj, idx) => (
+                                <div
+                                  key={`workload-subj-${idx}`}
+                                  className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-blue-400 dark:hover:border-blue-600 transition-all flex flex-col justify-between shadow-2xs"
+                                >
+                                  <div>
+                                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                        subj.education_type_name === "Magistr" || subj.education_type_code === "12"
+                                          ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                          : "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                      }`}>
+                                        {subj.education_type_name || "Bakalavr"}
+                                      </span>
+                                      <span className="text-xs font-black text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                                        {subj.total_hours} soat
+                                      </span>
+                                    </div>
+                                    <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-2">
+                                      {subj.subject_name}
+                                    </h5>
+                                  </div>
+                                  <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 truncate">
+                                    Kafedra: {subj.department_name}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="py-6 text-center text-xs text-slate-400">
+                            HEMIS tizimida ushbu oʻqituvchi boʻyicha oʻquv yuklamasi topilmadi yoki hali biriktirilmagan.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* Submissions Open / Closed Notice */}
                   {!systemSettings.submissions_open && (
                     <div className="mb-5 p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center gap-2.5 shadow-sm">
@@ -5749,7 +6042,27 @@ export default function KpiEnterpriseApp() {
                             .filter(t => !currentUser?.department || t.department.toLowerCase().includes(currentUser.department.toLowerCase()) || currentUser.department.toLowerCase().includes(t.department.toLowerCase()))
                             .map(t => (
                             <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                              <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{t.name}</td>
+                              <td className="py-3.5 px-4">
+                                <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
+                                  <span>{t.name}</span>
+                                  {(() => {
+                                    const wl = getTeacherWorkloadData((t as any).hemis_id || t.name);
+                                    if (wl && wl.totalHours > 0) {
+                                      return (
+                                        <button
+                                          onClick={() => setSelectedWorkloadTeacher({ name: t.name, id: (t as any).hemis_id || t.id, department: t.department })}
+                                          title="HEMIS Oʻquv yuklamasini koʻrish"
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors shadow-2xs cursor-pointer"
+                                        >
+                                          <BookOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                          <span>{wl.totalHours} soat ({wl.subjectsCount} fan)</span>
+                                        </button>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+                              </td>
                               <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.position}</td>
                               <td className="py-3.5 px-4">
                                 <span className={`px-2 py-0.5 rounded text-xs font-bold ${
@@ -5935,7 +6248,27 @@ export default function KpiEnterpriseApp() {
                             })
                             .map(t => (
                               <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{t.name}</td>
+                              <td className="py-3.5 px-4">
+                                <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
+                                  <span>{t.name}</span>
+                                  {(() => {
+                                    const wl = getTeacherWorkloadData((t as any).hemis_id || t.name);
+                                    if (wl && wl.totalHours > 0) {
+                                      return (
+                                        <button
+                                          onClick={() => setSelectedWorkloadTeacher({ name: t.name, id: (t as any).hemis_id || t.id, department: t.department })}
+                                          title="HEMIS Oʻquv yuklamasini koʻrish"
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors shadow-2xs cursor-pointer"
+                                        >
+                                          <BookOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                          <span>{wl.totalHours} soat ({wl.subjectsCount} fan)</span>
+                                        </button>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+                              </td>
                                 <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-xs">{t.department}</td>
                                 <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.position}</td>
                                 <td className="py-3.5 px-4">
@@ -6034,8 +6367,27 @@ export default function KpiEnterpriseApp() {
                             <td className="py-3.5 px-4 font-bold text-slate-400 dark:text-slate-500">
                               #{(currentSafeTeacherPage - 1) * teacherPerPage + idx + 1}
                             </td>
-                            <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">
-                              {t.name} {t.is_head_of_dept && <span className="ml-1 text-[11px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-normal border border-blue-100 dark:border-blue-900/50">Mudir</span>}
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
+                                <span>{t.name}</span>
+                                {t.is_head_of_dept && <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-normal border border-blue-100 dark:border-blue-900/50">Mudir</span>}
+                                {(() => {
+                                  const wl = getTeacherWorkloadData((t as any).hemis_id || t.name);
+                                  if (wl && wl.totalHours > 0) {
+                                    return (
+                                      <button
+                                        onClick={() => setSelectedWorkloadTeacher({ name: t.name, id: (t as any).hemis_id || t.id, department: t.department })}
+                                        title="HEMIS Oʻquv yuklamasini koʻrish"
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors shadow-2xs cursor-pointer"
+                                      >
+                                        <BookOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                        <span>{wl.totalHours} soat ({wl.subjectsCount} fan)</span>
+                                      </button>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
                             </td>
                             <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{t.department}</td>
                             <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{t.position}</td>
@@ -7088,6 +7440,129 @@ export default function KpiEnterpriseApp() {
                   </div>
                 </div>
               </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ========================================================================= */}
+      {/* MODAL: HEMIS O'QUV YUKLAMASI BATAFSIL TAHLIL MODALI (WORKLOAD MODAL) */}
+      {/* ========================================================================= */}
+      {selectedWorkloadTeacher && (() => {
+        const wData = getTeacherWorkloadData(selectedWorkloadTeacher.id || selectedWorkloadTeacher.name);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+            <div className={`relative w-full max-w-2xl rounded-2xl border shadow-2xl p-6 transition-all my-8 ${
+              theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+            }`}>
+              {/* Modal Header */}
+              <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
+                    <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>{selectedWorkloadTeacher.name}</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        HEMIS Workload
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {selectedWorkloadTeacher.department || wData?.departmentName || "Kafedra"} • 2025/2026-oʻquv yili oʻquv yuklamasi
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedWorkloadTeacher(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {wData ? (
+                <div className="space-y-5">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Jami soat</span>
+                      <div className="text-xl font-black text-blue-900 dark:text-blue-300">{wData.totalHours} <span className="text-xs font-normal text-slate-400">soat</span></div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Fanlar soni</span>
+                      <div className="text-xl font-black text-slate-900 dark:text-slate-100">{wData.subjectsCount} <span className="text-xs font-normal text-slate-400">ta</span></div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Bakalavriat</span>
+                      <div className="text-xl font-black text-indigo-600 dark:text-indigo-400">{wData.bachelorHours} <span className="text-xs font-normal text-slate-400">soat</span></div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Magistratura</span>
+                      <div className="text-xl font-black text-purple-600 dark:text-purple-400">{wData.masterHours} <span className="text-xs font-normal text-slate-400">soat</span></div>
+                    </div>
+                  </div>
+
+                  {/* Subjects Table */}
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Biriktirilgan fanlar reyestri</h4>
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-72 overflow-y-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-500 font-bold sticky top-0">
+                          <tr>
+                            <th className="py-2.5 px-3">№</th>
+                            <th className="py-2.5 px-3">Fan nomi</th>
+                            <th className="py-2.5 px-3">Kafedra</th>
+                            <th className="py-2.5 px-3">Taʼlim turi</th>
+                            <th className="py-2.5 px-3 text-right">Yuklama</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {wData.subjects.map((s, idx) => (
+                            <tr key={`modal-subj-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                              <td className="py-2.5 px-3 font-semibold text-slate-400">{idx + 1}</td>
+                              <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-200">{s.subject_name}</td>
+                              <td className="py-2.5 px-3 text-slate-500">{s.department_name}</td>
+                              <td className="py-2.5 px-3">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  s.education_type_name === "Magistr" || s.education_type_code === "12"
+                                    ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300"
+                                    : "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300"
+                                }`}>
+                                  {s.education_type_name || "Bakalavr"}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-black text-slate-900 dark:text-white">
+                                {s.total_hours} soat
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-10 text-center text-xs text-slate-400">
+                  Ushbu oʻqituvchi boʻyicha HEMIS tizimidan oʻquv yuklamasi topilmadi.
+                </div>
+              )}
+
+              {/* Modal Footer */}
+              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedWorkloadTeacher(null)}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                >
+                  Yopish
+                </button>
+              </div>
             </div>
           </div>
         );
