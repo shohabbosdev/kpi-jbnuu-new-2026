@@ -52,7 +52,9 @@ import {
   Upload,
   Sparkles,
   Calculator,
-  Paperclip
+  Paperclip,
+  Pencil,
+  Trash2
 } from "lucide-react";
 
 interface TeacherScoreDetail {
@@ -119,13 +121,49 @@ interface Submission {
 
 interface Appeal {
   id: string;
+  submission_id?: number;
   teacher_id: number;
   teacher_name: string;
   indicator_id: string;
+  title?: string;
+  claimed_ball?: number;
+  reviewed_ball?: number;
+  initial_reviewer?: string;
+  initial_rejection_reason?: string;
+  appeal_reason?: string;
   reason: string;
+  evidence_file?: string;
   submitted_date: string;
   status: string;
   decision?: string;
+  commission_member?: string;
+  commission_comment?: string;
+  decision_date?: string;
+  awarded_ball?: number;
+  created_at?: string;
+}
+
+interface EvaluatorRecord {
+  id: number;
+  user_id?: number;
+  username: string;
+  name: string;
+  assigned_category: string;
+  role_type: string;
+  deadline_date?: string;
+  is_active: boolean;
+  assigned_by?: string;
+  created_at?: string;
+}
+
+interface EvaluationPeriodInfo {
+  academic_year: string;
+  submissions_open: boolean;
+  submission_deadline: string;
+  review_deadline: string;
+  appeal_deadline: string;
+  current_stage: string;
+  budget_cap_monthly: number;
 }
 
 interface AuthUser {
@@ -174,6 +212,10 @@ interface SystemSettings {
   academic_year: string;
   submissions_open: boolean;
   deadline_date: string;
+  submission_deadline?: string;
+  review_deadline?: string;
+  appeal_deadline?: string;
+  current_stage?: string;
   budget_cap_monthly: number;
 }
 
@@ -242,19 +284,184 @@ interface HemisStatusInfo {
   error?: string;
 }
 
+interface ConfirmDialogState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  type?: "danger" | "warning" | "info" | "success";
+  onConfirm: () => void | Promise<void>;
+  onCancel?: () => void;
+  isAlertOnly?: boolean;
+}
+
+interface UniversalPaginationProps {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage?: number;
+  onPageChange: (page: number) => void;
+  onItemsPerPageChange?: (perPage: number) => void;
+  perPageOptions?: number[];
+  itemLabel?: string;
+  theme: "light" | "dark";
+}
+
+function UniversalPagination({
+  currentPage,
+  totalPages,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+  onItemsPerPageChange,
+  perPageOptions = [10, 25, 50],
+  itemLabel = "yozuv",
+  theme
+}: UniversalPaginationProps) {
+  if (totalItems === 0) return null;
+
+  const isDark = theme === "dark";
+  const startItem = itemsPerPage ? (currentPage - 1) * itemsPerPage + 1 : 1;
+  const endItem = itemsPerPage ? Math.min(currentPage * itemsPerPage, totalItems) : totalItems;
+
+  const pages: (number | string)[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (currentPage > 3) pages.push("...");
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push("...");
+    pages.push(totalPages);
+  }
+
+  return (
+    <div className={`px-4 py-3 border-t flex flex-wrap items-center justify-between gap-3 text-xs transition-colors ${
+      isDark 
+        ? "bg-slate-900 border-slate-800 text-slate-300" 
+        : "bg-slate-50 border-slate-200 text-slate-600"
+    }`}>
+      {/* Chap tomon: Qaydlar soni va har sahifadagi miqdor */}
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <span className="font-medium">
+          Jami <b className={isDark ? "text-white" : "text-slate-900"}>{totalItems}</b> ta {itemLabel}dan{" "}
+          <b className={isDark ? "text-blue-400" : "text-blue-700"}>{startItem}–{endItem}</b> koʻrsatilmoqda
+        </span>
+        {onItemsPerPageChange && itemsPerPage && (
+          <>
+            <span className={isDark ? "text-slate-700" : "text-slate-300"}>|</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-medium">Har sahifada:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  onItemsPerPageChange(Number(e.target.value));
+                  onPageChange(1);
+                }}
+                className={`border rounded-lg px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors ${
+                  isDark
+                    ? "bg-slate-800 border-slate-700 text-slate-100 hover:border-slate-600"
+                    : "bg-white border-slate-300 text-slate-800 hover:border-slate-400 shadow-xs"
+                }`}
+              >
+                {perPageOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt} tadan
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* O'ng tomon: Sahifalash tugmalari */}
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
+          {/* Oldingi tugmasi */}
+          <button
+            type="button"
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
+            className={`px-2.5 py-1.5 rounded-lg border font-semibold flex items-center gap-1 transition-all ${
+              currentPage <= 1
+                ? isDark
+                  ? "bg-slate-800/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50"
+                  : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50"
+                : isDark
+                ? "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white hover:border-slate-600 shadow-xs cursor-pointer"
+                : "bg-white border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-xs cursor-pointer"
+            }`}
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Oldingi</span>
+          </button>
+
+          {/* Sahifa raqamlari */}
+          {pages.map((p, idx) => {
+            if (p === "...") {
+              return (
+                <span
+                  key={`ellipsis-${idx}`}
+                  className={`w-8 h-8 flex items-center justify-center font-bold ${
+                    isDark ? "text-slate-600" : "text-slate-400"
+                  }`}
+                >
+                  ...
+                </span>
+              );
+            }
+            const isCurr = p === currentPage;
+            return (
+              <button
+                key={`page-${p}`}
+                type="button"
+                onClick={() => onPageChange(Number(p))}
+                className={`min-w-8 h-8 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                  isCurr
+                    ? isDark
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/40 ring-1 ring-blue-400"
+                      : "bg-blue-900 text-white shadow-md shadow-blue-900/20"
+                    : isDark
+                    ? "bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white hover:border-slate-600"
+                    : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-xs"
+                }`}
+              >
+                {p}
+              </button>
+            );
+          })}
+
+          {/* Keyingi tugmasi */}
+          <button
+            type="button"
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+            className={`px-2.5 py-1.5 rounded-lg border font-semibold flex items-center gap-1 transition-all ${
+              currentPage >= totalPages
+                ? isDark
+                  ? "bg-slate-800/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50"
+                  : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50"
+                : isDark
+                ? "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white hover:border-slate-600 shadow-xs cursor-pointer"
+                : "bg-white border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-xs cursor-pointer"
+            }`}
+          >
+            <span className="hidden sm:inline">Keyingi</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function KpiEnterpriseApp() {
   // Authentication State
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("kpi_session_user");
-        if (saved) return JSON.parse(saved);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [loginUsername, setLoginUsername] = useState<string>("");
   const [loginPassword, setLoginPassword] = useState<string>("");
   const [showLoginPassword, setShowLoginPassword] = useState<boolean>(false);
@@ -262,36 +469,15 @@ export default function KpiEnterpriseApp() {
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
   // Active Role and Navigation
-  const [activeRole, setActiveRole] = useState<"ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE">(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedUser = localStorage.getItem("kpi_session_user");
-        if (savedUser) {
-          const u = JSON.parse(savedUser);
-          if (u.role === "ADMIN") {
-            const savedRole = localStorage.getItem("kpi_active_role");
-            return (savedRole as any) || "ADMIN";
-          }
-          return u.role;
-        }
-      } catch {
-        return "ADMIN";
-      }
-    }
-    return "ADMIN";
-  });
-
+  const [activeRole, setActiveRole] = useState<"ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE">("ADMIN");
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
   const [activePage, setActivePage] = useState<
     "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators" | "profile"
-  >(() => {
-    if (typeof window !== "undefined") {
-      const savedPage = localStorage.getItem("kpi_active_page");
-      if (savedPage) return savedPage as any;
-    }
-    return "dashboard";
-  });
+  >("dashboard");
+
+  // Editing Submission State (Baholanmagan arizani tahrirlash uchun)
+  const [editingSubmission, setEditingSubmission] = useState<Submission | null>(null);
   const [activeSvetaforFilter, setActiveSvetaforFilter] = useState<string>("ALL");
   const [selectedBlockFilter, setSelectedBlockFilter] = useState<string>("ALL");
   const [fteFilter, setFteFilter] = useState<"ALL" | "1.5" | "1.0" | "PART">("ALL");
@@ -303,12 +489,41 @@ export default function KpiEnterpriseApp() {
   const [indicators, setIndicators] = useState<Indicator[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [appeals, setAppeals] = useState<Appeal[]>([]);
+  const [evaluators, setEvaluators] = useState<EvaluatorRecord[]>([]);
+
+  // Baholovchilar / Ekspertlar tayinlash modal statelari
+  const [isAddEvaluatorModalOpen, setIsAddEvaluatorModalOpen] = useState(false);
+  const [evalFormUsername, setEvalFormUsername] = useState("");
+  const [evalFormName, setEvalFormName] = useState("");
+  const [evalFormCategory, setEvalFormCategory] = useState("2. Ilmiy va innovatsion faoliyat");
+  const [evalFormRole, setEvalFormRole] = useState("EXPERT");
+  const [evalFormDeadline, setEvalFormDeadline] = useState("2026-06-25");
+  const [isEvaluatorSaving, setIsEvaluatorSaving] = useState(false);
+
+  // O'qituvchi arizadan to'g'ridan-to'g'ri apellyatsiya berish modal statelari
+  const [isAppealModalOpen, setIsAppealModalOpen] = useState(false);
+  const [selectedSubForAppeal, setSelectedSubForAppeal] = useState<Submission | null>(null);
+  const [appealFormReason, setAppealFormReason] = useState("");
+  const [appealFormEvidence, setAppealFormEvidence] = useState("");
+  const [isAppealSubmitting, setIsAppealSubmitting] = useState(false);
+
+  // Komissiya apellyatsiyani ko'rib chiqish modal statelari
+  const [isReviewAppealModalOpen, setIsReviewAppealModalOpen] = useState(false);
+  const [selectedAppealForReview, setSelectedAppealForReview] = useState<Appeal | null>(null);
+  const [appealReviewStatus, setAppealReviewStatus] = useState<"ACCEPTED" | "PARTIALLY_ACCEPTED" | "REJECTED">("ACCEPTED");
+  const [appealReviewBall, setAppealReviewBall] = useState<number>(0);
+  const [appealReviewComment, setAppealReviewComment] = useState("");
+  const [isAppealReviewing, setIsAppealReviewing] = useState(false);
 
   // Admin Data states
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
     academic_year: "2025/2026-oʻquv yili",
     submissions_open: true,
     deadline_date: "2026-05-30",
+    submission_deadline: "2026-06-15",
+    review_deadline: "2026-06-25",
+    appeal_deadline: "2026-07-05",
+    current_stage: "ALL_OPEN",
     budget_cap_monthly: 150000000.0
   });
   const [adminUsers, setAdminUsers] = useState<AdminUserRecord[]>([]);
@@ -362,13 +577,84 @@ export default function KpiEnterpriseApp() {
   const [modalIndicator, setModalIndicator] = useState("1.1");
   const [modalTitle, setModalTitle] = useState("");
   const [modalAuthors, setModalAuthors] = useState(1);
-  const [modalDate, setModalDate] = useState("2026-03-15");
+  const [modalDate, setModalDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [modalClaimedBall, setModalClaimedBall] = useState<number>(6.0);
   const [modalDescription, setModalDescription] = useState<string>("");
   const [isDoiLoading, setIsDoiLoading] = useState(false);
   const [modalUploadedFile, setModalUploadedFile] = useState<File | null>(null);
   const [modalUploadedFileName, setModalUploadedFileName] = useState<string>("");
   const [isSubmittingNewKpi, setIsSubmittingNewKpi] = useState<boolean>(false);
+  const [modalNotification, setModalNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // Global Confirmation & Alert Modal State
+  const [confirmModal, setConfirmModal] = useState<ConfirmDialogState | null>(null);
+
+  const showConfirm = (opts: {
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    type?: "danger" | "warning" | "info" | "success";
+    onConfirm: () => void | Promise<void>;
+    onCancel?: () => void;
+  }) => {
+    setConfirmModal({
+      isOpen: true,
+      title: opts.title,
+      message: opts.message,
+      confirmText: opts.confirmText || "Tasdiqlash",
+      cancelText: opts.cancelText || "Bekor qilish",
+      type: opts.type || "warning",
+      onConfirm: opts.onConfirm,
+      onCancel: opts.onCancel,
+      isAlertOnly: false
+    });
+  };
+
+  const showAlert = (opts: {
+    title: string;
+    message: string;
+    confirmText?: string;
+    type?: "danger" | "warning" | "info" | "success";
+    onConfirm?: () => void;
+  }) => {
+    setConfirmModal({
+      isOpen: true,
+      title: opts.title,
+      message: opts.message,
+      confirmText: opts.confirmText || "Tushunarli",
+      type: opts.type || "info",
+      onConfirm: () => {
+        if (opts.onConfirm) opts.onConfirm();
+        setConfirmModal(null);
+      },
+      isAlertOnly: true
+    });
+  };
+
+  const promptLogout = () => {
+    showConfirm({
+      title: "Tizimdan chiqishni tasdiqlaysizmi?",
+      message: "Haqiqatan ham shaxsiy kabinetingizdan chiqmoqchimisiz? Tizimga qayta kirish uchun maxfiy parolingizni kiritishingiz lozim boʻladi.",
+      confirmText: "Chiqish",
+      cancelText: "Qolish",
+      type: "danger",
+      onConfirm: () => handleLogout()
+    });
+  };
+
+  const promptSyncHemis = () => {
+    showConfirm({
+      title: "HEMIS bilan toʻliq sinxronlash",
+      message: "HEMIS axborot tizimidan barcha pedagoglar qayta yuklanadi. Boʻshagan xodimlar avtomatik chiqariladi, oʻrindoshliklar birlashtiriladi. Saqlangan parollar va kiritilgan arizalar saqlanib qoladi.",
+      confirmText: "Sinxronlashni boshlash",
+      cancelText: "Bekor qilish",
+      type: "info",
+      onConfirm: async () => {
+        await handleSyncHemis();
+      }
+    });
+  };
 
   // Reviewer Verification Modal State (Mudir, Dekan, Admin uchun)
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState<boolean>(false);
@@ -404,6 +690,14 @@ export default function KpiEnterpriseApp() {
   const [hemisPerPage, setHemisPerPage] = useState<number>(15);
   const [indicatorsPage, setIndicatorsPage] = useState<number>(1);
   const [indicatorsPerPage, setIndicatorsPerPage] = useState<number>(10);
+  const [mySubsPage, setMySubsPage] = useState<number>(1);
+  const [mySubsPerPage, setMySubsPerPage] = useState<number>(6);
+  const [reviewSubsPage, setReviewSubsPage] = useState<number>(1);
+  const [reviewSubsPerPage, setReviewSubsPerPage] = useState<number>(6);
+  const [appealsPage, setAppealsPage] = useState<number>(1);
+  const [appealsPerPage, setAppealsPerPage] = useState<number>(8);
+  const [adminLogsPage, setAdminLogsPage] = useState<number>(1);
+  const [adminLogsPerPage, setAdminLogsPerPage] = useState<number>(12);
 
   // Theme State (Dark / Light)
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -600,12 +894,14 @@ export default function KpiEnterpriseApp() {
 
   const fetchInitialData = async () => {
     try {
-      const [tRes, iRes, sRes, aRes, hRes] = await Promise.all([
+      const [tRes, iRes, sRes, aRes, hRes, eRes, pRes] = await Promise.all([
         fetch(`${API_BASE}/teachers`).then(r => r.json()),
         fetch(`${API_BASE}/indicators`).then(r => r.json()),
         fetch(`${API_BASE}/submissions`).then(r => r.json()),
         fetch(`${API_BASE}/appeals`).then(r => r.json()),
-        fetch(`${API_BASE}/structure/hierarchy`).then(r => r.json()).catch(() => null)
+        fetch(`${API_BASE}/structure/hierarchy`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/evaluators`).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/evaluation-period`).then(r => r.json()).catch(() => null)
       ]);
       setTeachers(tRes);
       if (Array.isArray(tRes)) {
@@ -638,6 +934,8 @@ export default function KpiEnterpriseApp() {
       setSubmissions(sRes);
       setAppeals(aRes);
       if (hRes) setStructureHierarchy(hRes);
+      if (Array.isArray(eRes)) setEvaluators(eRes);
+      if (pRes) setSystemSettings(pRes);
     } catch (err) {
       console.error("FastAPI serverga ulanishda xatolik:", err);
     }
@@ -676,41 +974,69 @@ export default function KpiEnterpriseApp() {
       fetchAdminData();
       setTimeout(() => setUserActionMessage(""), 4000);
     } catch (err: any) {
-      alert(err.message || "Xatolik yuz berdi");
+      showAlert({
+        title: "Xatolik yuz berdi",
+        message: err.message || "Foydalanuvchi rolini oʻzgartirish jarayonida kutilmagan xatolik yuz berdi.",
+        type: "danger"
+      });
     }
   };
 
-  const handleResetUserPassword = async (username: string) => {
-    if (!confirm(`Haqiqatan ham @${username} xodimining parolini birlamchi HEMIS ID raqamiga tiklamoqchimisiz?`)) {
-      return;
-    }
-    try {
-      const res = await fetch(`${API_BASE}/admin/users/${username}/reset-password`, {
-        method: "POST"
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Parolni tiklashda xatolik");
-      setUserActionMessage(`@${username} xodimining paroli birlamchi HEMIS ID ga tiklandi va birinchi kirishda majburiy almashtirish oʻrnatildi`);
-      fetchAdminData();
-      setTimeout(() => setUserActionMessage(""), 5000);
-    } catch (err: any) {
-      alert(err.message || "Xatolik yuz berdi");
-    }
+  const handleResetUserPassword = (username: string) => {
+    showConfirm({
+      title: "Parolni tiklashni tasdiqlaysizmi?",
+      message: `@${username} xodimining maxfiy paroli birlamchi HEMIS ID raqamiga tiklanadi va tizimga kirishda majburiy yangi parol soʻraladi.`,
+      confirmText: "Ha, tiklansin",
+      cancelText: "Bekor qilish",
+      type: "warning",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${API_BASE}/admin/users/${username}/reset-password`, {
+            method: "POST"
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Parolni tiklashda xatolik");
+          setUserActionMessage(`@${username} xodimining paroli birlamchi HEMIS ID ga tiklandi`);
+          fetchAdminData();
+          setTimeout(() => setUserActionMessage(""), 5000);
+          showAlert({
+            title: "Parol tiklandi",
+            message: `@${username} xodimining paroli dastlabki HEMIS ID raqamiga muvaffaqiyatli tiklandi.`,
+            type: "success"
+          });
+        } catch (err: any) {
+          showAlert({ title: "Xatolik", message: err.message || "Parolni tiklashda xatolik yuz berdi", type: "danger" });
+        }
+      }
+    });
   };
 
-  const handleToggleUserStatus = async (username: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/admin/users/${username}/toggle-status`, {
-        method: "POST"
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Statusni oʻzgartirishda xatolik");
-      setUserActionMessage(data.message);
-      fetchAdminData();
-      setTimeout(() => setUserActionMessage(""), 4000);
-    } catch (err: any) {
-      alert(err.message || "Xatolik yuz berdi");
-    }
+  const handleToggleUserStatus = (username: string) => {
+    const targetUser = adminUsers.find(u => u.username === username);
+    const willBlock = targetUser ? targetUser.is_active : true;
+    showConfirm({
+      title: willBlock ? "Hisobni bloklashni tasdiqlaysizmi?" : "Hisobni faollashtirishni tasdiqlaysizmi?",
+      message: willBlock
+        ? `@${username} hisobi vaqtincha bloklanadi va u tizimga kira olmaydi.`
+        : `@${username} hisobi qayta faollashtiriladi va tizimga kirish huquqi tiklanadi.`,
+      confirmText: willBlock ? "Bloklash" : "Faollashtirish",
+      cancelText: "Bekor qilish",
+      type: willBlock ? "danger" : "success",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${API_BASE}/admin/users/${username}/toggle-status`, {
+            method: "POST"
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Statusni oʻzgartirishda xatolik");
+          setUserActionMessage(data.message);
+          fetchAdminData();
+          setTimeout(() => setUserActionMessage(""), 4000);
+        } catch (err: any) {
+          showAlert({ title: "Xatolik", message: err.message || "Xatolik yuz berdi", type: "danger" });
+        }
+      }
+    });
   };
 
   const handleSaveIndicator = async (e: React.FormEvent) => {
@@ -761,21 +1087,32 @@ export default function KpiEnterpriseApp() {
     }
   };
 
-  const handleDeleteIndicator = async (indId: string) => {
-    if (!confirm(`Haqiqatan ham '${indId}' mezonini arxivlamoqchimisiz? (Tarixiy arizalar buzilmaydi, lekin yangi ariza qabul qilinmaydi)`)) {
-      return;
-    }
-    try {
-      const res = await fetch(`${API_BASE}/indicators/${indId}`, {
-        method: "DELETE"
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Arxivlashda xatolik");
-      fetchInitialData();
-      fetchAdminData();
-    } catch (err: any) {
-      alert(err.message || "Xatolik yuz berdi");
-    }
+  const handleDeleteIndicator = (indId: string) => {
+    showConfirm({
+      title: "Mezonni arxivlash",
+      message: `'${indId}' mezonini haqiqatan ham arxivlamoqchimisiz? Tarixiy arizalar va ularga qoʻyilgan ballar saqlanadi, lekin ushbu mezon boʻyicha yangi arizalar qabul qilinmaydi.`,
+      confirmText: "Arxivlash",
+      cancelText: "Bekor qilish",
+      type: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${API_BASE}/indicators/${indId}`, {
+            method: "DELETE"
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Arxivlashda xatolik");
+          fetchInitialData();
+          fetchAdminData();
+          showAlert({
+            title: "Mezon arxivlandi",
+            message: `'${indId}' mezoni muvaffaqiyatli arxivlandi.`,
+            type: "success"
+          });
+        } catch (err: any) {
+          showAlert({ title: "Xatolik", message: err.message || "Xatolik yuz berdi", type: "danger" });
+        }
+      }
+    });
   };
 
   const fetchHemisData = async () => {
@@ -801,6 +1138,204 @@ export default function KpiEnterpriseApp() {
       console.error("HEMIS maʼlumotlarini yuklashda xatolik:", err);
     } finally {
       setIsHemisLoading(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // BAHOLOVCHILAR VA MUDDATLAR (EVALUATORS & PERIOD) AMALLARI
+  // -------------------------------------------------------------
+  const handleAddEvaluator = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!evalFormName.trim()) {
+      showAlert({ title: "Xatolik", message: "Baholovchi F.I.Sh. yoki nomini kiriting!", type: "warning" });
+      return;
+    }
+    setIsEvaluatorSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/evaluators`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: evalFormUsername.trim() || evalFormName.toLowerCase().replace(/\s+/g, "_"),
+          name: evalFormName.trim(),
+          assigned_category: evalFormCategory,
+          role_type: evalFormRole,
+          deadline_date: evalFormDeadline,
+          is_active: true,
+          assigned_by: currentUser?.name || "ADMIN"
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Baholovchini saqlashda xatolik");
+      
+      setEvaluators(prev => [...prev, data]);
+      setIsAddEvaluatorModalOpen(false);
+      setEvalFormName("");
+      setEvalFormUsername("");
+      showAlert({
+        title: "Baholovchi tayinlandi",
+        message: `${data.name} muvaffaqiyatli '${data.assigned_category}' boʻyicha masʼul etib tayinlandi.`,
+        type: "success"
+      });
+    } catch (err: any) {
+      showAlert({ title: "Xatolik", message: err.message || "Xatolik yuz berdi", type: "danger" });
+    } finally {
+      setIsEvaluatorSaving(false);
+    }
+  };
+
+  const handleDeleteEvaluator = (evalId: number, evalName: string) => {
+    showConfirm({
+      title: "Baholovchini chiqarish",
+      message: `${evalName}ni baholovchilar roʻyxatidan chiqarishni tasdiqlaysizmi?`,
+      confirmText: "Chiqarish",
+      cancelText: "Bekor qilish",
+      type: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${API_BASE}/evaluators/${evalId}`, { method: "DELETE" });
+          if (!res.ok) throw new Error("Oʻchirishda xatolik");
+          setEvaluators(prev => prev.filter(e => e.id !== evalId));
+          showAlert({ title: "Oʻchirildi", message: "Baholovchi muvaffaqiyatli roʻyxatdan chiqarildi.", type: "success" });
+        } catch (err: any) {
+          showAlert({ title: "Xatolik", message: err.message || "Xatolik yuz berdi", type: "danger" });
+        }
+      }
+    });
+  };
+
+  const handleSaveEvaluationPeriod = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSettings(true);
+    try {
+      const res = await fetch(`${API_BASE}/evaluation-period`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          academic_year: systemSettings.academic_year,
+          submissions_open: systemSettings.submissions_open,
+          submission_deadline: systemSettings.submission_deadline,
+          review_deadline: systemSettings.review_deadline,
+          appeal_deadline: systemSettings.appeal_deadline,
+          current_stage: systemSettings.current_stage,
+          budget_cap_monthly: Number(systemSettings.budget_cap_monthly)
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Muddatlarni saqlashda xatolik");
+      setSystemSettings(data);
+      setSettingsSaveSuccess(true);
+      setTimeout(() => setSettingsSaveSuccess(false), 3000);
+      showAlert({
+        title: "Reglament saqlandi",
+        message: "Baholash bosqichlari va muddatlari muvaffaqiyatli yangilandi.",
+        type: "success"
+      });
+    } catch (err: any) {
+      showAlert({ title: "Xatolik", message: err.message || "Xatolik yuz berdi", type: "danger" });
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // APELIYATSIYA (APPEALS) MODAL AMALLARI
+  // -------------------------------------------------------------
+  const handleOpenAppealModal = (sub: Submission) => {
+    setSelectedSubForAppeal(sub);
+    setAppealFormReason(`«${sub.title}» arizasi boʻyicha rad etilgan qarorga eʼtiroz: `);
+    setAppealFormEvidence("");
+    setIsAppealModalOpen(true);
+  };
+
+  const handleSubmitSubAppeal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSubForAppeal) return;
+    if (!appealFormReason.trim() || appealFormReason.trim().length < 10) {
+      showAlert({ title: "Xatolik", message: "Apellyatsiya sababini batafsilroq yozing (kamida 10 belgi)!", type: "warning" });
+      return;
+    }
+    setIsAppealSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/appeals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submission_id: selectedSubForAppeal.id,
+          teacher_id: selectedSubForAppeal.teacher_id,
+          teacher_name: selectedSubForAppeal.teacher_name,
+          indicator_id: selectedSubForAppeal.indicator_id,
+          title: selectedSubForAppeal.title,
+          claimed_ball: selectedSubForAppeal.claimed_ball,
+          reviewed_ball: selectedSubForAppeal.ball,
+          initial_reviewer: selectedSubForAppeal.reviewer_name || "Kafedra mudiri",
+          initial_rejection_reason: selectedSubForAppeal.rejection_reason || selectedSubForAppeal.reviewer_comment,
+          reason: appealFormReason.trim(),
+          evidence_file: appealFormEvidence.trim() || selectedSubForAppeal.file_name
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Apellyatsiya yuborishda xatolik");
+
+      setAppeals(prev => [data, ...prev]);
+      setIsAppealModalOpen(false);
+      setSelectedSubForAppeal(null);
+      showAlert({
+        title: "Apellyatsiya qabul qilindi",
+        message: `Ariza muvaffaqiyatli qabul qilindi (#${data.id}). Apellyatsiya komissiyasi tomonidan koʻrib chiqiladi.`,
+        type: "success"
+      });
+      setActivePage("appeals");
+    } catch (err: any) {
+      showAlert({ title: "Xatolik", message: err.message || "Xatolik yuz berdi", type: "danger" });
+    } finally {
+      setIsAppealSubmitting(false);
+    }
+  };
+
+  const handleOpenReviewAppealModal = (appeal: Appeal) => {
+    setSelectedAppealForReview(appeal);
+    setAppealReviewStatus("ACCEPTED");
+    setAppealReviewBall(appeal.claimed_ball || 0);
+    setAppealReviewComment("");
+    setIsReviewAppealModalOpen(true);
+  };
+
+  const handleSubmitAppealReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAppealForReview) return;
+    if (!appealReviewComment.trim()) {
+      showAlert({ title: "Xatolik", message: "Komissiya xulosasi va qaror asosini kiritish majburiy!", type: "warning" });
+      return;
+    }
+    setIsAppealReviewing(true);
+    try {
+      const res = await fetch(`${API_BASE}/appeals/${selectedAppealForReview.id}/review`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: appealReviewStatus,
+          commission_member: currentUser?.name || "Apellyatsiya Komissiyasi",
+          commission_comment: appealReviewComment.trim(),
+          awarded_ball: appealReviewStatus === "REJECTED" ? 0 : Number(appealReviewBall)
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Qarorni saqlashda xatolik");
+
+      setAppeals(prev => prev.map(a => a.id === data.id ? data : a));
+      setIsReviewAppealModalOpen(false);
+      setSelectedAppealForReview(null);
+      fetchInitialData();
+      showAlert({
+        title: "Qaror qabul qilindi",
+        message: `Apellyatsiya boʻyicha qaror (${data.status}) tasdiqlandi va arizachining reytingiga tatbiq etildi.`,
+        type: "success"
+      });
+    } catch (err: any) {
+      showAlert({ title: "Xatolik", message: err.message || "Xatolik yuz berdi", type: "danger" });
+    } finally {
+      setIsAppealReviewing(false);
     }
   };
 
@@ -948,10 +1483,10 @@ export default function KpiEnterpriseApp() {
         setSettingsSaveSuccess(true);
         setTimeout(() => setSettingsSaveSuccess(false), 4000);
       } else {
-        alert("Sozlamalarni saqlashda xatolik yuz berdi");
+        showAlert({ title: "Xatolik", message: "Sozlamalarni saqlashda xatolik yuz berdi", type: "danger" });
       }
     } catch {
-      alert("Serverga ulanishda xatolik");
+      showAlert({ title: "Xatolik", message: "Serverga ulanishda xatolik yuz berdi", type: "danger" });
     } finally {
       setIsSavingSettings(false);
     }
@@ -970,11 +1505,16 @@ export default function KpiEnterpriseApp() {
         fetchAdminData();
         fetchHemisData();
         setTimeout(() => setHemisSyncMessage(""), 5000);
+        showAlert({
+          title: "Sinxronizatsiya muvaffaqiyatli",
+          message: data.message || "HEMIS pedagog xodimlar bazasi toʻliq yangilandi.",
+          type: "success"
+        });
       } else {
-        alert(data.detail || "Sinxronizatsiyada xatolik");
+        showAlert({ title: "Xatolik", message: data.detail || "Sinxronizatsiyada xatolik yuz berdi", type: "danger" });
       }
     } catch {
-      alert("HEMIS sinxronizatsiya soʻrovi bajarilmadi");
+      showAlert({ title: "Xatolik", message: "HEMIS sinxronizatsiya soʻrovi bajarilmadi. Server holatini tekshiring.", type: "danger" });
     } finally {
       setIsHemisSyncing(false);
     }
@@ -1038,28 +1578,43 @@ export default function KpiEnterpriseApp() {
   const yellowPct = totalTeachersCount > 0 ? Math.round((yellowTeachers.length / totalTeachersCount) * 100) : 0;
   const redPct = totalTeachersCount > 0 ? Math.round((redTeachers.length / totalTeachersCount) * 100) : 0;
 
-  // DOI lookup
+  // DOI orqali ilmiy maqolani avtomatik topish
   const handleDoiLookup = async () => {
     if (!doiInput.trim()) {
-      alert("Iltimos, DOI raqamini kiriting");
+      setModalNotification({ type: "error", message: "Iltimos, avval maqolaning DOI raqamini kiriting." });
       return;
     }
     setIsDoiLoading(true);
+    setModalNotification(null);
     try {
       const res = await fetch(`${API_BASE}/doi/lookup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ doi: doiInput })
+        body: JSON.stringify({ doi: doiInput.trim() })
       });
       const data = await res.json();
       if (data.found) {
         setModalTitle(data.title);
-        setModalAuthors(data.authors_count);
-        setModalIndicator(data.suggested_indicator);
-        alert(`DOI tekshirildi:\n\nMaqola: ${data.title}\nJurnal: ${data.journal} (${data.quartile})\nMualliflar soni: ${data.authors_count}`);
+        setModalAuthors(data.authors_count || 1);
+        if (data.suggested_indicator) {
+          setModalIndicator(data.suggested_indicator);
+          const ind = indicators.find(i => i.id === data.suggested_indicator);
+          if (ind) {
+            setModalClaimedBall(Number((ind.max_ball / Math.max(1, data.authors_count || 1)).toFixed(1)));
+          }
+        }
+        setModalNotification({
+          type: "success",
+          message: `Maqola topildi: "${data.title}" | Jurnal: ${data.journal || "Scopus/WoS"} (${data.quartile || ""}) | Mualliflar: ${data.authors_count}`
+        });
+      } else {
+        setModalNotification({
+          type: "error",
+          message: "Kiritilgan DOI boʻyicha Crossref/Scopus dan maqola topilmadi. Maʼlumotlarni qoʻlda kiriting."
+        });
       }
     } catch {
-      alert("DOI qidirishda xatolik yuz berdi");
+      setModalNotification({ type: "error", message: "DOI qidiruv serveri bilan aloqa oʻrnatilmadi." });
     } finally {
       setIsDoiLoading(false);
     }
@@ -1071,11 +1626,25 @@ export default function KpiEnterpriseApp() {
     if (!currentTeacher) return;
 
     if (!systemSettings.submissions_open) {
-      alert(`Hozirda KPI hujjatlarini qabul qilish muddati yakunlangan yoki administrator tomonidan vaqtincha yopilgan.\nBelgilangan oxirgi muddat: ${systemSettings.deadline_date}`);
+      setModalNotification({
+        type: "error",
+        message: `Hozirda KPI hujjatlarini qabul qilish muddati yakunlangan yoki yopilgan. Oxirgi muddat: ${systemSettings.deadline_date}`
+      });
+      return;
+    }
+
+    if (!modalTitle.trim()) {
+      setModalNotification({ type: "error", message: "Iltimos, faoliyat natijasi yoki hujjat nomini toʻliq kiriting." });
+      return;
+    }
+
+    if (!modalClaimedBall || modalClaimedBall <= 0) {
+      setModalNotification({ type: "error", message: "Daʻvo qilinayotgan ball 0 dan yuqori boʻlishi lozim." });
       return;
     }
 
     setIsSubmittingNewKpi(true);
+    setModalNotification(null);
     try {
       let finalFileName = modalUploadedFileName || "tasdiqlovchi_hujjat.pdf";
 
@@ -1097,39 +1666,122 @@ export default function KpiEnterpriseApp() {
         }
       }
 
-      const res = await fetch(`${API_BASE}/submissions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          teacher_id: currentTeacher.id,
-          indicator_id: modalIndicator,
-          title: modalTitle,
-          doi: doiInput || undefined,
-          authors_count: Number(modalAuthors),
-          submitted_date: modalDate,
-          claimed_ball: Number(modalClaimedBall),
-          description: modalDescription.trim() || undefined,
-          file_name: finalFileName
-        })
-      });
+      let res;
+      if (editingSubmission) {
+        res = await fetch(`${API_BASE}/submissions/${editingSubmission.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            indicator_id: modalIndicator,
+            title: modalTitle.trim(),
+            doi: doiInput.trim() || undefined,
+            authors_count: Number(modalAuthors) || 1,
+            claimed_ball: Number(modalClaimedBall),
+            description: modalDescription.trim() || undefined,
+            file_name: finalFileName
+          })
+        });
+      } else {
+        res = await fetch(`${API_BASE}/submissions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            teacher_id: currentTeacher.id,
+            indicator_id: modalIndicator,
+            title: modalTitle.trim(),
+            doi: doiInput.trim() || undefined,
+            authors_count: Number(modalAuthors) || 1,
+            submitted_date: modalDate || new Date().toISOString().split("T")[0],
+            claimed_ball: Number(modalClaimedBall),
+            description: modalDescription.trim() || undefined,
+            file_name: finalFileName
+          })
+        });
+      }
+
       const data = await res.json();
       if (!res.ok) {
-        alert(data.detail || "Arizani yuborishda xatolik yuz berdi.");
+        setModalNotification({ type: "error", message: data.detail || "Amalni bajarishda xatolik yuz berdi." });
         return;
       }
-      setSubmissions([data, ...submissions]);
-      setIsAddModalOpen(false);
-      setModalTitle("");
-      setDoiInput("");
-      setModalDescription("");
-      setModalUploadedFile(null);
-      setModalUploadedFileName("");
-      alert(`Arizangiz muvaffaqiyatli qabul qilindi!\nDaʻvo qilingan ball: ${data.claimed_ball} ball.\nHolati: Ekspert komissiyasi koʻrib chiqishi kutilmoqda.`);
+
+      if (editingSubmission) {
+        setSubmissions(submissions.map(s => s.id === data.id ? data : s));
+        setModalNotification({
+          type: "success",
+          message: `Faoliyat natijasi muvaffaqiyatli tahrirlandi! Daʻvo qilingan ball: ${data.claimed_ball} ball.`
+        });
+      } else {
+        setSubmissions([data, ...submissions]);
+        setModalNotification({
+          type: "success",
+          message: `Arizangiz muvaffaqiyatli qabul qilindi! Daʻvo qilingan ball: ${data.claimed_ball} ball.`
+        });
+      }
+
+      setTimeout(() => {
+        setIsAddModalOpen(false);
+        setEditingSubmission(null);
+        setModalNotification(null);
+        setModalTitle("");
+        setDoiInput("");
+        setModalDescription("");
+        setModalUploadedFile(null);
+        setModalUploadedFileName("");
+      }, 1500);
     } catch {
-      alert("Arizani yuborishda xatolik yuz berdi.");
+      setModalNotification({ type: "error", message: "Arizani yuborishda xatolik yuz berdi. Iltimos, qayta urinib koʻring." });
     } finally {
       setIsSubmittingNewKpi(false);
     }
+  };
+
+  // Baholanmagan arizani tahrirlash modalini ochish
+  const openEditModal = (sub: Submission) => {
+    setEditingSubmission(sub);
+    setModalIndicator(sub.indicator_id);
+    setModalTitle(sub.title);
+    setDoiInput(sub.doi || "");
+    setModalAuthors(sub.authors_count || 1);
+    setModalDate(sub.submitted_date || new Date().toISOString().split("T")[0]);
+    setModalClaimedBall(sub.claimed_ball ?? sub.ball ?? 0);
+    setModalDescription(sub.description || "");
+    setModalUploadedFile(null);
+    setModalUploadedFileName(sub.file_name || "");
+    setModalNotification(null);
+    setIsAddModalOpen(true);
+  };
+
+  // Baholanmagan arizani o'chirish
+  const handleDeleteSubmission = (sub: Submission) => {
+    showConfirm({
+      title: "Arizani oʻchirishni tasdiqlaysizmi?",
+      message: `«${sub.title}» sarlavhali faoliyat natijasi tizimdan butunlay oʻchiriladi. Bu amalni qaytarib boʻlmaydi.`,
+      confirmText: "Ha, oʻchirilsin",
+      cancelText: "Bekor qilish",
+      type: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${API_BASE}/submissions/${sub.id}`, {
+            method: "DELETE"
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Arizani oʻchirishda xatolik yuz berdi");
+          setSubmissions(prev => prev.filter(s => s.id !== sub.id));
+          showAlert({
+            title: "Muvaffaqiyatli oʻchirildi",
+            message: `Ariza tizimdan butunlay oʻchirildi (#${sub.id}).`,
+            type: "success"
+          });
+        } catch (err: any) {
+          showAlert({
+            title: "Xatolik",
+            message: err.message || "Arizani oʻchirishda xatolik yuz berdi",
+            type: "danger"
+          });
+        }
+      }
+    });
   };
 
   // Open Reviewer Verification Modal
@@ -1180,7 +1832,11 @@ export default function KpiEnterpriseApp() {
       setSubmissions(submissions.map(s => s.id === selectedSubForReview.id ? data.submission : s));
       setIsVerifyModalOpen(false);
       setSelectedSubForReview(null);
-      alert(data.message);
+      showAlert({
+        title: "Qaror qayd etildi",
+        message: data.message || "Arizaning holati muvaffaqiyatli saqlandi.",
+        type: "success"
+      });
     } catch {
       setVerifyError("Server bilan bogʻlanishda xatolik yuz berdi");
     } finally {
@@ -1214,9 +1870,17 @@ export default function KpiEnterpriseApp() {
       const newAppeal = await res.json();
       setAppeals([newAppeal, ...appeals]);
       setAppealReason("");
-      alert(`Apellyatsiya qabul qilindi: ${newAppeal.id}. Komissiya 3 ish kunida koʻrib chiqadi.`);
+      showAlert({
+        title: "Apellyatsiya qabul qilindi",
+        message: `Apellyatsiya arizangiz #${newAppeal.id} raqami bilan qabul qilindi. Maxsus komissiya 3 ish kunida koʻrib chiqadi.`,
+        type: "success"
+      });
     } catch {
-      alert("Apellyatsiyani yuborishda xatolik yuz berdi");
+      showAlert({
+        title: "Xatolik",
+        message: "Apellyatsiyani yuborishda xatolik yuz berdi. Iltimos qayta urinib koʻring.",
+        type: "danger"
+      });
     }
   };
 
@@ -1281,6 +1945,81 @@ export default function KpiEnterpriseApp() {
     (currentSafeAdminUsersPage - 1) * adminUsersPerPage,
     currentSafeAdminUsersPage * adminUsersPerPage
   );
+
+  // Pagination calculations: My Submissions (O'qituvchining o'z arizalari)
+  const mySubmissionsList = currentTeacher 
+    ? submissions.filter(s => s.teacher_id === currentTeacher.id) 
+    : [];
+  const totalMySubsPages = Math.ceil(mySubmissionsList.length / mySubsPerPage) || 1;
+  const currentSafeMySubsPage = Math.max(1, Math.min(mySubsPage, totalMySubsPages));
+  const pagedMySubmissions = mySubmissionsList.slice(
+    (currentSafeMySubsPage - 1) * mySubsPerPage,
+    currentSafeMySubsPage * mySubsPerPage
+  );
+
+  // Pagination calculations: Review Submissions (Mudir/Dekan/Admin verifikatsiyasi)
+  const mudirDept = currentUser?.department || "";
+  const reviewSubmissionsList = submissions.filter(s => 
+    s.status === "pending" && 
+    s.teacher_id !== currentUser?.id && 
+    (!mudirDept || (s.dept && (s.dept.toLowerCase().includes(mudirDept.toLowerCase()) || mudirDept.toLowerCase().includes(s.dept.toLowerCase()))))
+  );
+  const totalReviewSubsPages = Math.ceil(reviewSubmissionsList.length / reviewSubsPerPage) || 1;
+  const currentSafeReviewSubsPage = Math.max(1, Math.min(reviewSubsPage, totalReviewSubsPages));
+  const pagedReviewSubmissions = reviewSubmissionsList.slice(
+    (currentSafeReviewSubsPage - 1) * reviewSubsPerPage,
+    currentSafeReviewSubsPage * reviewSubsPerPage
+  );
+
+  // Pagination calculations: Appeals (Apellyatsiyalar)
+  const totalAppealsPages = Math.ceil(appeals.length / appealsPerPage) || 1;
+  const currentSafeAppealsPage = Math.max(1, Math.min(appealsPage, totalAppealsPages));
+  const pagedAppeals = appeals.slice(
+    (currentSafeAppealsPage - 1) * appealsPerPage,
+    currentSafeAppealsPage * appealsPerPage
+  );
+
+  // Pagination calculations: Admin Logs (Audit qaydnomasi)
+  const totalAdminLogsPages = Math.ceil(adminLogs.length / adminLogsPerPage) || 1;
+  const currentSafeAdminLogsPage = Math.max(1, Math.min(adminLogsPage, totalAdminLogsPages));
+  const pagedAdminLogs = adminLogs.slice(
+    (currentSafeAdminLogsPage - 1) * adminLogsPerPage,
+    currentSafeAdminLogsPage * adminLogsPerPage
+  );
+
+  // Pagination calculations: Indicators Catalog (Mezonlar katalogi)
+  const totalCatalogIndicatorsPages = Math.ceil(filteredIndicators.length / indicatorsPerPage) || 1;
+  const currentSafeCatalogIndicatorsPage = Math.max(1, Math.min(indicatorsPage, totalCatalogIndicatorsPages));
+  const pagedCatalogIndicators = filteredIndicators.slice(
+    (currentSafeCatalogIndicatorsPage - 1) * indicatorsPerPage,
+    currentSafeCatalogIndicatorsPage * indicatorsPerPage
+  );
+
+  // =========================================================================
+  // SSR Hydration xavfsizligi: Server va mijoz dastlabki renderini 100% bir xil saqlash
+  // =========================================================================
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4 selection:bg-blue-600 selection:text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
+        <div className="text-center z-10 animate-in fade-in duration-300">
+          <div className="relative inline-flex items-center justify-center mb-4">
+            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full scale-125" />
+            <img
+              src="/logo-kpi.png"
+              alt="OʻzMU JF KPI Tizimi"
+              className="w-20 h-20 rounded-full shadow-2xl border-2 border-blue-400/50 object-contain bg-slate-900 p-0.5 relative z-10"
+            />
+          </div>
+          <div className="flex items-center justify-center gap-2.5 mt-3 text-blue-400 text-xs font-semibold">
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <span>KPI axborot tizimi yuklanmoqda...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // =========================================================================
   if (!currentUser) {
     return (
@@ -2133,7 +2872,7 @@ export default function KpiEnterpriseApp() {
 
           {/* Logout Button */}
           <button
-            onClick={handleLogout}
+            onClick={promptLogout}
             title="Tizimdan xavfsiz chiqish"
             className={`w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-semibold transition-colors`}
           >
@@ -2265,6 +3004,40 @@ export default function KpiEnterpriseApp() {
                 )}
               </div>
             )}
+
+            {/* Quick KPI Submission button for teachers and department heads */}
+            {(activeRole === "TEACHER" || activeRole === "HEAD_OF_DEPT") && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!systemSettings.submissions_open) {
+                    showAlert({
+                      title: "Hujjatlar qabuli yopiq",
+                      message: `Hozirda yangi KPI faoliyat natijalarini qabul qilish muddati yakunlangan. Belgilangan oxirgi qabul muddati: ${systemSettings.deadline_date}`,
+                      type: "warning"
+                    });
+                    return;
+                  }
+                  const firstInd = indicators[0] || { id: "1.1", max_ball: 6 };
+                  setModalIndicator(firstInd.id);
+                  setModalClaimedBall(firstInd.max_ball);
+                  setModalAuthors(1);
+                  setModalDate(new Date().toISOString().split("T")[0]);
+                  setModalTitle("");
+                  setModalDescription("");
+                  setModalUploadedFile(null);
+                  setModalUploadedFileName("");
+                  setModalNotification(null);
+                  setIsAddModalOpen(true);
+                }}
+                className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer flex-shrink-0"
+                title="Yangi KPI natijasini kiritish"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span className="hidden sm:inline">+ Yangi natija</span>
+                <span className="sm:hidden">+ Natija</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -2315,7 +3088,7 @@ export default function KpiEnterpriseApp() {
                   </div>
 
                   <button
-                    onClick={handleSyncHemis}
+                    onClick={promptSyncHemis}
                     disabled={isHemisSyncing}
                     className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-950 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-2"
                   >
@@ -2600,82 +3373,17 @@ export default function KpiEnterpriseApp() {
                     </table>
 
                     {/* Pagination Bar for HEMIS */}
-                    <div className={`px-4 py-3 border-t flex flex-wrap items-center justify-between gap-3 text-xs mt-2 ${
-                      theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600"
-                    }`}>
-                      <div className="flex items-center gap-2">
-                        <span>
-                          Jami <b>{filteredHemisEmployees.length}</b> nafardan <b>{filteredHemisEmployees.length > 0 ? (currentSafeHemisPage - 1) * hemisPerPage + 1 : 0}</b> - <b>{Math.min(currentSafeHemisPage * hemisPerPage, filteredHemisEmployees.length)}</b> koʻrsatilmoqda
-                        </span>
-                        <span className={theme === "dark" ? "text-slate-700" : "text-slate-300"}>|</span>
-                        <div className="flex items-center gap-1.5">
-                          <span>Sahifada:</span>
-                          <select
-                            value={hemisPerPage}
-                            onChange={(e) => {
-                              setHemisPerPage(Number(e.target.value));
-                              setHemisPage(1);
-                            }}
-                            className={`border rounded px-2 py-1 text-xs font-medium focus:ring-1 focus:ring-blue-900 ${
-                              theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                            }`}
-                          >
-                            <option value={15}>15 ta</option>
-                            <option value={25}>25 ta</option>
-                            <option value={50}>50 ta</option>
-                            <option value={100}>100 ta</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setHemisPage(prev => Math.max(1, prev - 1))}
-                          disabled={currentSafeHemisPage <= 1}
-                          className={`px-2.5 py-1.5 rounded border disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-medium transition-colors ${
-                            theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
-                          }`}
-                        >
-                          <ChevronLeft className="w-3.5 h-3.5" />
-                          <span>Oldingi</span>
-                        </button>
-
-                        <div className="flex items-center gap-1 px-1">
-                          {Array.from({ length: totalHemisPages }, (_, i) => i + 1)
-                            .filter(p => p === 1 || p === totalHemisPages || Math.abs(p - currentSafeHemisPage) <= 1)
-                            .map((p, idx, arr) => (
-                              <React.Fragment key={p}>
-                                {idx > 0 && arr[idx - 1] !== p - 1 && (
-                                  <span className="px-1 text-slate-400">...</span>
-                                )}
-                                <button
-                                  onClick={() => setHemisPage(p)}
-                                  className={`w-7 h-7 rounded text-xs font-semibold transition-colors ${
-                                    currentSafeHemisPage === p
-                                      ? "bg-blue-900 text-white"
-                                      : theme === "dark"
-                                      ? "bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700"
-                                      : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
-                                  }`}
-                                >
-                                  {p}
-                                </button>
-                              </React.Fragment>
-                            ))}
-                        </div>
-
-                        <button
-                          onClick={() => setHemisPage(prev => Math.min(totalHemisPages, prev + 1))}
-                          disabled={currentSafeHemisPage >= totalHemisPages}
-                          className={`px-2.5 py-1.5 rounded border disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-medium transition-colors ${
-                            theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
-                          }`}
-                        >
-                          <span>Keyingi</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+                    <UniversalPagination
+                      currentPage={currentSafeHemisPage}
+                      totalPages={totalHemisPages}
+                      totalItems={filteredHemisEmployees.length}
+                      itemsPerPage={hemisPerPage}
+                      onPageChange={setHemisPage}
+                      onItemsPerPageChange={setHemisPerPage}
+                      perPageOptions={[15, 25, 50, 100]}
+                      itemLabel="xodim"
+                      theme={theme}
+                    />
                   </div>
                 )}
               </div>
@@ -2999,22 +3707,83 @@ export default function KpiEnterpriseApp() {
                   </label>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* 4 Bosqichli Reglament va Muddatlar */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
                       theme === "dark" ? "text-slate-300" : "text-slate-700"
                     }`}>
-                      Qabulning oxirgi muddati (Deadline)
+                      1. Ariza topshirish muddati
                     </label>
                     <input
                       type="date"
                       required
-                      value={systemSettings.deadline_date}
-                      onChange={(e) => setSystemSettings({ ...systemSettings, deadline_date: e.target.value })}
+                      value={systemSettings.submission_deadline || systemSettings.deadline_date}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, submission_deadline: e.target.value, deadline_date: e.target.value })}
                       className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
                         theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                       }`}
                     />
+                    <p className="text-[11px] text-slate-400 mt-1">Oʻqituvchilar natijalarni kiritadi</p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
+                      theme === "dark" ? "text-slate-300" : "text-slate-700"
+                    }`}>
+                      2. Baholash / Tekshirish muddati
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={systemSettings.review_deadline || "2026-06-25"}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, review_deadline: e.target.value })}
+                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
+                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">Ekspertlar va mudirlar tekshiradi</p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
+                      theme === "dark" ? "text-slate-300" : "text-slate-700"
+                    }`}>
+                      3. Apellyatsiya topshirish muddati
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={systemSettings.appeal_deadline || "2026-07-05"}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, appeal_deadline: e.target.value })}
+                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
+                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">Eʼtiroz arizalari qabul qilinadi</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
+                      theme === "dark" ? "text-slate-300" : "text-slate-700"
+                    }`}>
+                      Joriy faol bosqich (Reglament statusi)
+                    </label>
+                    <select
+                      value={systemSettings.current_stage || "ALL_OPEN"}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, current_stage: e.target.value })}
+                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 ${
+                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                    >
+                      <option value="ALL_OPEN">Barcha jarayonlar faol (Sinov / Ochiq rejim)</option>
+                      <option value="SUBMISSION_STAGE">1-bosqich: Faqat arizalar topshirish davri</option>
+                      <option value="REVIEW_STAGE">2-bosqich: Ekspertlar tekshiruvi davri</option>
+                      <option value="APPEAL_STAGE">3-bosqich: Apellyatsiya koʻrib chiqish davri</option>
+                      <option value="CLOSED">4-bosqich: Yakuniy tasdiqlangan (Reyting yopiq)</option>
+                    </select>
                   </div>
 
                   <div>
@@ -3036,17 +3805,93 @@ export default function KpiEnterpriseApp() {
                   </div>
                 </div>
 
-                <div className="pt-4 flex justify-end">
+                <div className="pt-2 flex justify-end">
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSaveEvaluationPeriod}
                     disabled={isSavingSettings}
                     className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    <span>{isSavingSettings ? "Saqlanmoqda..." : "Sozlamalarni saqlash"}</span>
+                    <span>{isSavingSettings ? "Saqlanmoqda..." : "Reglament va sozlamalarni saqlash"}</span>
                   </button>
                 </div>
               </form>
+
+              {/* BAHOLOVCHILAR VA EKSPERTLAR KOMISSIYASI REYESTRI */}
+              <div className="mt-10 pt-8 border-t border-slate-200 dark:border-slate-800">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <span>Tayinlangan baholovchilar va ekspertlar komissiyasi</span>
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Mezonlar yoʻnalishlari va kafedralar boʻyicha arizalarni tekshiruvchi masʼullar
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddEvaluatorModalOpen(true)}
+                    className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
+                  >
+                    <span>+ Yangi baholovchi tayinlash</span>
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                      <tr>
+                        <th className="py-3 px-4">Baholovchi F.I.Sh.</th>
+                        <th className="py-3 px-4">Masʼul yoʻnalishi / Mezon bloki</th>
+                        <th className="py-3 px-4">Roli</th>
+                        <th className="py-3 px-4">Baholash muddati</th>
+                        <th className="py-3 px-4 text-center">Amallar</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {evaluators.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                            Hozircha qoʻshimcha ekspertlar biriktirilmagan. "+ Yangi baholovchi tayinlash" orqali qoʻshing.
+                          </td>
+                        </tr>
+                      ) : (
+                        evaluators.map(ev => (
+                          <tr key={ev.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">
+                              <div>{ev.name}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">@{ev.username}</div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50">
+                                {ev.assigned_category}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 font-mono text-xs text-slate-600 dark:text-slate-300">
+                              {ev.role_type === "EXPERT" ? "Ilmiy/Oʻquv Eksperti" : ev.role_type === "COMMISSION" ? "Apellyatsiya Komissiyasi" : ev.role_type}
+                            </td>
+                            <td className="py-3.5 px-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {ev.deadline_date || "2026-06-25"}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteEvaluator(ev.id, ev.name)}
+                                className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-md transition-colors"
+                                title="Baholovchini roʻyxatdan chiqarish"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
@@ -3218,75 +4063,17 @@ export default function KpiEnterpriseApp() {
                     const totalPages = Math.ceil(blockFiltered.length / indicatorsPerPage) || 1;
                     const safePage = Math.max(1, Math.min(indicatorsPage, totalPages));
                     return (
-                      <div className={`px-4 py-3 border-t flex flex-wrap items-center justify-between gap-3 text-xs mt-2 ${
-                        theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600"
-                      }`}>
-                        <div className="flex items-center gap-2">
-                          <span>
-                            Jami <b>{blockFiltered.length}</b> mezondan <b>{blockFiltered.length > 0 ? (safePage - 1) * indicatorsPerPage + 1 : 0}</b> - <b>{Math.min(safePage * indicatorsPerPage, blockFiltered.length)}</b> koʻrsatilmoqda
-                          </span>
-                          <span className={theme === "dark" ? "text-slate-700" : "text-slate-300"}>|</span>
-                          <div className="flex items-center gap-1.5">
-                            <span>Sahifada:</span>
-                            <select
-                              value={indicatorsPerPage}
-                              onChange={(e) => {
-                                setIndicatorsPerPage(Number(e.target.value));
-                                setIndicatorsPage(1);
-                              }}
-                              className={`border rounded px-2 py-1 text-xs font-medium focus:ring-1 focus:ring-blue-900 ${
-                                theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                              }`}
-                            >
-                              <option value={10}>10 ta</option>
-                              <option value={20}>20 ta</option>
-                              <option value={40}>40 ta</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setIndicatorsPage(prev => Math.max(1, prev - 1))}
-                            disabled={safePage <= 1}
-                            className={`px-2.5 py-1.5 rounded border disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-medium transition-colors ${
-                              theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
-                            }`}
-                          >
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                            <span>Oldingi</span>
-                          </button>
-
-                          <div className="flex items-center gap-1 px-1">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                              <button
-                                key={p}
-                                onClick={() => setIndicatorsPage(p)}
-                                className={`w-7 h-7 rounded text-xs font-semibold transition-colors ${
-                                  safePage === p
-                                    ? "bg-blue-900 text-white"
-                                    : theme === "dark"
-                                    ? "bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700"
-                                    : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
-                                }`}
-                              >
-                                {p}
-                              </button>
-                            ))}
-                          </div>
-
-                          <button
-                            onClick={() => setIndicatorsPage(prev => Math.min(totalPages, prev + 1))}
-                            disabled={safePage >= totalPages}
-                            className={`px-2.5 py-1.5 rounded border disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-medium transition-colors ${
-                              theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
-                            }`}
-                          >
-                            <span>Keyingi</span>
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
+                      <UniversalPagination
+                        currentPage={safePage}
+                        totalPages={totalPages}
+                        totalItems={blockFiltered.length}
+                        itemsPerPage={indicatorsPerPage}
+                        onPageChange={setIndicatorsPage}
+                        onItemsPerPageChange={setIndicatorsPerPage}
+                        perPageOptions={[10, 20, 40]}
+                        itemLabel="mezon"
+                        theme={theme}
+                      />
                     );
                   })()}
                 </div>
@@ -3524,82 +4311,17 @@ export default function KpiEnterpriseApp() {
                   </table>
 
                   {/* Pagination Bar for Admin Users */}
-                  <div className={`px-4 py-3 border-t flex flex-wrap items-center justify-between gap-3 text-xs mt-2 ${
-                    theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600"
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <span>
-                        Jami <b>{adminUsers.length}</b> nafardan <b>{adminUsers.length > 0 ? (currentSafeAdminUsersPage - 1) * adminUsersPerPage + 1 : 0}</b> - <b>{Math.min(currentSafeAdminUsersPage * adminUsersPerPage, adminUsers.length)}</b> koʻrsatilmoqda
-                      </span>
-                      <span className={theme === "dark" ? "text-slate-700" : "text-slate-300"}>|</span>
-                      <div className="flex items-center gap-1.5">
-                        <span>Sahifada:</span>
-                        <select
-                          value={adminUsersPerPage}
-                          onChange={(e) => {
-                            setAdminUsersPerPage(Number(e.target.value));
-                            setAdminUsersPage(1);
-                          }}
-                          className={`border rounded px-2 py-1 text-xs font-medium focus:ring-1 focus:ring-blue-900 ${
-                            theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                          }`}
-                        >
-                          <option value={15}>15 ta</option>
-                          <option value={30}>30 ta</option>
-                          <option value={50}>50 ta</option>
-                          <option value={100}>100 ta</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setAdminUsersPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentSafeAdminUsersPage <= 1}
-                        className={`px-2.5 py-1.5 rounded border disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-medium transition-colors ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                        <span>Oldingi</span>
-                      </button>
-
-                      <div className="flex items-center gap-1 px-1">
-                        {Array.from({ length: totalAdminUsersPages }, (_, i) => i + 1)
-                          .filter(p => p === 1 || p === totalAdminUsersPages || Math.abs(p - currentSafeAdminUsersPage) <= 1)
-                          .map((p, idx, arr) => (
-                            <React.Fragment key={p}>
-                              {idx > 0 && arr[idx - 1] !== p - 1 && (
-                                <span className="px-1 text-slate-400">...</span>
-                              )}
-                              <button
-                                onClick={() => setAdminUsersPage(p)}
-                                className={`w-7 h-7 rounded text-xs font-semibold transition-colors ${
-                                  currentSafeAdminUsersPage === p
-                                    ? "bg-blue-900 text-white"
-                                    : theme === "dark"
-                                    ? "bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700"
-                                    : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
-                                }`}
-                              >
-                                {p}
-                              </button>
-                            </React.Fragment>
-                          ))}
-                      </div>
-
-                      <button
-                        onClick={() => setAdminUsersPage(prev => Math.min(totalAdminUsersPages, prev + 1))}
-                        disabled={currentSafeAdminUsersPage >= totalAdminUsersPages}
-                        className={`px-2.5 py-1.5 rounded border disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-medium transition-colors ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        <span>Keyingi</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                  <UniversalPagination
+                    currentPage={currentSafeAdminUsersPage}
+                    totalPages={totalAdminUsersPages}
+                    totalItems={adminUsers.length}
+                    itemsPerPage={adminUsersPerPage}
+                    onPageChange={setAdminUsersPage}
+                    onItemsPerPageChange={setAdminUsersPerPage}
+                    perPageOptions={[15, 30, 50, 100]}
+                    itemLabel="foydalanuvchi"
+                    theme={theme}
+                  />
                 </div>
               </div>
             </div>
@@ -4114,16 +4836,37 @@ export default function KpiEnterpriseApp() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {adminLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="py-3 px-4 font-mono text-xs text-slate-400 dark:text-slate-500">#{log.id}</td>
-                        <td className="py-3 px-4 font-mono text-xs text-slate-600 dark:text-slate-300">{log.time}</td>
-                        <td className="py-3 px-4 font-semibold text-blue-900 dark:text-blue-400">@{log.user}</td>
-                        <td className="py-3 px-4 text-slate-800 dark:text-slate-200">{log.action}</td>
+                    {adminLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-400 dark:text-slate-500 text-xs">
+                          Tizimda audit qaydnomalari mavjud emas.
+                        </td>
                       </tr>
-                    ))}
+                    ) : (
+                      pagedAdminLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="py-3 px-4 font-mono text-xs text-slate-400 dark:text-slate-500">#{log.id}</td>
+                          <td className="py-3 px-4 font-mono text-xs text-slate-600 dark:text-slate-300">{log.time}</td>
+                          <td className="py-3 px-4 font-semibold text-blue-900 dark:text-blue-400">@{log.user}</td>
+                          <td className="py-3 px-4 text-slate-800 dark:text-slate-200">{log.action}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
+
+                {/* Pagination Bar for Admin Logs */}
+                <UniversalPagination
+                  currentPage={currentSafeAdminLogsPage}
+                  totalPages={totalAdminLogsPages}
+                  totalItems={adminLogs.length}
+                  itemsPerPage={adminLogsPerPage}
+                  onPageChange={setAdminLogsPage}
+                  onItemsPerPageChange={setAdminLogsPerPage}
+                  perPageOptions={[12, 25, 50]}
+                  itemLabel="qayd"
+                  theme={theme}
+                />
               </div>
             </div>
           )}
@@ -4315,7 +5058,11 @@ export default function KpiEnterpriseApp() {
                     <button
                       onClick={() => {
                         if (!systemSettings.submissions_open) {
-                          alert(`Hujjatlar qabuli yopiq. Oxirgi muddat: ${systemSettings.deadline_date}`);
+                          showAlert({
+                            title: "Hujjatlar qabuli yopiq",
+                            message: `Hozirda yangi KPI faoliyat natijalarini qabul qilish muddati yakunlangan. Belgilangan oxirgi qabul muddati: ${systemSettings.deadline_date}`,
+                            type: "warning"
+                          });
                           return;
                         }
                         const firstInd = indicators[0] || { id: "1.1", max_ball: 6 };
@@ -4346,17 +5093,18 @@ export default function KpiEnterpriseApp() {
                           <th className="py-3 px-4">Oʻqituvchi daʻvosi</th>
                           <th className="py-3 px-4">Tasdiqlangan ball</th>
                           <th className="py-3 px-4">Holati va xulosa</th>
+                          <th className="py-3 px-4 text-center">Amallar</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {submissions.filter(s => s.teacher_id === currentTeacher.id).length === 0 ? (
+                        {mySubmissionsList.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+                            <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
                               Hozircha yuklangan KPI natijalari mavjud emas. Yuqoridagi "+ Yangi natija kiritish" tugmasi orqali ariza topshiring.
                             </td>
                           </tr>
                         ) : (
-                          submissions.filter(s => s.teacher_id === currentTeacher.id).map(sub => (
+                          pagedMySubmissions.map(sub => (
                             <tr key={sub.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                               <td className="py-3.5 px-4 font-mono text-xs font-bold text-slate-600 dark:text-slate-400">
                                 {sub.indicator_id}
@@ -4418,18 +5166,39 @@ export default function KpiEnterpriseApp() {
                                 {sub.status === "rejected" && (
                                   <div className="mt-1.5 p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/40 text-[11px] text-rose-700 dark:text-rose-300">
                                     <div className="font-bold">Rad etish sababi:</div>
-                                    <div className="mt-0.5 leading-tight">{sub.rejection_reason || "Hujjat talablarga mos emas"}</div>
                                     <button
-                                      onClick={() => {
-                                        setActivePage("appeals");
-                                        setAppealIndicator(sub.indicator_id);
-                                        setAppealReason(`«${sub.title}» boʻyicha rad etilgan qarorga eʼtiroz: `);
-                                      }}
-                                      className="text-blue-600 dark:text-blue-400 font-semibold underline mt-1.5 inline-block hover:text-blue-800"
+                                      onClick={() => handleOpenAppealModal(sub)}
+                                      className="text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-800/50 px-2.5 py-1 rounded text-xs font-semibold mt-2 inline-flex items-center gap-1 transition-colors"
                                     >
-                                      Apellyatsiya arizasi berish →
+                                      <span>⚡ Asoslangan apellyatsiya berish →</span>
                                     </button>
                                   </div>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                {sub.status === "pending" ? (
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      onClick={() => openEditModal(sub)}
+                                      className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 rounded-lg text-xs font-semibold flex items-center gap-1 border border-blue-200 dark:border-blue-800 transition-colors"
+                                      title="Baholanmagan arizani tahrirlash"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">Tahrir</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSubmission(sub)}
+                                      className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-300 rounded-lg text-xs font-semibold flex items-center gap-1 border border-rose-200 dark:border-rose-800 transition-colors"
+                                      title="Arizani oʻchirish"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">Oʻchirish</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                                    Muzlatilgan
+                                  </span>
                                 )}
                               </td>
                             </tr>
@@ -4437,6 +5206,21 @@ export default function KpiEnterpriseApp() {
                         )}
                       </tbody>
                     </table>
+
+                    {/* Pagination Bar */}
+                    <UniversalPagination
+                      currentPage={currentSafeMySubsPage}
+                      totalPages={totalMySubsPages}
+                      totalItems={mySubmissionsList.length}
+                      itemsPerPage={mySubsPerPage}
+                      onPageChange={setMySubsPage}
+                      onItemsPerPageChange={(val) => {
+                        setMySubsPerPage(val);
+                        setMySubsPage(1);
+                      }}
+                      itemLabel="natija"
+                      theme={theme}
+                    />
                   </div>
                 </div>
               )}
@@ -4484,23 +5268,14 @@ export default function KpiEnterpriseApp() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {(() => {
-                            const mudirDept = currentUser?.department || "";
-                            const mudirSubs = submissions.filter(s => 
-                              s.status === "pending" && 
-                              s.teacher_id !== currentUser?.id && 
-                              (!mudirDept || (s.dept && (s.dept.toLowerCase().includes(mudirDept.toLowerCase()) || mudirDept.toLowerCase().includes(s.dept.toLowerCase()))))
-                            );
-                            if (mudirSubs.length === 0) {
-                              return (
-                                <tr>
-                                  <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
-                                    {currentUser?.department ? `"${currentUser.department}" kafedrasi boʻyicha hozirda tasdiqlash kutilayotgan arizalar mavjud emas` : "Hozirda tasdiqlash kutilayotgan arizalar mavjud emas"}
-                                  </td>
-                                </tr>
-                              );
-                            }
-                            return mudirSubs.map(sub => (
+                          {reviewSubmissionsList.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+                                {currentUser?.department ? `"${currentUser.department}" kafedrasi boʻyicha hozirda tasdiqlash kutilayotgan arizalar mavjud emas` : "Hozirda tasdiqlash kutilayotgan arizalar mavjud emas"}
+                              </td>
+                            </tr>
+                          ) : (
+                            pagedReviewSubmissions.map(sub => (
                               <tr key={sub.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                 <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{sub.teacher_name}</td>
                                 <td className="py-3.5 px-4 font-mono text-xs font-bold text-slate-600 dark:text-slate-400">{sub.indicator_id}</td>
@@ -4513,7 +5288,11 @@ export default function KpiEnterpriseApp() {
                                 <td className="py-3.5 px-4 font-bold text-blue-900 dark:text-blue-400">{sub.claimed_ball ?? sub.ball} ball</td>
                                 <td className="py-3.5 px-4">
                                   <button
-                                    onClick={() => alert(`PDF hujjat tekshirildi: ${sub.file_name}`)}
+                                    onClick={() => showAlert({
+                                      title: "Asoslovchi hujjat",
+                                      message: `Yuklangan asoslovchi fayl nomi: "${sub.file_name}". Tizimda hujjat fayli xavfsiz saqlanmoqda va ekspert koʻrigi uchun taqdim etilgan.`,
+                                      type: "info"
+                                    })}
                                     className="text-xs text-blue-700 dark:text-blue-400 font-semibold underline flex items-center gap-1 hover:text-blue-900"
                                   >
                                     <FileText className="w-3.5 h-3.5" />
@@ -4521,30 +5300,67 @@ export default function KpiEnterpriseApp() {
                                   </button>
                                 </td>
                                 <td className="py-3.5 px-4">
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => openVerifyModal(sub, "approved")}
-                                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-sm transition-all"
-                                      title="Arizani tekshirib, bahosini qoʻlda tasdiqlash"
-                                    >
-                                      <Check className="w-3.5 h-3.5" />
-                                      <span>Tasdiqlash & Baholash</span>
-                                    </button>
-                                    <button
-                                      onClick={() => openVerifyModal(sub, "rejected")}
-                                      className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-sm transition-all"
-                                      title="Rad etish (sababi majburiy)"
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                      <span>Rad etish</span>
-                                    </button>
-                                  </div>
+                                  {(() => {
+                                    const isSelf = (sub.teacher_id === currentUser?.id) || 
+                                      Boolean(currentUser?.name && sub.teacher_name && 
+                                      sub.teacher_name.toLowerCase().replace(/^(dots\.|prof\.)\s*/, '').trim() === currentUser.name.toLowerCase().replace(/^(dots\.|prof\.)\s*/, '').trim());
+                                    
+                                    if (isSelf) {
+                                      return (
+                                        <div className="flex flex-col gap-1 max-w-[210px]">
+                                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                            <span>Oʻzingizning arizangiz</span>
+                                          </span>
+                                          <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+                                            Manfaatlar toʻqnashuvi: Fakultet Dekani yoki Komissiya tomonidan baholanadi
+                                          </span>
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => openVerifyModal(sub, "approved")}
+                                          className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-sm transition-all"
+                                          title="Arizani tekshirib, bahosini qoʻlda tasdiqlash"
+                                        >
+                                          <Check className="w-3.5 h-3.5" />
+                                          <span>Tasdiqlash</span>
+                                        </button>
+                                        <button
+                                          onClick={() => openVerifyModal(sub, "rejected")}
+                                          className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-sm transition-all"
+                                          title="Rad etish (sababi majburiy)"
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                          <span>Rad etish</span>
+                                        </button>
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
                               </tr>
-                            ));
-                          })()}
+                            ))
+                          )}
                         </tbody>
                       </table>
+
+                      {/* Pagination Bar */}
+                      <UniversalPagination
+                        currentPage={currentSafeReviewSubsPage}
+                        totalPages={totalReviewSubsPages}
+                        totalItems={reviewSubmissionsList.length}
+                        itemsPerPage={reviewSubsPerPage}
+                        onPageChange={setReviewSubsPage}
+                        onItemsPerPageChange={(val) => {
+                          setReviewSubsPerPage(val);
+                          setReviewSubsPage(1);
+                        }}
+                        itemLabel="ariza"
+                        theme={theme}
+                      />
                     </div>
 
                     <div className="flex justify-between items-center mb-3">
@@ -4885,72 +5701,20 @@ export default function KpiEnterpriseApp() {
                     </table>
 
                     {/* Pagination Bar for Teachers */}
-                    <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
-                      <div className="flex items-center gap-2">
-                        <span>
-                          Jami <b>{filteredTeachers.length}</b> nafardan <b>{filteredTeachers.length > 0 ? (currentSafeTeacherPage - 1) * teacherPerPage + 1 : 0}</b> - <b>{Math.min(currentSafeTeacherPage * teacherPerPage, filteredTeachers.length)}</b> koʻrsatilmoqda
-                        </span>
-                        <span className="text-slate-300 dark:text-slate-600">|</span>
-                        <div className="flex items-center gap-1.5">
-                          <span>Sahifada:</span>
-                          <select
-                            value={teacherPerPage}
-                            onChange={(e) => {
-                              setTeacherPerPage(Number(e.target.value));
-                              setTeacherPage(1);
-                            }}
-                            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs font-medium text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-blue-900"
-                          >
-                            <option value={10}>10 ta</option>
-                            <option value={25}>25 ta</option>
-                            <option value={50}>50 ta</option>
-                            <option value={100}>100 ta</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setTeacherPage(prev => Math.max(1, prev - 1))}
-                          disabled={currentSafeTeacherPage <= 1}
-                          className="px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-medium transition-colors"
-                        >
-                          <ChevronLeft className="w-3.5 h-3.5" />
-                          <span>Oldingi</span>
-                        </button>
-
-                        <div className="flex items-center gap-1 px-1">
-                          {Array.from({ length: totalTeacherPages }, (_, i) => i + 1)
-                            .filter(p => p === 1 || p === totalTeacherPages || Math.abs(p - currentSafeTeacherPage) <= 1)
-                            .map((p, idx, arr) => (
-                              <React.Fragment key={p}>
-                                {idx > 0 && arr[idx - 1] !== p - 1 && (
-                                  <span className="px-1 text-slate-400 dark:text-slate-500">...</span>
-                                )}
-                                <button
-                                  onClick={() => setTeacherPage(p)}
-                                  className={`w-7 h-7 rounded text-xs font-semibold transition-colors ${
-                                    currentSafeTeacherPage === p
-                                      ? "bg-blue-900 dark:bg-blue-600 text-white"
-                                      : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                                  }`}
-                                >
-                                  {p}
-                                </button>
-                              </React.Fragment>
-                            ))}
-                        </div>
-
-                        <button
-                          onClick={() => setTeacherPage(prev => Math.min(totalTeacherPages, prev + 1))}
-                          disabled={currentSafeTeacherPage >= totalTeacherPages}
-                          className="px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-medium transition-colors"
-                        >
-                          <span>Keyingi</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+                    <UniversalPagination
+                      currentPage={currentSafeTeacherPage}
+                      totalPages={totalTeacherPages}
+                      totalItems={filteredTeachers.length}
+                      itemsPerPage={teacherPerPage}
+                      onPageChange={setTeacherPage}
+                      onItemsPerPageChange={(val) => {
+                        setTeacherPerPage(val);
+                        setTeacherPage(1);
+                      }}
+                      perPageOptions={[10, 25, 50, 100]}
+                      itemLabel="oʻqituvchi"
+                      theme={theme}
+                    />
                   </div>
                 </div>
               )}
@@ -5049,7 +5813,7 @@ export default function KpiEnterpriseApp() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {filteredIndicators.map(ind => (
+                    {pagedCatalogIndicators.map(ind => (
                       <tr key={ind.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                         <td className="py-3.5 px-4 font-mono text-xs font-bold text-slate-700 dark:text-slate-300">{ind.id}</td>
                         <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{ind.name}</td>
@@ -5060,6 +5824,21 @@ export default function KpiEnterpriseApp() {
                     ))}
                   </tbody>
                 </table>
+
+                {/* Pagination Bar for Indicators */}
+                <UniversalPagination
+                  currentPage={currentSafeCatalogIndicatorsPage}
+                  totalPages={totalCatalogIndicatorsPages}
+                  totalItems={filteredIndicators.length}
+                  itemsPerPage={indicatorsPerPage}
+                  onPageChange={setIndicatorsPage}
+                  onItemsPerPageChange={(val) => {
+                    setIndicatorsPerPage(val);
+                    setIndicatorsPage(1);
+                  }}
+                  itemLabel="mezon"
+                  theme={theme}
+                />
               </div>
             </div>
           )}
@@ -5215,28 +5994,101 @@ export default function KpiEnterpriseApp() {
                       <th className="py-3 px-4">Ariza kodi</th>
                       <th className="py-3 px-4">Oʻqituvchi</th>
                       <th className="py-3 px-4">Mezon</th>
-                      <th className="py-3 px-4">Eʼtiroz matni</th>
-                      <th className="py-3 px-4">Topshirilgan sana</th>
+                      <th className="py-3 px-4">Eʼtiroz matni & Asos</th>
+                      <th className="py-3 px-4">Sana</th>
                       <th className="py-3 px-4">Komissiya qarori</th>
+                      {(activeRole === "ADMIN" || activeRole === "RECTORATE" || activeRole === "DEAN") && (
+                        <th className="py-3 px-4 text-center">Komissiya amali</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {appeals.map(a => (
-                      <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="py-3.5 px-4 font-mono text-xs font-bold text-blue-900 dark:text-blue-400">{a.id}</td>
-                        <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">{a.teacher_name}</td>
-                        <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">{a.indicator_id}</td>
-                        <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 text-xs max-w-sm">{a.reason}</td>
-                        <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-xs">{a.submitted_date}</td>
-                        <td className="py-3.5 px-4">
-                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50">
-                            {a.status}: {a.decision}
-                          </span>
+                    {appeals.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+                          Hozircha roʻyxatga olingan apellyatsiyalar mavjud emas.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      pagedAppeals.map(a => (
+                        <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="py-3.5 px-4 font-mono text-xs font-bold text-blue-900 dark:text-blue-400">
+                            {a.id}
+                            {a.title && <div className="text-[11px] font-sans font-normal text-slate-500 dark:text-slate-400 truncate max-w-[150px]">{a.title}</div>}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">
+                            <div>{a.teacher_name}</div>
+                            {a.initial_reviewer && (
+                              <div className="text-[10px] text-slate-400 font-normal">Dastlabki masʼul: {a.initial_reviewer}</div>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">{a.indicator_id}</td>
+                          <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 text-xs max-w-sm">
+                            <div className="font-medium text-slate-900 dark:text-slate-100">{a.reason || a.appeal_reason}</div>
+                            {a.initial_rejection_reason && (
+                              <div className="text-[11px] text-rose-600 dark:text-rose-400 mt-1 italic">
+                                Dastlabki rad sababi: "{a.initial_rejection_reason}"
+                              </div>
+                            )}
+                            {a.evidence_file && (
+                              <div className="mt-1 flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-mono">
+                                <FileText className="w-3 h-3" />
+                                <span>Ilova: {a.evidence_file}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-xs">{a.submitted_date || "2026-10-01"}</td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                a.status === "Qanoatlantirildi"
+                                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                  : a.status === "Qisman qanoatlantirildi"
+                                  ? "bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                                  : a.status === "Rad etildi"
+                                  ? "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+                                  : "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-900/50"
+                              }`}>
+                                {a.status} {a.awarded_ball ? `(+${a.awarded_ball} ball)` : ""}
+                              </span>
+                              {(a.commission_comment || a.decision) && (
+                                <div className="text-[11px] text-slate-600 dark:text-slate-400 italic">
+                                  "{a.commission_comment || a.decision}"
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          {(activeRole === "ADMIN" || activeRole === "RECTORATE" || activeRole === "DEAN") && (
+                            <td className="py-3.5 px-4 text-center">
+                              <button
+                                onClick={() => handleOpenReviewAppealModal(a)}
+                                className="px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1 mx-auto"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Qaror qabul qilish</span>
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
+
+                {/* Pagination Bar for Appeals */}
+                <UniversalPagination
+                  currentPage={currentSafeAppealsPage}
+                  totalPages={totalAppealsPages}
+                  totalItems={appeals.length}
+                  itemsPerPage={appealsPerPage}
+                  onPageChange={setAppealsPage}
+                  onItemsPerPageChange={(val) => {
+                    setAppealsPerPage(val);
+                    setAppealsPage(1);
+                  }}
+                  itemLabel="apellyatsiya"
+                  theme={theme}
+                />
               </div>
             </div>
           )}
@@ -5302,7 +6154,7 @@ export default function KpiEnterpriseApp() {
       {/* MODAL 1: ADD KPI ENTRY (O'QITUVCHI TOMONIDAN NATIJA YUKLASH VA O'ZIGA BALL QO'YISH) */}
       {/* ========================================================================= */}
       {isAddModalOpen && (() => {
-        const currentSelectedInd = indicators.find(i => i.id === modalIndicator);
+        const currentSelectedInd = indicators.find(i => i.id === modalIndicator) || indicators[0];
         const maxPossibleBall = currentSelectedInd ? currentSelectedInd.max_ball : 10;
         const recommendedAuthorBall = currentSelectedInd 
           ? Number((currentSelectedInd.max_ball / Math.max(1, modalAuthors)).toFixed(1)) 
@@ -5315,366 +6167,514 @@ export default function KpiEnterpriseApp() {
           return matchBlock && matchSearch;
         });
 
+        const POPULAR_PRESETS = [
+          { id: "1.1", label: "Scopus / WoS (Q1-Q4)", badge: "Ilmiy" },
+          { id: "1.3", label: "OAK ilmiy maqolasi", badge: "Ilmiy" },
+          { id: "2.1", label: "Darslik / Qoʻllanma", badge: "Oʻquv" },
+          { id: "3.1", label: "Xalqaro til sertifikati", badge: "Xalqaro" },
+          { id: "4.1", label: "Talaba yutugʻi / toʻgarak", badge: "Maʼnaviy" }
+        ];
+
+        const isDoiRelevant = modalIndicator.startsWith("1.") || (currentSelectedInd && currentSelectedInd.block.toLowerCase() === "ilm");
+
         return (
-          <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 my-6">
-              {/* Header */}
-              <div className="flex justify-between items-start pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+          <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 my-4 flex flex-col max-h-[92vh] overflow-hidden">
+              
+              {/* Modal Header */}
+              <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-md flex-shrink-0">
                     <Sparkles className="w-5 h-5 text-amber-300" />
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                      <span>Yangi KPI natijasi kiritish</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
-                        2025/2026-oʻquv yili
+                      <span>{editingSubmission ? "KPI natijasini tahrirlash" : "Yangi KPI natijasi kiritish"}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                        editingSubmission
+                          ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                          : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                      }`}>
+                        {editingSubmission ? `Ariza #${editingSubmission.id}` : "2025/2026-oʻquv yili"}
                       </span>
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {currentTeacher ? (
-                        <span>Topshiruvchi: <b>{currentTeacher.name}</b> ({currentTeacher.department})</span>
+                      {editingSubmission ? (
+                        <span>Koʻrsatkich kodi, sarlavha, mualliflar soni yoki asoslovchi hujjatni qayta tahrirlang</span>
+                      ) : currentTeacher ? (
+                        <span>Topshiruvchi: <b>{currentTeacher.name}</b> • {currentTeacher.department}</span>
                       ) : (
-                        "Mezonni tanlang, asoslovchi hujjatni biriktiring va natijangizni tasdiqlashga yuboring"
+                        "Mezonni tanlang, natijangizni kiriting va tasdiqlovchi hujjatni ilova qiling"
                       )}
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => setIsAddModalOpen(false)}
+                  type="button"
+                  onClick={() => {
+                    setIsAddModalOpen(false);
+                    setEditingSubmission(null);
+                  }}
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                {/* 1-qism: Blok tanlash va Mezon qidiruvi */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      1. Baholash yoʻnalishi va mezoni *
-                    </label>
-                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">
-                      Jami 41 ta rasmiy mezon
-                    </span>
-                  </div>
-
-                  {/* Blok filtri tugmalari */}
-                  <div className="grid grid-cols-5 gap-1 text-xs font-semibold">
-                    {[
-                      { id: "ALL", label: "Barchasi" },
-                      { id: "oqv", label: "I. Oʻquv" },
-                      { id: "ilm", label: "II. Ilmiy" },
-                      { id: "xal", label: "III. Xalqaro" },
-                      { id: "man", label: "IV. Maʼnaviy" }
-                    ].map(tab => (
+              {/* Ommabop mezonlar tezkor tugmalari */}
+              <div className="px-6 py-2.5 bg-blue-50/40 dark:bg-blue-950/20 border-b border-blue-100/60 dark:border-blue-900/40 flex items-center gap-2 overflow-x-auto text-xs">
+                <span className="text-[11px] font-bold text-blue-900 dark:text-blue-300 flex-shrink-0 flex items-center gap-1">
+                  ⚡ Ommabop:
+                </span>
+                <div className="flex items-center gap-1.5 flex-nowrap">
+                  {POPULAR_PRESETS.map(pop => {
+                    const isSelected = modalIndicator === pop.id;
+                    return (
                       <button
-                        key={tab.id}
+                        key={pop.id}
                         type="button"
-                        onClick={() => setModalBlockFilter(tab.id)}
-                        className={`py-1.5 px-2 rounded-lg text-center text-xs transition-all ${
-                          modalBlockFilter === tab.id
+                        onClick={() => {
+                          setModalIndicator(pop.id);
+                          const ind = indicators.find(i => i.id === pop.id);
+                          if (ind) {
+                            setModalClaimedBall(Number((ind.max_ball / Math.max(1, modalAuthors)).toFixed(1)));
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                          isSelected
                             ? "bg-blue-900 text-white shadow-xs font-bold"
-                            : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                         }`}
                       >
-                        {tab.label}
+                        <span>{pop.label}</span>
+                        <span className={`text-[10px] px-1 rounded ${isSelected ? "bg-blue-800 text-blue-100" : "bg-slate-100 dark:bg-slate-700 text-slate-500"}`}>
+                          #{pop.id}
+                        </span>
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-                  {/* Tezkor qidiruv inputi */}
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={modalIndicatorSearch}
-                      onChange={(e) => setModalIndicatorSearch(e.target.value)}
-                      placeholder="Mezon nomi, kodi (masalan: 1.1, 2.3) yoki kalit soʻz boʻyicha tezkor qidirish..."
-                      className="w-full pl-9 pr-8 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 transition-all placeholder-slate-400"
-                    />
-                    {modalIndicatorSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setModalIndicatorSearch("")}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Mezonlar select ro'yxati */}
-                  <select
-                    value={modalIndicator}
-                    onChange={(e) => {
-                      setModalIndicator(e.target.value);
-                      const ind = indicators.find(i => i.id === e.target.value);
-                      if (ind) {
-                        const defaultShare = Number((ind.max_ball / Math.max(1, modalAuthors)).toFixed(1));
-                        setModalClaimedBall(defaultShare);
-                      }
-                    }}
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium leading-relaxed"
-                  >
-                    {filteredModalIndicators.length === 0 ? (
-                      <option disabled value="">Qidiruv boʻyicha mezon topilmadi</option>
+              {/* Notification Banner */}
+              {modalNotification && (
+                <div className={`mx-6 mt-3 p-3 rounded-xl border text-xs font-semibold flex items-center justify-between animate-in fade-in duration-150 ${
+                  modalNotification.type === "success"
+                    ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
+                    : "bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200"
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {modalNotification.type === "success" ? (
+                      <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     ) : (
-                      filteredModalIndicators.map(ind => (
-                        <option key={ind.id} value={ind.id}>
-                          {ind.id}. {ind.name} — [Maks. {ind.max_ball} ball]
-                        </option>
-                      ))
+                      <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
                     )}
-                  </select>
+                    <span>{modalNotification.message}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalNotification(null)}
+                    className="text-xs hover:opacity-75 ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
 
-                  {/* Tanlangan mezon kartochkasi */}
-                  {currentSelectedInd && (
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="space-y-0.5">
-                        <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-blue-600" />
-                          <span>Mezon #{currentSelectedInd.id}: {currentSelectedInd.name}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Masʼul boʻlim: <b>{currentSelectedInd.dept}</b>
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-800 self-start sm:self-auto">
-                        <Award className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                        <span>Maks: {currentSelectedInd.max_ball} ball</span>
-                      </div>
+              {/* Form Body - 2 Columns */}
+              <form onSubmit={handleFormSubmit} className="flex-1 overflow-hidden flex flex-col">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 p-6 overflow-y-auto flex-1">
+                  
+                  {/* CHAP USTUN (5 ustun): Mezonni tanlash */}
+                  <div className="md:col-span-5 flex flex-col space-y-3 md:border-r md:border-slate-200 dark:md:border-slate-800 md:pr-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <Award className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <span>1. Baholash mezonini tanlang</span>
+                      </label>
+                      <span className="text-[11px] text-slate-400">
+                        {filteredModalIndicators.length} ta mezon
+                      </span>
                     </div>
-                  )}
-                </div>
 
-                {/* DOI avtomatik to'ldirish (Scopus / Web of Science uchun) */}
-                <div className="p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-900/50">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-blue-950 dark:text-blue-300 flex items-center gap-1">
-                      <ExternalLink className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                      <span>DOI orqali avtomatik toʻldirish (Scopus / Web of Science)</span>
-                    </label>
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Ixtiyoriy tezkor toʻldirish</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={doiInput}
-                      onChange={(e) => setDoiInput(e.target.value)}
-                      placeholder="Masalan: 10.1016/j.eswa.2025.123456"
-                      className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleDoiLookup}
-                      disabled={isDoiLoading}
-                      className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-60 flex-shrink-0"
-                    >
-                      {isDoiLoading ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Qidirilmoqda...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                          <span>Tekshirish</span>
-                        </>
+                    {/* Kategoriya filtri */}
+                    <div className="grid grid-cols-5 gap-1 text-[11px] font-semibold">
+                      {[
+                        { id: "ALL", label: "Barchasi" },
+                        { id: "oqv", label: "Oʻquv" },
+                        { id: "ilm", label: "Ilmiy" },
+                        { id: "xal", label: "Xalqaro" },
+                        { id: "man", label: "Maʼnaviy" }
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setModalBlockFilter(tab.id)}
+                          className={`py-1.5 px-1 rounded-lg text-center transition-all ${
+                            modalBlockFilter === tab.id
+                              ? "bg-blue-900 text-white shadow-xs font-bold"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Mezon qidiruvi */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={modalIndicatorSearch}
+                        onChange={(e) => setModalIndicatorSearch(e.target.value)}
+                        placeholder="Mezon kodi (1.1, 2.3) yoki soʻz..."
+                        className="w-full pl-8 pr-7 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
+                      />
+                      {modalIndicatorSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setModalIndicatorSearch("")}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                        >
+                          ✕
+                        </button>
                       )}
-                    </button>
+                    </div>
+
+                    {/* Mezonlar ro'yxati (Kartochkalar) */}
+                    <div className="flex-1 max-h-[380px] overflow-y-auto space-y-1.5 pr-1 text-xs">
+                      {filteredModalIndicators.length === 0 ? (
+                        <div className="p-4 text-center text-slate-400 text-xs">
+                          Ushbu qidiruv boʻyicha mezon topilmadi
+                        </div>
+                      ) : (
+                        filteredModalIndicators.map(ind => {
+                          const isSelected = modalIndicator === ind.id;
+                          return (
+                            <div
+                              key={ind.id}
+                              onClick={() => {
+                                setModalIndicator(ind.id);
+                                const defaultShare = Number((ind.max_ball / Math.max(1, modalAuthors)).toFixed(1));
+                                setModalClaimedBall(defaultShare);
+                              }}
+                              className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                                isSelected
+                                  ? "border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 shadow-xs ring-1 ring-blue-600"
+                                  : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-800/60 text-slate-800 dark:text-slate-200"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-1.5">
+                                <div className="font-bold flex items-center gap-1.5 text-xs">
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                    isSelected
+                                      ? "bg-blue-900 text-white"
+                                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                                  }`}>
+                                    #{ind.id}
+                                  </span>
+                                  <span className="line-clamp-1">{ind.name}</span>
+                                </div>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold flex-shrink-0 ${
+                                  isSelected
+                                    ? "bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-100"
+                                    : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                }`}>
+                                  {ind.max_ball} b.
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                                <span>{ind.dept || "Ekspert komissiyasi"}</span>
+                                {isSelected && (
+                                  <span className="text-blue-700 dark:text-blue-300 font-bold flex items-center gap-0.5">
+                                    <Check className="w-3 h-3" /> Tanlangan
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* 2-qism: Faoliyat nomi */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    2. Faoliyat natijasi nomi *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={modalTitle}
-                    onChange={(e) => setModalTitle(e.target.value)}
-                    placeholder="Ilmiy maqola nomi, darslik, xalqaro sertifikat yoki loyiha nomini toʻliq kiriting..."
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium"
-                  />
-                </div>
+                  {/* O'NG USTUN (7 ustun): Natija tafsilotlari va Hujjat */}
+                  <div className="md:col-span-7 space-y-3.5">
+                    
+                    {/* Tanlangan mezon kartochkasi */}
+                    {currentSelectedInd && (
+                      <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/60 flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-600" />
+                            <span>Mezon #{currentSelectedInd.id}: {currentSelectedInd.name}</span>
+                          </div>
+                          <div className="text-[11px] text-blue-700 dark:text-blue-300 mt-0.5">
+                            Masʼul: <b>{currentSelectedInd.dept || "KPI Komissiyasi"}</b>
+                          </div>
+                        </div>
+                        <div className="px-2.5 py-1 rounded-lg bg-blue-900 text-white text-xs font-bold shadow-xs flex-shrink-0">
+                          Maks: {maxPossibleBall} ball
+                        </div>
+                      </div>
+                    )}
 
-                {/* 3-qism: Hammualliflar soni va Avtomatik kalkulyator */}
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <Calculator className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                      <span>3. Mualliflar soni va ball taqsimoti kalkulyatori</span>
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                      Mezon maksimal: <b>{maxPossibleBall} ball</b>
-                    </span>
-                  </div>
+                    {/* DOI orqali tezkor to'ldirish (agar ilmiy mezon bo'lsa) */}
+                    {isDoiRelevant && (
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                            <span>DOI raqami orqali avtomatik toʻldirish (Scopus / WoS / Crossref)</span>
+                          </label>
+                          <span className="text-[10px] text-slate-400">Ixtiyoriy</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={doiInput}
+                            onChange={(e) => setDoiInput(e.target.value)}
+                            placeholder="Masalan: 10.1016/j.eswa.2025.123456"
+                            className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono bg-white dark:bg-slate-850 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-900"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleDoiLookup}
+                            disabled={isDoiLoading}
+                            className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-60 flex-shrink-0"
+                          >
+                            {isDoiLoading ? (
+                              <>
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                <span>Qidirilmoqda...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3 h-3 text-amber-300" />
+                                <span>Maʼlumotni olish</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Mualliflar soni */}
+                    {/* Faoliyat natijasi nomi */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Hammualliflar soni (jami) *
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        2. Faoliyat natijasi yoki hujjat nomi *
                       </label>
                       <input
-                        type="number"
-                        min="1"
-                        max="20"
+                        type="text"
                         required
-                        value={modalAuthors}
-                        onChange={(e) => {
-                          const count = Math.max(1, parseInt(e.target.value) || 1);
-                          setModalAuthors(count);
-                          if (currentSelectedInd) {
-                            const rec = Number((currentSelectedInd.max_ball / count).toFixed(1));
-                            setModalClaimedBall(rec);
-                          }
-                        }}
-                        className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                        value={modalTitle}
+                        onChange={(e) => setModalTitle(e.target.value)}
+                        placeholder="Ilmiy maqola sarlavhasi, darslik, xalqaro sertifikat yoki loyiha nomini kiriting..."
+                        className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-850 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium"
                       />
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                        {modalAuthors === 1 ? "Yakka muallif (100% toʻliq ball)" : `${modalAuthors} nafar teng huquqli muallif`}
-                      </div>
                     </div>
 
-                    {/* Da'vo qilinayotgan ball */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-xs font-semibold text-blue-950 dark:text-blue-300">
-                          Oʻzingizga daʻvo qilinayotgan ball *
-                        </label>
-                        <span className="text-[10px] text-slate-400 font-mono">maks. {maxPossibleBall}</span>
+                    {/* Mualliflar soni va Da'vo qilinayotgan ball (Aqlli kalkulyator) */}
+                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Calculator className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          <span>3. Mualliflar soni va ball taqsimoti</span>
+                        </span>
+                        <span className="text-[11px] text-blue-700 dark:text-blue-400 font-semibold">
+                          Tavsiya: <b>{recommendedAuthorBall} ball</b>
+                        </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max={maxPossibleBall}
-                        required
-                        value={modalClaimedBall}
-                        onChange={(e) => setModalClaimedBall(Number(e.target.value))}
-                        className="w-full p-2 border border-blue-300 dark:border-blue-700 rounded-lg text-xs font-black text-blue-900 dark:text-blue-200 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                      />
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
-                        <span>Tavsiya: <b>{recommendedAuthorBall} ball</b></span>
-                        {modalClaimedBall !== recommendedAuthorBall && (
-                          <button
-                            type="button"
-                            onClick={() => setModalClaimedBall(recommendedAuthorBall)}
-                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                          >
-                            ⚡ Tavsiya ballini qoʻllash
-                          </button>
-                        )}
+
+                      {/* Tezkor mualliflar soni tugmalari */}
+                      <div className="grid grid-cols-5 gap-1.5 text-xs font-semibold">
+                        {[1, 2, 3, 4, 5].map(cnt => {
+                          const isCnt = modalAuthors === cnt;
+                          return (
+                            <button
+                              key={cnt}
+                              type="button"
+                              onClick={() => {
+                                setModalAuthors(cnt);
+                                if (currentSelectedInd) {
+                                  const rec = Number((currentSelectedInd.max_ball / cnt).toFixed(1));
+                                  setModalClaimedBall(rec);
+                                }
+                              }}
+                              className={`py-1.5 px-2 rounded-lg text-center transition-all ${
+                                isCnt
+                                  ? "bg-blue-900 text-white font-bold shadow-xs"
+                                  : "bg-white dark:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                              }`}
+                            >
+                              {cnt === 1 ? "1 kishi (100%)" : `${cnt} kishi`}
+                            </button>
+                          );
+                        })}
                       </div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* 4-qism: Sana va Fayl biriktirish */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      4. Topshirilgan / eʼlon qilingan sana *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={modalDate}
-                      onChange={(e) => setModalDate(e.target.value)}
-                      className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      5. Tasdiqlovchi hujjat (PDF / DOCX) *
-                    </label>
-                    <label className="cursor-pointer flex flex-col items-center justify-center p-2.5 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 rounded-lg bg-slate-50/60 dark:bg-slate-800/40 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-all text-center">
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,.zip,.png,.jpg"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setModalUploadedFile(file);
-                            setModalUploadedFileName(file.name);
-                          }
-                        }}
-                        className="hidden"
-                      />
-                      {modalUploadedFileName ? (
-                        <div className="flex items-center gap-2 text-xs font-semibold text-blue-900 dark:text-blue-300 truncate max-w-full">
-                          <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                          <span className="truncate">{modalUploadedFileName}</span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setModalUploadedFile(null);
-                              setModalUploadedFileName("");
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                            Aniq mualliflar soni:
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="30"
+                            required
+                            value={modalAuthors}
+                            onChange={(e) => {
+                              const count = Math.max(1, parseInt(e.target.value) || 1);
+                              setModalAuthors(count);
+                              if (currentSelectedInd) {
+                                const rec = Number((currentSelectedInd.max_ball / count).toFixed(1));
+                                setModalClaimedBall(rec);
+                              }
                             }}
-                            className="text-xs text-rose-500 hover:text-rose-700 ml-1 font-bold"
-                            title="Faylni olib tashlash"
-                          >
-                            ✕
-                          </button>
+                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                          />
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                          <Upload className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                          <span className="font-semibold">Faylni tanlang yoki shu yerga tashlang</span>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[11px] font-semibold text-blue-950 dark:text-blue-300">
+                              Oʻzingizga daʻvo qilayotgan ball:
+                            </label>
+                            <span className="text-[10px] text-slate-400 font-mono">maks. {maxPossibleBall}</span>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0.1"
+                              max={maxPossibleBall}
+                              required
+                              value={modalClaimedBall}
+                              onChange={(e) => setModalClaimedBall(Number(e.target.value))}
+                              className="w-full p-2 border border-blue-300 dark:border-blue-700 rounded-lg text-xs font-black text-blue-900 dark:text-blue-200 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                            />
+                            {modalClaimedBall !== recommendedAuthorBall && (
+                              <button
+                                type="button"
+                                onClick={() => setModalClaimedBall(recommendedAuthorBall)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                                title="Tavsiya qilingan ballni tiklash"
+                              >
+                                ⚡ {recommendedAuthorBall} b.
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </label>
+                      </div>
+                    </div>
+
+                    {/* Sana va Tasdiqlovchi hujjat (Dropzone) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          4. Natija sanasi *
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={modalDate}
+                          onChange={(e) => setModalDate(e.target.value)}
+                          className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-850 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          5. Asoslovchi fayl (PDF / DOCX) *
+                        </label>
+                        <label className="cursor-pointer flex flex-col items-center justify-center p-2.5 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 rounded-lg bg-slate-50 dark:bg-slate-800/40 hover:bg-blue-50/30 transition-all text-center">
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx,.zip,.png,.jpg"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setModalUploadedFile(file);
+                                setModalUploadedFileName(file.name);
+                              }
+                            }}
+                            className="hidden"
+                          />
+                          {modalUploadedFileName ? (
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-900 dark:text-blue-300 truncate max-w-full">
+                              <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                              <span className="truncate">{modalUploadedFileName}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setModalUploadedFile(null);
+                                  setModalUploadedFileName("");
+                                }}
+                                className="text-xs text-rose-500 hover:text-rose-700 ml-1 font-bold"
+                                title="Faylni olib tashlash"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                              <Upload className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                              <span>Faylni yuklash (PDF/DOCX)</span>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Izoh yoki havola (ixtiyoriy) */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        6. Ekspert uchun qoʻshimcha izoh yoki havola (ixtiyoriy)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={modalDescription}
+                        onChange={(e) => setModalDescription(e.target.value)}
+                        placeholder="Veb-havola, Scopus/ResearchGate profili yoki nashr haqida qoʻshimcha maʼlumot..."
+                        className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-850 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* 5-qism: Ekspert uchun izoh */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    6. Ekspert komissiyasi uchun qoʻshimcha izoh yoki havola (ixtiyoriy)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={modalDescription}
-                    onChange={(e) => setModalDescription(e.target.value)}
-                    placeholder="Jurnal veb-sahifasi havolasi, Scopus profili yoki nashr toʻgʻrisida qisqacha izoh..."
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                  />
-                </div>
-
-                {/* Footer tugmalari */}
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                {/* Modal Footer */}
+                <div className="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 flex items-center justify-between">
                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Arizangiz masʼul ekspert tomonidan tekshirilib, baholanadi.
+                    Kiritilgan natija masʼul ekspert va komissiya tekshiruviga yuboriladi.
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setIsAddModalOpen(false)}
-                      className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      onClick={() => {
+                        setIsAddModalOpen(false);
+                        setEditingSubmission(null);
+                      }}
+                      className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     >
                       Bekor qilish
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmittingNewKpi}
-                      className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-md transition-all flex items-center gap-2 disabled:opacity-60"
+                      className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-md transition-all flex items-center gap-2 disabled:opacity-60 cursor-pointer"
                     >
                       {isSubmittingNewKpi ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Yuborilmoqda...</span>
+                          <span>Saqlanmoqda...</span>
                         </>
                       ) : (
                         <>
                           <Check className="w-3.5 h-3.5" />
-                          <span>Arizani yuborish</span>
+                          <span>{editingSubmission ? "Oʻzgarishlarni saqlash" : "Arizani tasdiqlashga yuborish"}</span>
                         </>
                       )}
                     </button>
@@ -5737,7 +6737,11 @@ export default function KpiEnterpriseApp() {
                 <span className="text-slate-500 dark:text-slate-400">Asoslovchi PDF:</span>
                 <button
                   type="button"
-                  onClick={() => alert(`PDF hujjat ekspert tomonidan ochildi va tekshirildi: ${selectedSubForReview.file_name}`)}
+                  onClick={() => showAlert({
+                    title: "Ekspert koʻrigi hujjati",
+                    message: `Biriktirilgan asoslovchi fayl: "${selectedSubForReview.file_name}". Tizimda hujjat fayli toʻliq tekshiruv uchun yuklangan.`,
+                    type: "info"
+                  })}
                   className="text-xs text-blue-700 dark:text-blue-400 font-semibold underline flex items-center gap-1 hover:text-blue-900"
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -5894,6 +6898,425 @@ export default function KpiEnterpriseApp() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: YANGI BAHOLOVCHI / EKSPERT TAYINLASH */}
+      {/* ========================================================================= */}
+      {isAddEvaluatorModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Yangi baholovchi / ekspert tayinlash</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Mezon yoʻnalishlari boʻyicha masʼul shaxsni biriktirish</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddEvaluatorModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddEvaluator} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Baholovchi F.I.Sh. *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={evalFormName}
+                  onChange={(e) => setEvalFormName(e.target.value)}
+                  placeholder="Masalan: Prof. Rahimov Ulugʻbek Shavkatovich"
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Foydalanuvchi logini (username)
+                  </label>
+                  <input
+                    type="text"
+                    value={evalFormUsername}
+                    onChange={(e) => setEvalFormUsername(e.target.value)}
+                    placeholder="Masalan: prof_rahimov"
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Ekspertlik roli
+                  </label>
+                  <select
+                    value={evalFormRole}
+                    onChange={(e) => setEvalFormRole(e.target.value)}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium"
+                  >
+                    <option value="EXPERT">Soha eksperti (Yoʻnalish boʻyicha)</option>
+                    <option value="COMMISSION">Apellyatsiya komissiyasi aʼzosi</option>
+                    <option value="HEAD_OF_DEPT">Kafedra mudiri</option>
+                    <option value="DEAN">Fakultet dekani</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Masʼul yoʻnalishi / Mezon bloki *
+                </label>
+                <select
+                  value={evalFormCategory}
+                  onChange={(e) => setEvalFormCategory(e.target.value)}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                >
+                  <option value="2. Ilmiy va innovatsion faoliyat">2. Ilmiy va innovatsion faoliyat (Scopus, jurnallar, patentlar)</option>
+                  <option value="1. Oʻquv-uslubiy faoliyat">1. Oʻquv-uslubiy faoliyat (Darsliklar, qoʻllanmalar, ochiq darslar)</option>
+                  <option value="3. Xalqaro hamkorlik va til">3. Xalqaro hamkorlik va til sertifikatlari</option>
+                  <option value="4. Maʼnaviy-maʼrifiy va tarbiyaviy faoliyat">4. Maʼnaviy-maʼrifiy va tarbiyaviy ishlar</option>
+                  <option value="Dasturiy injiniring kafedrasi">Dasturiy injiniring kafedrasi</option>
+                  <option value="Amaliy matematika va informatika kafedrasi">Amaliy matematika va informatika kafedrasi</option>
+                  <option value="Barcha yoʻnalishlar boʻyicha bosh komissiya">Barcha yoʻnalishlar boʻyicha bosh komissiya</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Baholashni yakunlash muddati (Deadline)
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={evalFormDeadline}
+                  onChange={(e) => setEvalFormDeadline(e.target.value)}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddEvaluatorModalOpen(false)}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  disabled={isEvaluatorSaving}
+                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
+                >
+                  {isEvaluatorSaving ? "Saqlanmoqda..." : "Baholovchini tayinlash"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: RAD ETILGAN ARIZAGA TO'G'RIDAN-TO'G'RI APELLATSIYA BERISH */}
+      {/* ========================================================================= */}
+      {isAppealModalOpen && selectedSubForAppeal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                  <span>Apellyatsiya arizasini topshirish</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Rad etilgan natija yuzasidan komissiyaga asosli eʼtiroz</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAppealModalOpen(false);
+                  setSelectedSubForAppeal(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Dastlabki ariza detallari */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs mb-4 space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Ariza kodi & Mezon:</span>
+                <span className="font-mono font-bold text-blue-900 dark:text-blue-400">#{selectedSubForAppeal.id} (Mezon: {selectedSubForAppeal.indicator_id})</span>
+              </div>
+              <div className="font-semibold text-slate-900 dark:text-slate-100">{selectedSubForAppeal.title}</div>
+              <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300">
+                <b>Dastlabki rad etish sababi:</b> {selectedSubForAppeal.rejection_reason || selectedSubForAppeal.reviewer_comment || "Koʻrikda talabga mos kelmagan"}
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitSubAppeal} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Eʼtirozning asosli tavsifi va rad etishga raddiya *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={appealFormReason}
+                  onChange={(e) => setAppealFormReason(e.target.value)}
+                  placeholder="Masalan: Maqola xalqaro bazada indekslanganligi boʻyicha toʻliq dalillar mavjud. Dastlabki koʻrikda havola xato tushunilgan. Havola yangilandi va ilova qilindi..."
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Qoʻshimcha tasdiqlovchi hujjat nomi yoki elektron havola
+                </label>
+                <input
+                  type="text"
+                  value={appealFormEvidence}
+                  onChange={(e) => setAppealFormEvidence(e.target.value)}
+                  placeholder="Masalan: scopus_tasdiqnoma_2026_updated.pdf yoki DOI/veb havola"
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none font-mono"
+                />
+              </div>
+
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 text-[11px] text-blue-900 dark:text-blue-300">
+                <b>Eslatma:</b> Apellyatsiya arizangiz arizani dastlab rad etgan shaxs tomonidan emas, balki Rektorat tomonidan tuzilgan <b>mustaqil Apellyatsiya komissiyasi</b> tomonidan koʻrib chiqiladi.
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAppealModalOpen(false);
+                    setSelectedSubForAppeal(null);
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAppealSubmitting}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
+                >
+                  {isAppealSubmitting ? "Yuborilmoqda..." : "Apellyatsiyani komissiyaga yuborish"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: KOMISSIYA UCHUN APELLATSIYANI KO'RIB CHIQISH VA QAROR QABUL QILISH */}
+      {/* ========================================================================= */}
+      {isReviewAppealModalOpen && selectedAppealForReview && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                  <span>Apellyatsiya komissiyasi qarori</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Ariza kodi: {selectedAppealForReview.id}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsReviewAppealModalOpen(false);
+                  setSelectedAppealForReview(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Apellyatsiya ma'lumotlari */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs mb-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Arizachi muallif:</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedAppealForReview.teacher_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Mezon & Daʼvo balli:</span>
+                <span className="font-mono font-bold text-blue-900 dark:text-blue-400">{selectedAppealForReview.indicator_id} — {selectedAppealForReview.claimed_ball || 0} ball</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                <div className="font-bold text-slate-600 dark:text-slate-400 text-[11px] mb-1">Oʻqituvchining eʼtiroz dalili:</div>
+                <div className="leading-relaxed">{selectedAppealForReview.reason || selectedAppealForReview.appeal_reason}</div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitAppealReview} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Komissiya yakuniy qarori *
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAppealReviewStatus("ACCEPTED")}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
+                      appealReviewStatus === "ACCEPTED"
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    ✓ Qanoatlantirilsin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAppealReviewStatus("PARTIALLY_ACCEPTED")}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
+                      appealReviewStatus === "PARTIALLY_ACCEPTED"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    ≈ Qisman qabul
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAppealReviewStatus("REJECTED")}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
+                      appealReviewStatus === "REJECTED"
+                        ? "bg-rose-600 text-white border-rose-600 shadow-sm"
+                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    ✗ Rad etilsin
+                  </button>
+                </div>
+              </div>
+
+              {appealReviewStatus !== "REJECTED" && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Tiklanadigan / Beriladigan ball (0 - {selectedAppealForReview.claimed_ball || 10})
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="15"
+                    required
+                    value={appealReviewBall}
+                    onChange={(e) => setAppealReviewBall(Number(e.target.value))}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-900 focus:outline-none font-bold"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Komissiya xulosasi va asoslangan tushuntirish *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={appealReviewComment}
+                  onChange={(e) => setAppealReviewComment(e.target.value)}
+                  placeholder="Masalan: Qoʻshimcha taqdim etilgan dalillar tekshirildi va eʼtiroz oʻrinli deb topildi. 8.0 ball toʻliq tiklandi."
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReviewAppealModalOpen(false);
+                    setSelectedAppealForReview(null);
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAppealReviewing}
+                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
+                >
+                  {isAppealReviewing ? "Tasdiqlanmoqda..." : "Qarorni qabul qilish va ballni saqlash"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* GLOBAL CONFIRMATION & ALERT MODAL */}
+      {/* ========================================================================= */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
+            <div className="flex items-start gap-3.5 mb-4">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
+                confirmModal.type === "danger"
+                  ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900"
+                  : confirmModal.type === "warning"
+                  ? "bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900"
+                  : confirmModal.type === "success"
+                  ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900"
+                  : "bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900"
+              }`}>
+                {confirmModal.type === "danger" && <AlertTriangle className="w-5 h-5" />}
+                {confirmModal.type === "warning" && <AlertCircle className="w-5 h-5" />}
+                {confirmModal.type === "success" && <CheckCircle className="w-5 h-5" />}
+                {(!confirmModal.type || confirmModal.type === "info") && <Sparkles className="w-5 h-5" />}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                  {confirmModal.title}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                  {confirmModal.message}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
+              {!confirmModal.isAlertOnly && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirmModal.onCancel) confirmModal.onCancel();
+                    setConfirmModal(null);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
+                >
+                  {confirmModal.cancelText || "Bekor qilish"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  const onConf = confirmModal.onConfirm;
+                  setConfirmModal(null);
+                  if (onConf) await onConf();
+                }}
+                className={`px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm transition-all cursor-pointer ${
+                  confirmModal.type === "danger"
+                    ? "bg-rose-600 hover:bg-rose-700"
+                    : confirmModal.type === "success"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-blue-900 hover:bg-blue-800"
+                }`}
+              >
+                {confirmModal.confirmText || (confirmModal.isAlertOnly ? "Tushunarli" : "Tasdiqlash")}
+              </button>
+            </div>
           </div>
         </div>
       )}

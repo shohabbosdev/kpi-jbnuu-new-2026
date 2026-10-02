@@ -17,9 +17,14 @@ HEMIS_BASE_URL = os.getenv("HEMIS_BASE_URL", "https://student.jbnuu.uz/rest/v1")
 HEMIS_API_TOKEN = os.getenv("HEMIS_API_TOKEN", "Qn8Jp7TVvpGdQUvWoqpBC1i0p7ukHKT0")
 
 from database import (
-    db_load_users, db_save_user, db_update_password,
-    db_load_submissions, db_save_submission,
-    db_save_audit_log, db_load_audit_logs
+    db_load_users, db_get_user, db_save_user, db_update_password,
+    db_reset_user_password, db_update_user_role, db_toggle_user_status,
+    db_load_submissions, db_save_submission, db_delete_submission,
+    db_save_audit_log, db_load_audit_logs,
+    db_load_settings, db_save_settings,
+    db_load_indicators, db_save_indicator,
+    db_load_appeals, db_save_appeal, db_review_appeal,
+    db_load_evaluators, db_add_evaluator, db_delete_evaluator
 )
 
 
@@ -246,6 +251,15 @@ class SubmissionCreate(BaseModel):
     claimed_ball: Optional[float] = None
     description: Optional[str] = None
 
+class SubmissionUpdate(BaseModel):
+    indicator_id: Optional[str] = None
+    title: Optional[str] = None
+    doi: Optional[str] = None
+    authors_count: Optional[int] = None
+    claimed_ball: Optional[float] = None
+    file_name: Optional[str] = None
+    description: Optional[str] = None
+
 class Submission(BaseModel):
     id: int
     teacher_id: int
@@ -275,21 +289,69 @@ class VerificationAction(BaseModel):
     comment: Optional[str] = None
 
 class AppealCreate(BaseModel):
+    submission_id: Optional[int] = None
     teacher_id: int
     teacher_name: str
     indicator_id: str
+    title: Optional[str] = None
+    claimed_ball: Optional[float] = 0.0
+    reviewed_ball: Optional[float] = 0.0
+    initial_reviewer: Optional[str] = None
+    initial_rejection_reason: Optional[str] = None
     reason: str
+    evidence_file: Optional[str] = None
     file_name: Optional[str] = None
+
+class AppealReviewRequest(BaseModel):
+    status: str  # 'ACCEPTED', 'PARTIALLY_ACCEPTED', 'REJECTED'
+    commission_member: Optional[str] = "Apellyatsiya Komissiyasi"
+    commission_comment: str
+    awarded_ball: Optional[float] = 0.0
 
 class Appeal(BaseModel):
     id: str
+    submission_id: Optional[int] = None
     teacher_id: int
     teacher_name: str
     indicator_id: str
-    reason: str
-    submitted_date: str
+    title: Optional[str] = None
+    claimed_ball: Optional[float] = 0.0
+    reviewed_ball: Optional[float] = 0.0
+    initial_reviewer: Optional[str] = None
+    initial_rejection_reason: Optional[str] = None
+    appeal_reason: Optional[str] = None
+    reason: Optional[str] = None
+    evidence_file: Optional[str] = None
+    submitted_date: Optional[str] = None
     status: str
     decision: Optional[str] = None
+    commission_member: Optional[str] = None
+    commission_comment: Optional[str] = None
+    decision_date: Optional[str] = None
+    awarded_ball: Optional[float] = 0.0
+    created_at: Optional[str] = None
+
+class EvaluatorCreate(BaseModel):
+    user_id: Optional[int] = None
+    username: str
+    name: str
+    assigned_category: str
+    role_type: Optional[str] = "EXPERT"
+    deadline_date: Optional[str] = None
+    is_active: Optional[bool] = True
+    assigned_by: Optional[str] = "ADMIN"
+
+class Evaluator(BaseModel):
+    id: int
+    user_id: Optional[int] = None
+    username: str
+    name: str
+    assigned_category: str
+    role_type: str = "EXPERT"
+    deadline_date: Optional[str] = None
+    is_active: bool = True
+    assigned_by: Optional[str] = None
+    created_at: Optional[str] = None
 
 class DoiLookupRequest(BaseModel):
     doi: str
@@ -298,7 +360,21 @@ class SystemSettings(BaseModel):
     academic_year: str
     submissions_open: bool
     deadline_date: str
+    submission_deadline: Optional[str] = "2026-06-15"
+    review_deadline: Optional[str] = "2026-06-25"
+    appeal_deadline: Optional[str] = "2026-07-05"
+    current_stage: Optional[str] = "ALL_OPEN"
     budget_cap_monthly: float
+
+class EvaluationPeriodUpdate(BaseModel):
+    academic_year: Optional[str] = None
+    submissions_open: Optional[bool] = None
+    deadline_date: Optional[str] = None
+    submission_deadline: Optional[str] = None
+    review_deadline: Optional[str] = None
+    appeal_deadline: Optional[str] = None
+    current_stage: Optional[str] = None
+    budget_cap_monthly: Optional[float] = None
 
 # ==========================================
 # FOYDALANUVCHILAR VA XAVFSIZLIK BAZASI
@@ -632,15 +708,45 @@ SUBMISSIONS_DB: List[Submission] = [
 APPEALS_DB: List[Appeal] = [
     Appeal(
         id="AP-2026-04",
+        submission_id=101,
         teacher_id=2,
         teacher_name="Dots. Karimov Jamshid Anvarovich",
         indicator_id="2.3",
+        title="Scopus Q2 xalqaro jurnalida maqola",
+        claimed_ball=8.0,
+        reviewed_ball=0.0,
+        initial_reviewer="Kafedra mudiri",
+        initial_rejection_reason="Havoladagi kvartil tasdiqnomasi ochilmadi",
+        appeal_reason="Kvartil tasdiqnomasi yangilangan havola orqali ilova qilindi",
         reason="Kvartil tasdiqnomasi yangilangan havola orqali ilova qilindi",
         submitted_date="2026-09-29",
         status="Jarayonda",
         decision="Ekspertiza jarayonida (Ilmiy boʻlim)"
     )
 ]
+
+# SQLite bazasidan apellyatsiyalarni yuklash
+db_appeals = db_load_appeals()
+if db_appeals:
+    APPEALS_DB = [Appeal(**a) for a in db_appeals]
+else:
+    for a in APPEALS_DB:
+        db_save_appeal(a.dict())
+
+# SQLite bazasidan baholovchilarni yuklash
+EVALUATORS_DB: List[Evaluator] = []
+db_evals = db_load_evaluators()
+if db_evals:
+    EVALUATORS_DB = [Evaluator(**e) for e in db_evals]
+else:
+    default_evals = [
+        {"user_id": 2, "username": "dots_karimov", "name": "Dots. Karimov Jamshid Anvarovich", "assigned_category": "2. Ilmiy va innovatsion faoliyat", "role_type": "EXPERT", "deadline_date": "2026-06-25"},
+        {"user_id": 1, "username": "prof_rahimov", "name": "Prof. Rahimov Ulugʻbek Shavkatovich", "assigned_category": "1. Oʻquv-uslubiy faoliyat", "role_type": "EXPERT", "deadline_date": "2026-06-25"},
+        {"user_id": 3, "username": "mudir_ermatov", "name": "Dots. Ermatov Sanjar Qodirovich", "assigned_category": "Dasturiy injiniring kafedrasi", "role_type": "HEAD_OF_DEPT", "deadline_date": "2026-06-25"}
+    ]
+    for de in default_evals:
+        saved = db_add_evaluator(de)
+        EVALUATORS_DB.append(Evaluator(**saved))
 
 # SQLite doimiy xotirasidan yuklash va sinxronlash
 existing_db_users = db_load_users()
@@ -709,6 +815,26 @@ else:
     for s in SUBMISSIONS_DB:
         db_save_submission(s.dict())
 
+# System Settings doimiy saqlash
+existing_settings = db_load_settings()
+if existing_settings:
+    SYSTEM_SETTINGS = SystemSettings(**existing_settings)
+else:
+    db_save_settings(SYSTEM_SETTINGS.dict())
+
+# Indicators doimiy saqlash
+existing_indicators = db_load_indicators()
+if existing_indicators and len(existing_indicators) >= 40:
+    INDICATORS_DB = [Indicator(**i) for i in existing_indicators]
+else:
+    for ind in INDICATORS_DB:
+        db_save_indicator(ind.dict())
+
+# Barcha doimiy foydalanuvchilarni SQLite bazasidan yuklab olish
+db_saved_users = db_load_users()
+if db_saved_users:
+    USERS_DB.update(db_saved_users)
+
 # ==========================================
 # REST API ENDPOINTS
 # ==========================================
@@ -775,7 +901,23 @@ def login(creds: LoginRequest, request: Request):
     # 1. Rate limiting va hisob bloklanishini tekshirish
     check_login_rate_limit(client_ip, username)
 
-    user_record = USERS_DB.get(username)
+    # Haqiqiy SQLite ma'lumotlar bazasidan foydalanuvchini olish
+    db_u = db_get_user(username)
+    if db_u:
+        user_record = db_u
+        if username in USERS_DB:
+            USERS_DB[username].update(db_u)
+        else:
+            USERS_DB[username] = db_u
+    else:
+        user_record = USERS_DB.get(username)
+
+    # Hisob faolligini tekshirish
+    if user_record and not user_record.get("is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Hisobingiz administrator tomonidan faolsizlantirilgan (bloklangan)."
+        )
 
     # 2. Agar foydalanuvchi topilmasa yoki parol noto'g'ri bo'lsa
     if not user_record or user_record["password"] != creds.password:
@@ -870,7 +1012,7 @@ def change_password(req: ChangePasswordRequest):
     - Minimal uzunlik 6 ta belgi.
     """
     username = req.username.strip().lower()
-    user_record = USERS_DB.get(username)
+    user_record = db_get_user(username) or USERS_DB.get(username)
 
     if not user_record:
         raise HTTPException(status_code=404, detail="Foydalanuvchi hisobi topilmadi")
@@ -887,9 +1029,12 @@ def change_password(req: ChangePasswordRequest):
     if req.new_password == req.current_password or req.new_password == username:
         raise HTTPException(status_code=400, detail="Yangi parol birlamchi HEMIS ID paroli bilan bir xil boʻlishi mumkin emas!")
 
-    # Parolni yangilash
+    # Parolni yangilash (SQLite va xotirada)
     user_record["password"] = req.new_password
     user_record["must_change_password"] = False
+    if username in USERS_DB:
+        USERS_DB[username]["password"] = req.new_password
+        USERS_DB[username]["must_change_password"] = False
     db_update_password(username, req.new_password)
 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -1075,6 +1220,7 @@ def create_indicator(item: IndicatorCreate):
         is_active=item.is_active
     )
     INDICATORS_DB.append(new_ind)
+    db_save_indicator(new_ind.dict())
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
         "time": "2026-10-01 21:44",
@@ -1097,6 +1243,7 @@ def update_indicator(indicator_id: str, update: IndicatorUpdate):
     if update.dept is not None: ind.dept = update.dept.strip()
     if update.is_active is not None: ind.is_active = update.is_active
 
+    db_save_indicator(ind.dict())
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
         "time": "2026-10-01 21:44",
@@ -1114,6 +1261,7 @@ def delete_indicator(indicator_id: str):
     
     # Soft delete: tarixiy ma'lumotlar saqlanishi uchun arxivlanadi
     ind.is_active = False
+    db_save_indicator(ind.dict())
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
         "time": "2026-10-01 21:44",
@@ -1163,6 +1311,11 @@ def create_submission(sub_in: SubmissionCreate):
 
     teacher = next((t for t in RAW_TEACHERS if t["id"] == sub_in.teacher_id), None)
     if not teacher:
+        for u in USERS_DB.values():
+            if u.get("id") == sub_in.teacher_id or str(u.get("id")) == str(sub_in.teacher_id) or str(u.get("employee_id_number")) == str(sub_in.teacher_id):
+                teacher = u
+                break
+    if not teacher:
         raise HTTPException(status_code=404, detail="Oʻqituvchi topilmadi")
     
     ind = next((i for i in INDICATORS_DB if i.id == sub_in.indicator_id), None)
@@ -1202,17 +1355,111 @@ def create_submission(sub_in: SubmissionCreate):
 
     return new_sub
 
+@app.put("/api/submissions/{sub_id}", response_model=Submission)
+def update_submission(sub_id: int, update_data: SubmissionUpdate):
+    sub = next((s for s in SUBMISSIONS_DB if s.id == sub_id), None)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Ariza topilmadi")
+    if sub.status != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail="Faqat baholanmagan (kutilayotgan) holatdagi arizalarni tahrirlash mumkin. Baholangan arizalar boʻyicha apellyatsiya berilishi kerak."
+        )
+
+    if update_data.indicator_id is not None:
+        sub.indicator_id = update_data.indicator_id
+        ind = next((i for i in INDICATORS_DB if i.id == update_data.indicator_id), None)
+        if ind:
+            sub.dept = ind.dept
+    if update_data.title is not None and update_data.title.strip():
+        sub.title = update_data.title.strip()
+    if update_data.doi is not None:
+        sub.doi = update_data.doi.strip() if update_data.doi else None
+    if update_data.authors_count is not None and update_data.authors_count > 0:
+        sub.authors_count = update_data.authors_count
+    if update_data.claimed_ball is not None:
+        sub.claimed_ball = float(update_data.claimed_ball)
+        sub.ball = float(update_data.claimed_ball)
+    if update_data.file_name is not None and update_data.file_name.strip():
+        sub.file_name = update_data.file_name.strip()
+    if update_data.description is not None:
+        sub.description = update_data.description.strip() if update_data.description else None
+
+    db_save_submission(sub.dict())
+
+    audit_now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    audit_msg = f"KPI arizasi tahrirlandi (#{sub.id}, '{sub.title}', Mezon: {sub.indicator_id})"
+    db_save_audit_log(audit_now, sub.teacher_name, audit_msg)
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": audit_now,
+        "user": sub.teacher_name,
+        "action": audit_msg
+    })
+    return sub
+
+@app.delete("/api/submissions/{sub_id}")
+def delete_submission(sub_id: int):
+    global SUBMISSIONS_DB
+    sub = next((s for s in SUBMISSIONS_DB if s.id == sub_id), None)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Ariza topilmadi")
+    if sub.status != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail="Faqat baholanmagan (kutilayotgan) holatdagi arizalarni oʻchirish mumkin. Baholangan arizalar boʻyicha apellyatsiya berilishi kerak."
+        )
+
+    SUBMISSIONS_DB = [s for s in SUBMISSIONS_DB if s.id != sub_id]
+    db_delete_submission(sub_id)
+
+    audit_now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    audit_msg = f"KPI arizasi oʻchirildi (#{sub.id}, '{sub.title}')"
+    db_save_audit_log(audit_now, sub.teacher_name, audit_msg)
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": audit_now,
+        "user": sub.teacher_name,
+        "action": audit_msg
+    })
+    return {"message": "Ariza muvaffaqiyatli oʻchirildi", "id": sub_id}
+
 @app.post("/api/submissions/{sub_id}/verify")
 def verify_submission(sub_id: int, action: VerificationAction):
     sub = next((s for s in SUBMISSIONS_DB if s.id == sub_id), None)
     if not sub:
         raise HTTPException(status_code=404, detail="Ariza topilmadi")
     
-    if sub.teacher_id == action.reviewer_id:
+    # 1. Manfaatlar to'qnashuvi (Conflict of Interest) qat'iy himoyasi
+    rev_name_clean = (action.reviewer_name or "").lower().replace("dots.", "").replace("prof.", "").strip()
+    author_name_clean = (sub.teacher_name or "").lower().replace("dots.", "").replace("prof.", "").strip()
+    
+    if (sub.teacher_id == action.reviewer_id) or (rev_name_clean and author_name_clean and (rev_name_clean == author_name_clean or rev_name_clean in author_name_clean or author_name_clean in rev_name_clean)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Manfaatlar toʻqnashuvi taqiqlanadi: Muallif oʻz arizasini tasdiqlashi mumkin emas. Ariza fakultet dekani yoki ilmiy boʻlimga yoʻnaltiriladi."
+            detail="Manfaatlar toʻqnashuvi taqiqlanadi: Baholovchi oʻzining arizasini oʻzi tasdiqlashi yoki rad etishi mutlaqo mumkin emas. Ushbu ariza Fakultet Dekani yoki Universitet Ilmiy Komissiyasi tomonidan baholanadi."
         )
+
+    # 2. Baholash muddati va bosqich tekshiruvi
+    s_settings = db_load_settings()
+    if s_settings:
+        c_stage = s_settings.get("current_stage", "ALL_OPEN")
+        r_deadline = s_settings.get("review_deadline")
+        if c_stage == "CLOSED":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Baholash kampaniyasi rasman yakunlangan. Hozirda arizalarni qayta baholash imkonsiz."
+            )
+        elif r_deadline and c_stage not in ["ALL_OPEN", "REVIEW_STAGE"]:
+            try:
+                deadline_dt = datetime.strptime(r_deadline, "%Y-%m-%d").date()
+                if datetime.now().date() > deadline_dt:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Baholash muddati ({r_deadline}) tugagan. Kechiktirilgan baholash uchun Rektorat/Administratsiyaga murojaat qiling."
+                    )
+            except ValueError:
+                pass
 
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     sub.reviewer_name = action.reviewer_name
@@ -1306,24 +1553,212 @@ def lookup_doi(req: DoiLookupRequest):
         "calculated_ball": 8.0
     }
 
+# ==========================================
+# APPEALS (APELLYATSIYA) ENDPOINTS
+# ==========================================
+
 @app.get("/api/appeals", response_model=List[Appeal])
 def get_appeals():
+    db_items = db_load_appeals()
+    if db_items:
+        return [Appeal(**a) for a in db_items]
     return APPEALS_DB
 
 @app.post("/api/appeals", response_model=Appeal)
 def create_appeal(appeal_in: AppealCreate):
-    new_appeal = Appeal(
-        id=f"AP-2026-{len(APPEALS_DB) + 10}",
-        teacher_id=appeal_in.teacher_id,
-        teacher_name=appeal_in.teacher_name,
-        indicator_id=appeal_in.indicator_id,
-        reason=appeal_in.reason,
-        submitted_date="2026-10-01",
-        status="Jarayonda",
-        decision="Apellyatsiya komissiyasida koʻrib chiqilmoqda"
-    )
-    APPEALS_DB.append(new_appeal)
-    return new_appeal
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    appeal_id = f"AP-2026-{uuid.uuid4().hex[:6].upper()}"
+    
+    # Ariza ma'lumotlarini qidirish
+    sub_title = appeal_in.title or ""
+    claimed = appeal_in.claimed_ball or 0.0
+    reviewed = appeal_in.reviewed_ball or 0.0
+    if appeal_in.submission_id:
+        sub = next((s for s in SUBMISSIONS_DB if s.id == appeal_in.submission_id), None)
+        if sub:
+            sub_title = sub_title or sub.title
+            claimed = claimed or sub.claimed_ball
+            reviewed = reviewed or sub.ball
+            if not appeal_in.initial_reviewer:
+                appeal_in.initial_reviewer = sub.reviewer_name or "Kafedra mudiri"
+            if not appeal_in.initial_rejection_reason:
+                appeal_in.initial_rejection_reason = sub.rejection_reason or sub.reviewer_comment
+
+    new_appeal_data = {
+        "id": appeal_id,
+        "submission_id": appeal_in.submission_id or 0,
+        "teacher_id": appeal_in.teacher_id,
+        "teacher_name": appeal_in.teacher_name,
+        "indicator_id": appeal_in.indicator_id,
+        "title": sub_title,
+        "claimed_ball": claimed,
+        "reviewed_ball": reviewed,
+        "initial_reviewer": appeal_in.initial_reviewer or "Kafedra mudiri",
+        "initial_rejection_reason": appeal_in.initial_rejection_reason or "Koʻrib chiqishda rad etilgan",
+        "appeal_reason": appeal_in.reason,
+        "reason": appeal_in.reason,
+        "evidence_file": appeal_in.evidence_file or appeal_in.file_name,
+        "submitted_date": datetime.now().strftime("%Y-%m-%d"),
+        "status": "Jarayonda",
+        "decision": "Apellyatsiya komissiyasida koʻrib chiqilmoqda",
+        "commission_member": None,
+        "commission_comment": None,
+        "decision_date": None,
+        "awarded_ball": 0.0,
+        "created_at": current_time_str
+    }
+    db_save_appeal(new_appeal_data)
+    created_obj = Appeal(**new_appeal_data)
+    APPEALS_DB.insert(0, created_obj)
+
+    audit_msg = f"Yangi apellyatsiya berildi ({appeal_id}, Muallif: {appeal_in.teacher_name}, Mezon: {appeal_in.indicator_id})"
+    db_save_audit_log(current_time_str, appeal_in.teacher_name, audit_msg)
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": current_time_str,
+        "user": appeal_in.teacher_name,
+        "action": audit_msg
+    })
+    return created_obj
+
+@app.put("/api/appeals/{appeal_id}/review", response_model=Appeal)
+def review_appeal(appeal_id: str, review_in: AppealReviewRequest):
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    # Status konvertatsiyasi
+    status_map = {
+        "ACCEPTED": "Qanoatlantirildi",
+        "PARTIALLY_ACCEPTED": "Qisman qanoatlantirildi",
+        "REJECTED": "Rad etildi"
+    }
+    disp_status = status_map.get(review_in.status.upper(), review_in.status)
+
+    decision_data = {
+        "status": disp_status,
+        "commission_member": review_in.commission_member or "Apellyatsiya Komissiyasi",
+        "commission_comment": review_in.commission_comment,
+        "decision_date": current_time_str,
+        "awarded_ball": review_in.awarded_ball or 0.0
+    }
+
+    updated = db_review_appeal(appeal_id, decision_data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Apellyatsiya topilmadi")
+
+    # In-memory xotirani ham sinxronlash
+    for i, a in enumerate(APPEALS_DB):
+        if a.id == appeal_id:
+            for k, v in updated.items():
+                if hasattr(a, k):
+                    setattr(a, k, v)
+            a.status = disp_status
+            a.decision = review_in.commission_comment
+            break
+
+    # Agar qanoatlantirilgan bo'lsa, submissions xotirasini ham sinxronlash
+    if review_in.status.upper() in ["ACCEPTED", "PARTIALLY_ACCEPTED"]:
+        sub_id = updated.get("submission_id")
+        if sub_id:
+            sub = next((s for s in SUBMISSIONS_DB if s.id == sub_id), None)
+            if sub:
+                sub.status = "approved"
+                sub.ball = float(review_in.awarded_ball or 0.0)
+                sub.reviewer_comment = f"Apellyatsiya komissiyasi qarori: {review_in.commission_comment}"
+
+    audit_msg = f"Apellyatsiya koʻrib chiqildi ({appeal_id}, Holati: {disp_status}, Qoʻyilgan ball: {review_in.awarded_ball})"
+    db_save_audit_log(current_time_str, review_in.commission_member or "Komissiya", audit_msg)
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": current_time_str,
+        "user": review_in.commission_member or "Komissiya",
+        "action": audit_msg
+    })
+    return Appeal(**updated)
+
+# ==========================================
+# BAHOLOVCHILAR VA EKSPERTLAR (EVALUATORS)
+# ==========================================
+
+@app.get("/api/evaluators", response_model=List[Evaluator])
+def get_evaluators():
+    db_evals = db_load_evaluators()
+    if db_evals:
+        return [Evaluator(**e) for e in db_evals]
+    return EVALUATORS_DB
+
+@app.post("/api/evaluators", response_model=Evaluator)
+def add_evaluator(eval_in: EvaluatorCreate):
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    eval_dict = eval_in.dict()
+    saved = db_add_evaluator(eval_dict)
+    eval_obj = Evaluator(**saved)
+    EVALUATORS_DB.append(eval_obj)
+
+    audit_msg = f"Yangi baholovchi/ekspert tayinlandi ({eval_obj.name}, Mezon yoʻnalishi: {eval_obj.assigned_category})"
+    db_save_audit_log(current_time_str, eval_in.assigned_by or "ADMIN", audit_msg)
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": current_time_str,
+        "user": eval_in.assigned_by or "ADMIN",
+        "action": audit_msg
+    })
+    return eval_obj
+
+@app.delete("/api/evaluators/{eval_id}")
+def delete_evaluator_endpoint(eval_id: int):
+    global EVALUATORS_DB
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    db_delete_evaluator(eval_id)
+    EVALUATORS_DB = [e for e in EVALUATORS_DB if e.id != eval_id]
+    
+    audit_msg = f"Baholovchi/ekspert roʻyxatdan chiqarildi (ID: #{eval_id})"
+    db_save_audit_log(current_time_str, "ADMIN", audit_msg)
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": current_time_str,
+        "user": "ADMIN",
+        "action": audit_msg
+    })
+    return {"success": True, "message": "Ekspert muvaffaqiyatli oʻchirildi", "id": eval_id}
+
+# ==========================================
+# BAHOLASH MUDDATLARI VA BOSQICHLARI (PERIOD)
+# ==========================================
+
+@app.get("/api/evaluation-period")
+def get_evaluation_period():
+    s = db_load_settings() or SYSTEM_SETTINGS.dict()
+    return {
+        "academic_year": s.get("academic_year", "2025/2026-oʻquv yili"),
+        "submissions_open": s.get("submissions_open", True),
+        "submission_deadline": s.get("submission_deadline", "2026-06-15"),
+        "review_deadline": s.get("review_deadline", "2026-06-25"),
+        "appeal_deadline": s.get("appeal_deadline", "2026-07-05"),
+        "current_stage": s.get("current_stage", "ALL_OPEN"),
+        "budget_cap_monthly": s.get("budget_cap_monthly", 150000000.0)
+    }
+
+@app.put("/api/evaluation-period")
+def update_evaluation_period(period_in: EvaluationPeriodUpdate):
+    global SYSTEM_SETTINGS
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    current = db_load_settings() or SYSTEM_SETTINGS.dict()
+    for k, v in period_in.dict(exclude_unset=True).items():
+        if v is not None:
+            current[k] = v
+    db_save_settings(current)
+
+    SYSTEM_SETTINGS = SystemSettings(**current)
+
+    audit_msg = f"Baholash davri va muddatlari yangilandi (Bosqich: {current.get('current_stage')}, Ariza: {current.get('submission_deadline')}, Baholash: {current.get('review_deadline')}, Apellyatsiya: {current.get('appeal_deadline')})"
+    db_save_audit_log(current_time_str, "ADMIN", audit_msg)
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": current_time_str,
+        "user": "ADMIN",
+        "action": audit_msg
+    })
+    return current
 
 # ==========================================
 # ADMIN ENDPOINTS
@@ -1332,12 +1767,16 @@ def create_appeal(appeal_in: AppealCreate):
 @app.get("/api/settings", response_model=SystemSettings)
 @app.get("/api/admin/settings", response_model=SystemSettings)
 def get_system_settings():
+    s = db_load_settings()
+    if s:
+        return SystemSettings(**s)
     return SYSTEM_SETTINGS
 
 @app.post("/api/admin/settings", response_model=SystemSettings)
 def update_system_settings(new_settings: SystemSettings):
     global SYSTEM_SETTINGS
     SYSTEM_SETTINGS = new_settings
+    db_save_settings(new_settings.dict())
     return SYSTEM_SETTINGS
 
 @app.get("/api/admin/users")
@@ -1403,6 +1842,7 @@ def update_user_role(username: str, body: AdminUserRoleUpdate):
 
     old_role = user.get("role", "TEACHER")
     user["role"] = body.role.upper()
+    db_update_user_role(u_key, body.role.upper())
 
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
@@ -1427,6 +1867,7 @@ def reset_user_password(username: str):
     initial_pass = user.get("employee_id_number") or u_key
     user["password"] = initial_pass
     user["must_change_password"] = True
+    db_reset_user_password(u_key, initial_pass)
 
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
@@ -1446,6 +1887,7 @@ def toggle_user_status(username: str):
 
     current_status = user.get("is_active", True)
     user["is_active"] = not current_status
+    db_toggle_user_status(u_key, user["is_active"])
 
     status_name = "faollashtirildi" if user["is_active"] else "bloklandi"
     AUDIT_LOGS.insert(0, {
@@ -1477,6 +1919,7 @@ def create_admin_user(data: AdminUserCreate):
         "is_active": True,
         "employee_id_number": u_key
     }
+    db_save_user(u_key, USERS_DB[u_key], overwrite_auth=True)
 
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
@@ -1726,29 +2169,40 @@ def deduplicate_and_clean_hemis_employees(raw_items: List[Dict[str, Any]]) -> Di
         }
         clean_employees.append(clean_item)
 
-        # 5. Har bir o'qituvchiga HEMIS ID orqali birlamchi hisob yaratish
-        if emp_id and emp_id.lower() not in USERS_DB:
-            is_head = "mudir" in clean_item["position"].lower()
-            USERS_DB[emp_id.lower()] = {
-                "id": clean_item["id"],
-                "username": emp_id,
-                "password": emp_id,  # Birlamchi parol = HEMIS ID
-                "must_change_password": True,  # Birinchi kirishda majburiy o'zgartirish
-                "name": clean_item["full_name"],
-                "role": "HEAD_OF_DEPT" if is_head else "TEACHER",
-                "department": clean_item["department"],
-                "faculty": resolve_faculty_from_dept(clean_item["department"]),
-                "position": clean_item["position"],
-                "degree": clean_item["degree"],
-                "fte": clean_item["fte"],
-                "employee_id_number": emp_id,
-                "image": clean_item.get("image")
-            }
-            db_save_user(emp_id.lower(), USERS_DB[emp_id.lower()])
-        elif emp_id and emp_id.lower() in USERS_DB:
-            if clean_item.get("image") and not USERS_DB[emp_id.lower()].get("image"):
-                USERS_DB[emp_id.lower()]["image"] = clean_item["image"]
-                db_save_user(emp_id.lower(), USERS_DB[emp_id.lower()])
+        # 5. Har bir o'qituvchiga hisob yaratish yoki ma'lumotlar bazasidagi shaxsiy parolini saqlash
+        if emp_id:
+            u_id = emp_id.lower()
+            existing_user = db_get_user(u_id)
+            if existing_user:
+                # Bazada mavjud foydalanuvchi: saqlangan parol, rol va must_change_password o'zgarmaydi!
+                USERS_DB[u_id] = existing_user
+                if clean_item.get("image") and not existing_user.get("image"):
+                    existing_user["image"] = clean_item["image"]
+                db_save_user(u_id, existing_user, overwrite_auth=False)
+            elif u_id not in USERS_DB:
+                is_head = "mudir" in clean_item["position"].lower()
+                new_account = {
+                    "id": clean_item["id"],
+                    "username": emp_id,
+                    "password": emp_id,  # Birlamchi parol = HEMIS ID
+                    "must_change_password": True,  # Birinchi kirishda majburiy o'zgartirish
+                    "name": clean_item["full_name"],
+                    "role": "HEAD_OF_DEPT" if is_head else "TEACHER",
+                    "department": clean_item["department"],
+                    "faculty": resolve_faculty_from_dept(clean_item["department"]),
+                    "position": clean_item["position"],
+                    "degree": clean_item["degree"],
+                    "fte": clean_item["fte"],
+                    "employee_id_number": emp_id,
+                    "image": clean_item.get("image"),
+                    "is_active": True
+                }
+                USERS_DB[u_id] = new_account
+                db_save_user(u_id, new_account, overwrite_auth=True)
+            else:
+                if clean_item.get("image") and not USERS_DB[u_id].get("image"):
+                    USERS_DB[u_id]["image"] = clean_item["image"]
+                db_save_user(u_id, USERS_DB[u_id], overwrite_auth=False)
 
     clean_employees.sort(key=lambda x: x["full_name"])
 
