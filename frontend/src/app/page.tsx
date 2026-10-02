@@ -940,6 +940,8 @@ export default function KpiEnterpriseApp() {
   const [activeSubjectHemisResources, setActiveSubjectHemisResources] = useState<HemisSubjectResource[]>([]);
   const [activeSubjectCurriculumSubject, setActiveSubjectCurriculumSubject] = useState<HemisCurriculumSubject | null>(null);
   const [isSubjectHemisResourcesLoading, setIsSubjectHemisResourcesLoading] = useState<boolean>(false);
+  const [hemisResourceSearch, setHemisResourceSearch] = useState<string>("");
+  const [hemisResourceFilterType, setHemisResourceFilterType] = useState<string>("ALL");
 
   // 1. Fan o'quv-uslubiy hujjatlari
   const [courseDocsList, setCourseDocsList] = useState<CourseSyllabusDoc[]>([]);
@@ -1623,19 +1625,25 @@ export default function KpiEnterpriseApp() {
     }
   };
 
-  const fetchSubjectHemisDetails = async (subjName?: string, tName?: string) => {
+  const fetchSubjectHemisDetails = async (subjName?: string, tName?: string, forceRefresh: boolean = false) => {
     setIsSubjectHemisResourcesLoading(true);
     try {
       const p = new URLSearchParams();
-      if (subjName) p.append("subject_name", subjName);
-      if (tName) p.append("employee_name", tName);
+      if (subjName) {
+        const cleanName = subjName.split("(")[0].trim();
+        p.append("subject_name", cleanName);
+      }
+      if (forceRefresh) {
+        p.append("force_refresh", "true");
+      }
       const res = await fetch(`${API_BASE}/hemis/subject-resources?${p.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setActiveSubjectHemisResources(data.items || []);
       }
       if (subjName) {
-        const csRes = await fetch(`${API_BASE}/hemis/curriculum-subjects?subject_name=${encodeURIComponent(subjName)}`);
+        const cleanName = subjName.split("(")[0].trim();
+        const csRes = await fetch(`${API_BASE}/hemis/curriculum-subjects?subject_name=${encodeURIComponent(cleanName)}`);
         if (csRes.ok) {
           const csData = await csRes.json();
           if (csData.items && csData.items.length > 0) {
@@ -11176,7 +11184,7 @@ export default function KpiEnterpriseApp() {
 
                 <button
                   type="button"
-                  onClick={() => fetchSubjectHemisDetails(selectedWorkflowSubject?.subject_name, selectedWorkflowSubject?.teacher_name)}
+                  onClick={() => fetchSubjectHemisDetails(selectedWorkflowSubject?.subject_name, selectedWorkflowSubject?.teacher_name, true)}
                   disabled={isSubjectHemisResourcesLoading}
                   className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors self-start md:self-center cursor-pointer flex-shrink-0"
                 >
@@ -11252,7 +11260,7 @@ export default function KpiEnterpriseApp() {
               <div className={`p-4 rounded-2xl border ${
                 theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
               }`}>
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3 gap-2">
                   <div className="flex items-center gap-2">
                     <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
@@ -11264,6 +11272,47 @@ export default function KpiEnterpriseApp() {
                   </span>
                 </div>
 
+                {/* Filtrlash va qidiruv paneli */}
+                {activeSubjectHemisResources.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    {/* Dars turi filtri */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        { id: "ALL", label: "Barchasi" },
+                        { id: "Ma’ruza", label: "Maʼruza" },
+                        { id: "Amaliy", label: "Amaliy" },
+                        { id: "Laboratoriya", label: "Laboratoriya" },
+                        { id: "Seminar", label: "Seminar" }
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setHemisResourceFilterType(t.id)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            hemisResourceFilterType === t.id
+                              ? "bg-emerald-600 text-white shadow-xs"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Qidiruv inputi */}
+                    <div className="relative min-w-[220px]">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={hemisResourceSearch}
+                        onChange={(e) => setHemisResourceSearch(e.target.value)}
+                        placeholder="Mavzu yoki fayl nomi..."
+                        className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {isSubjectHemisResourcesLoading ? (
                   <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
                     <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
@@ -11271,48 +11320,70 @@ export default function KpiEnterpriseApp() {
                   </div>
                 ) : activeSubjectHemisResources.length === 0 ? (
                   <div className="py-8 text-center text-xs text-slate-400">
-                    Hozircha HEMIS da bu fanga yuklangan resurslar mavjud emas.
+                    Hozircha HEMIS da bu fanga yuklangan resurslar topilmadi. Yuqoridagi "Yangilash" tugmasini bosing.
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {activeSubjectHemisResources.map((res) => (
-                      <div key={res.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 p-2 rounded-xl transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            {res.file_name.toLowerCase().endsWith(".pdf") ? "PDF" : "DOC"}
-                          </div>
-                          <div>
-                            <h5 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                              <span>{res.title || res.file_name}</span>
-                              <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-300 font-medium">
-                                {res.training_type || "Oʻquv materiali"}
-                              </span>
-                            </h5>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-3">
-                              <span>Fayl: <b className="font-mono text-slate-700 dark:text-slate-300">{res.file_name}</b></span>
-                              <span>Hajmi: <b>{res.file_size ? `${(res.file_size / 1024).toFixed(1)} KB` : "Nomaʼlum"}</b></span>
-                              <span>Oʻqituvchi: <b>{res.employee_name}</b></span>
-                              {res.updated_at_ts && (
-                                <span>Sana: <b>{new Date(res.updated_at_ts * 1000).toLocaleDateString()}</b></span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                  (() => {
+                    const filteredItems = activeSubjectHemisResources.filter(res => {
+                      const matchesSearch = !hemisResourceSearch || 
+                        (res.title || "").toLowerCase().includes(hemisResourceSearch.toLowerCase()) ||
+                        (res.file_name || "").toLowerCase().includes(hemisResourceSearch.toLowerCase()) ||
+                        (res.employee_name || "").toLowerCase().includes(hemisResourceSearch.toLowerCase());
+                      const matchesType = hemisResourceFilterType === "ALL" || 
+                        (res.training_type || "").toLowerCase().includes(hemisResourceFilterType.toLowerCase());
+                      return matchesSearch && matchesType;
+                    });
 
-                        <a
-                          href={res.file_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          download
-                          className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors self-start sm:self-center flex-shrink-0 cursor-pointer"
-                          title="HEMIS serveridan faylni toʻgʻridan-toʻgʻri koʻrish / yuklab olish"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Koʻrish / Yuklash</span>
-                        </a>
+                    if (filteredItems.length === 0) {
+                      return (
+                        <div className="py-6 text-center text-xs text-slate-400">
+                          Tanlangan filtr yoki qidiruv boʻyicha resurs topilmadi.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {filteredItems.map((res) => (
+                          <div key={res.id || res.file_url} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 p-2 rounded-xl transition-colors">
+                            <div className="flex items-start gap-3">
+                              <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                {res.file_name?.toLowerCase().endsWith(".pdf") ? "PDF" : res.file_name?.toLowerCase().endsWith(".ppt") || res.file_name?.toLowerCase().endsWith(".pptx") ? "PPT" : "DOC"}
+                              </div>
+                              <div>
+                                <h5 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                  <span>{res.title || res.file_name}</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-300 font-medium">
+                                    {res.training_type || "Oʻquv materiali"}
+                                  </span>
+                                </h5>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-3">
+                                  <span>Fayl: <b className="font-mono text-slate-700 dark:text-slate-300">{res.file_name}</b></span>
+                                  <span>Hajmi: <b>{res.file_size ? `${(res.file_size / 1024).toFixed(1)} KB` : "Nomaʼlum"}</b></span>
+                                  <span>Oʻqituvchi: <b>{res.employee_name}</b></span>
+                                  {res.updated_at_ts && (
+                                    <span>Sana: <b>{new Date(res.updated_at_ts * 1000).toLocaleDateString()}</b></span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <a
+                              href={res.file_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              download
+                              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors self-start sm:self-center flex-shrink-0 cursor-pointer"
+                              title="HEMIS serveridan faylni toʻgʻridan-toʻgʻri koʻrish / yuklab olish"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Koʻrish / Yuklash</span>
+                            </a>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()
                 )}
               </div>
             </div>

@@ -32,7 +32,7 @@ from database import (
     db_update_publication_mygov, db_get_publication_by_token, db_delete_publication,
     db_save_hemis_curriculums, db_get_hemis_curriculums,
     db_save_hemis_curriculum_subjects, db_get_hemis_curriculum_subjects,
-    db_save_hemis_subject_resources, db_get_hemis_subject_resources,
+    db_save_hemis_subject_resources, db_get_hemis_subject_resources, db_find_subject_id_by_name,
     db_save_hemis_subject_teachers, db_get_hemis_subject_teachers,
     db_get_hemis_academic_stats
 )
@@ -2659,14 +2659,60 @@ def get_hemis_curriculum_subjects(curriculum_id: Optional[int] = None, subject_n
     items = db_get_hemis_curriculum_subjects(curriculum_id=curriculum_id, subject_name=subject_name)
     return {"success": True, "items": items}
 
+def fetch_hemis_resources_for_subject(subject_id: int, max_pages: int = 5):
+    """Aniq fanning subject_id si bo'yicha HEMIS API dan barcha resurslarni yuklab olish"""
+    items = []
+    for page in range(1, max_pages + 1):
+        url = f"{HEMIS_BASE_URL}/data/subject-file-resource-list?_subject={subject_id}&page={page}&limit=200"
+        try:
+            res = requests.get(url, headers=get_hemis_headers(), timeout=20)
+            if res.status_code != 200:
+                break
+            p_items = res.json().get("data", {}).get("items", [])
+            if not p_items:
+                break
+            items.extend(p_items)
+            if len(p_items) < 200:
+                break
+        except Exception as e:
+            print(f"Error fetching resources for subject {subject_id}: {e}")
+            break
+    if items:
+        db_save_hemis_subject_resources(items, clear_all=False)
+    return items
+
 @app.get("/api/hemis/subject-resources")
-def get_hemis_subject_resources(employee_name: Optional[str] = None, subject_name: Optional[str] = None):
+def get_hemis_subject_resources(
+    employee_name: Optional[str] = None, 
+    subject_name: Optional[str] = None,
+    subject_id: Optional[int] = None,
+    force_refresh: bool = False
+):
     """
     HEMIS ga yuklangan fan resurslari va fayllar ro'yxati (https://hemis.jbnuu.uz/static/... bevosita havolalari bilan).
-    O'qituvchi yoki fan nomi bo'yicha filtrlash mumkin.
+    Agar bazada resurslar bo'lmasa yoki force_refresh=True bo'lsa, avtomatik HEMIS API dan _subject orqali on-demand yuklaydi.
     """
-    items = db_get_hemis_subject_resources(employee_name=employee_name, subject_name=subject_name)
-    return {"success": True, "items": items}
+    resolved_id = subject_id
+    if not resolved_id and subject_name:
+        resolved_id = db_find_subject_id_by_name(subject_name)
+
+    items = db_get_hemis_subject_resources(employee_name=employee_name, subject_name=subject_name, subject_id=resolved_id)
+    
+    # Agar resurslar bazada topilmasa yoki force_refresh=True bo'lsa va subject_id mavjud bo'lsa,
+    # HEMIS API dan real-vaqtda on-demand yuklab olamiz!
+    if (not items or force_refresh) and resolved_id:
+        try:
+            fetch_hemis_resources_for_subject(resolved_id, max_pages=5)
+            items = db_get_hemis_subject_resources(employee_name=employee_name, subject_name=subject_name, subject_id=resolved_id)
+        except Exception as e:
+            print(f"On-demand HEMIS fetch error: {e}")
+
+    # Agar hali ham bo'sh bo'lsa va employee_name berilgan bo'lsa,
+    # boshqa o'qituvchi (masalan ma'ruzachi) yuklagan resurslar ham ko'rinishi uchun employee filtrisiz qidiramiz:
+    if not items and employee_name and (subject_name or resolved_id):
+        items = db_get_hemis_subject_resources(employee_name=None, subject_name=subject_name, subject_id=resolved_id)
+
+    return {"success": True, "items": items, "subject_id": resolved_id}
 
 @app.get("/api/hemis/subject-teachers")
 def get_hemis_subject_teachers(employee_name: Optional[str] = None, subject_name: Optional[str] = None):

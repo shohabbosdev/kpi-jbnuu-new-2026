@@ -1309,10 +1309,49 @@ def db_get_hemis_curriculum_subjects(curriculum_id: Optional[int] = None, subjec
 # -------------------------------------------------------------
 # HEMIS Fan resurslari (Subject File Resources)
 # -------------------------------------------------------------
-def db_save_hemis_subject_resources(items: List[Dict[str, Any]]) -> int:
+
+def db_find_subject_id_by_name(subject_name: str) -> Optional[int]:
+    """Fan nomi bo'yicha hemis_curriculum_subjects yoki hemis_subject_teachers dan subject_id ni topish"""
+    if not subject_name:
+        return None
+    clean_name = subject_name.split("(")[0].strip()
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM hemis_subject_resources")
+    # 1. hemis_curriculum_subjects dan qidirish
+    cursor.execute("""
+        SELECT subject_id FROM hemis_curriculum_subjects 
+        WHERE subject_id IS NOT NULL AND (subject_name = ? OR subject_name LIKE ?)
+        LIMIT 1
+    """, (clean_name, f"%{clean_name}%"))
+    row = cursor.fetchone()
+    if row and row["subject_id"]:
+        conn.close()
+        return int(row["subject_id"])
+    
+    # 2. hemis_subject_teachers dan qidirish
+    cursor.execute("""
+        SELECT subject_id FROM hemis_subject_teachers 
+        WHERE subject_id IS NOT NULL AND (subject_name = ? OR subject_name LIKE ?)
+        LIMIT 1
+    """, (clean_name, f"%{clean_name}%"))
+    row = cursor.fetchone()
+    conn.close()
+    if row and row["subject_id"]:
+        return int(row["subject_id"])
+    return None
+
+def db_save_hemis_subject_resources(items: List[Dict[str, Any]], clear_all: bool = False) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # ensure file_url index exists
+    try:
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_res_file_url ON hemis_subject_resources(file_url);")
+    except Exception:
+        pass
+        
+    if clear_all:
+        cursor.execute("DELETE FROM hemis_subject_resources")
     
     rows = []
     for it in items:
@@ -1327,6 +1366,9 @@ def db_save_hemis_subject_resources(items: List[Dict[str, Any]]) -> int:
             files = fi.get("files") or []
             ts = fi.get("updated_at") or it.get("updated_at") or 0
             for f in files:
+                f_url = f.get("url", "")
+                if not f_url:
+                    continue
                 rows.append((
                     it.get("id"),
                     it.get("title", ""),
@@ -1339,7 +1381,7 @@ def db_save_hemis_subject_resources(items: List[Dict[str, Any]]) -> int:
                     rtype.get("name", ""),
                     f.get("name", ""),
                     int(f.get("size") or 0),
-                    f.get("url", ""),
+                    f_url,
                     ts
                 ))
     cursor.executemany("""
@@ -1350,21 +1392,37 @@ def db_save_hemis_subject_resources(items: List[Dict[str, Any]]) -> int:
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, rows)
     conn.commit()
-    count = cursor.rowcount
+    count = len(rows)
     conn.close()
     return count
 
-def db_get_hemis_subject_resources(employee_name: Optional[str] = None, subject_name: Optional[str] = None) -> List[Dict[str, Any]]:
+def db_get_hemis_subject_resources(employee_name: Optional[str] = None, subject_name: Optional[str] = None, subject_id: Optional[int] = None) -> List[Dict[str, Any]]:
     conn = get_connection()
     cursor = conn.cursor()
+    
+    # Agar subject_id berilmagan bo'lsa, subject_name orqali aniqlash
+    resolved_subj_id = subject_id
+    clean_name = None
+    if subject_name:
+        clean_name = subject_name.split("(")[0].strip()
+        if not resolved_subj_id:
+            resolved_subj_id = db_find_subject_id_by_name(clean_name)
+    
     query = "SELECT * FROM hemis_subject_resources WHERE 1=1"
     params = []
-    if employee_name:
-        query += " AND employee_name LIKE ?"
-        params.append(f"%{employee_name.strip()}%")
-    if subject_name:
+    
+    if resolved_subj_id:
+        query += " AND (subject_id = ? OR subject_name LIKE ?)"
+        params.extend([resolved_subj_id, f"%{clean_name or ''}%"])
+    elif clean_name:
         query += " AND subject_name LIKE ?"
-        params.append(f"%{subject_name.strip()}%")
+        params.append(f"%{clean_name}%")
+        
+    if employee_name and employee_name.strip():
+        emp_clean = employee_name.strip()
+        query += " AND employee_name LIKE ?"
+        params.append(f"%{emp_clean}%")
+        
     query += " ORDER BY updated_at_ts DESC, id DESC"
     cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
