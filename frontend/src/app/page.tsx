@@ -43,6 +43,7 @@ import {
   Sliders,
   Plus,
   X,
+  ArrowLeft,
   ChevronLeft,
   FileSpreadsheet,
   Sun,
@@ -1795,6 +1796,14 @@ export default function KpiEnterpriseApp() {
     }
   };
 
+  const handleCloseSubjectCabinet = () => {
+    setCourseDocsModalOpen(false);
+    setWorkflowModalOpen(false);
+    setPublicationModalOpen(false);
+    setHemisSubjectModalOpen(false);
+    setSelectedWorkflowSubject(null);
+  };
+
   const handleOpenCourseDocs = (sub: any, teacherName: string) => {
     setSelectedWorkflowSubject({
       subject_name: sub.subject_name,
@@ -1803,6 +1812,7 @@ export default function KpiEnterpriseApp() {
       teacher_name: teacherName,
       total_hours: sub.total_hours
     });
+    setWorkflowSubTab("docs");
     const sName = (sub.subject_name || "").toLowerCase();
     const isOnlyAmaliy = sName.includes("amaliyot") || (sName.includes("amaliy") && !sName.includes("nazariy"));
     setTeacherTrainingRoles({
@@ -1813,6 +1823,8 @@ export default function KpiEnterpriseApp() {
     });
     setIsAddCourseDocFormOpen(false);
     fetchCourseDocs(sub.subject_name, teacherName);
+    fetchSubjectHemisDetails(sub.subject_name, teacherName);
+    fetchPublications(sub.subject_name, teacherName);
     setCourseDocsModalOpen(true);
   };
 
@@ -1824,9 +1836,12 @@ export default function KpiEnterpriseApp() {
       teacher_name: teacherName,
       total_hours: sub.total_hours
     });
+    setWorkflowSubTab("publications");
     setPubModalFormOpen(false);
+    fetchCourseDocs(sub.subject_name, teacherName);
+    fetchSubjectHemisDetails(sub.subject_name, teacherName);
     fetchPublications(sub.subject_name, teacherName);
-    setPublicationModalOpen(true);
+    setCourseDocsModalOpen(true);
   };
 
   const handleOpenHemisSubjectResources = (sub: any, teacherName: string) => {
@@ -1837,8 +1852,11 @@ export default function KpiEnterpriseApp() {
       teacher_name: teacherName,
       total_hours: sub.total_hours
     });
+    setWorkflowSubTab("hemis_resources");
+    fetchCourseDocs(sub.subject_name, teacherName);
     fetchSubjectHemisDetails(sub.subject_name, teacherName);
-    setHemisSubjectModalOpen(true);
+    fetchPublications(sub.subject_name, teacherName);
+    setCourseDocsModalOpen(true);
   };
 
   const handleOpenSubjectWorkflow = (sub: any, teacherName: string) => {
@@ -10224,1387 +10242,274 @@ export default function KpiEnterpriseApp() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 1: FAN O'QUV-USLUBIY HUJJATLARI (MAJBURIY QISM) */}
+      {/* TO'LIQ EKRANLI FAN BOSHQARUV KABINETI (FULL-PAGE SUBJECT FOCUS CABINET) */}
       {/* ========================================================================= */}
-      {(courseDocsModalOpen || workflowModalOpen) && selectedWorkflowSubject && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
-          <div className={`rounded-3xl max-w-5xl w-full p-5 sm:p-7 shadow-2xl border transition-all max-h-[92vh] flex flex-col ${
-            theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-          }`}>
-            {/* Modal Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
+      {(courseDocsModalOpen || workflowModalOpen || publicationModalOpen || hemisSubjectModalOpen) && selectedWorkflowSubject && (
+        <div className="fixed inset-0 z-50 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md overflow-y-auto flex flex-col animate-in fade-in duration-150">
+          
+          {/* Tepa navigatsiya paneli (Sticky Header) */}
+          <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs px-4 sm:px-8 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleCloseSubjectCabinet}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                title="Fanlar roʻyxatiga qaytish"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Fanlar roʻyxatiga qaytish</span>
+              </button>
+
+              <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                    Oʻquv-uslubiy hujjatlar (Majburiy)
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Oʻquv yili: {systemSettings?.academic_year || "2025/2026"}
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>{selectedWorkflowSubject.subject_name}</span>
+                  </h2>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono">
+                    {selectedWorkflowSubject.total_hours} soat
                   </span>
                 </div>
-                <h2 className="text-lg sm:text-xl font-black mt-1 text-slate-900 dark:text-white flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  <span>{selectedWorkflowSubject.subject_name}</span>
-                </h2>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  <span><b>Kafedra:</b> {selectedWorkflowSubject.department_name}</span>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                  <span>Kafedra: <b>{selectedWorkflowSubject.department_name}</b></span>
                   <span>•</span>
-                  <span><b>Oʻqituvchi:</b> {selectedWorkflowSubject.teacher_name}</span>
-                  <span>•</span>
-                  <span><b>Dars soati:</b> <b className="text-emerald-600 dark:text-emerald-400 font-mono">{selectedWorkflowSubject.total_hours} soat</b></span>
+                  <span>Oʻqituvchi: <b>{selectedWorkflowSubject.teacher_name}</b></span>
+                  {selectedWorkflowSubject.education_type_name && (
+                    <>
+                      <span>•</span>
+                      <span>Taʼlim shakli: <b>{selectedWorkflowSubject.education_type_name}</b></span>
+                    </>
+                  )}
                 </div>
-              </div>
-
-              {/* Boshqa bo'limlarga tezkor o'tish & Yopish */}
-              <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCourseDocsModalOpen(false);
-                    setWorkflowModalOpen(false);
-                    handleOpenPublicationWorkflow(selectedWorkflowSubject, selectedWorkflowSubject.teacher_name);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-300 hover:bg-indigo-100 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Darslik va oʻquv qoʻllanmalar kengashlar zanjiri (Ixtiyoriy)"
-                >
-                  <GraduationCap className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Darslik va grif</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCourseDocsModalOpen(false);
-                    setWorkflowModalOpen(false);
-                    handleOpenHemisSubjectResources(selectedWorkflowSubject, selectedWorkflowSubject.teacher_name);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="HEMIS dagi rasmiy elektron fayllar va oʻquv reja"
-                >
-                  <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>HEMIS bazasi</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCourseDocsModalOpen(false);
-                    setWorkflowModalOpen(false);
-                  }}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  title="Yopish"
-                >
-                  <X className="w-5 h-5" />
-                </button>
               </div>
             </div>
 
-            {/* Dedlaynlar info paneli */}
-            <div className={`mt-3 p-3 rounded-2xl border text-xs flex flex-wrap items-center justify-between gap-2 ${
-              theme === "dark" ? "bg-slate-800/40 border-slate-800" : "bg-blue-50/60 border-blue-100 text-blue-950"
-            }`}>
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                <span className="font-semibold">Rejali muddatlar:</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 text-[11px]">
-                <span className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 font-medium border border-slate-200 dark:border-slate-700">
-                  Hujjat yuklash muddati: <b>{systemSettings?.submission_deadline || "2026-10-25"}</b>
+            {/* 3 ta toza tab tugmalari */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl self-start md:self-auto overflow-x-auto max-w-full">
+              <button
+                type="button"
+                onClick={() => setWorkflowSubTab("hemis_resources")}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  workflowSubTab === "hemis_resources"
+                    ? "bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>1. HEMIS bazasi va soatlar</span>
+                <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold">
+                  {activeSubjectHemisResources.length} ta
                 </span>
-                <span className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 font-medium border border-slate-200 dark:border-slate-700">
-                  Mudir koʻrib chiqishi: <b>{systemSettings?.review_deadline || "2026-11-05"}</b>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setWorkflowSubTab("docs")}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  workflowSubTab === "docs"
+                    ? "bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span>2. Oʻquv hujjatlari (Sillabus)</span>
+                <span className="px-1.5 py-0.2 rounded-md bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 text-[10px] font-mono font-bold">
+                  {courseDocsList.length} ta
                 </span>
-                <span className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 font-medium border border-slate-200 dark:border-slate-700">
-                  Dekan tasdigʻi: <b>{systemSettings?.appeal_deadline || "2026-11-15"}</b>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setWorkflowSubTab("publications")}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  workflowSubTab === "publications"
+                    ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>3. Darslik va tavsiyanoma</span>
+                <span className="px-1.5 py-0.2 rounded-md bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 text-[10px] font-mono font-bold">
+                  {publicationsList.length} ta
                 </span>
-              </div>
-            </div>
-
-            {/* Scrollable Kontent */}
-            <div className="flex-1 overflow-y-auto pt-4 pr-1 space-y-4">
-              {/* Dinamik talab qilinadigan hujjatlar matritsasi va Mashg'ulot turlari */}
-              {(() => {
-                const requiredItemsList: Array<{
-                  type: CourseSyllabusDoc["doc_type"];
-                  name: string;
-                  desc: string;
-                  assignedTo: string;
-                }> = [];
-
-                if (teacherTrainingRoles.hasLecture) {
-                  requiredItemsList.push(
-                    {
-                      type: "SYLLABUS",
-                      name: "Fan sillabusi / Ishchi fan dasturi",
-                      desc: "Oʻquv yili uchun fanning toʻliq mavzular, haftalar va soatlar taqsimoti rejasi",
-                      assignedTo: "Maʼruzachi oʻqituvchi"
-                    },
-                    {
-                      type: "LECTURE_NOTES",
-                      name: "Maʼruzalar matni va taqdimotlar toʻplami",
-                      desc: "Barcha maʼruza mavzulari boʻyicha toʻliq nazariy matnlar va taqdimot slaydlar",
-                      assignedTo: "Maʼruzachi oʻqituvchi"
-                    },
-                    {
-                      type: "INDEPENDENT_STUDY_GUIDE",
-                      name: "Mustaqil taʼlim boʻyicha uslubiy koʻrsatma va topshiriqlar",
-                      desc: "Talabalar mustaqil bajarishi shart boʻlgan vazifalar, adabiyotlar va nazorat shakllari (Maʼruzachi tuzadi)",
-                      assignedTo: "Maʼruzachi oʻqituvchi"
-                    },
-                    {
-                      type: "ASSESSMENT_CRITERIA",
-                      name: "Baholash mezonlari va nazorat savollari",
-                      desc: "JN, ON va YaN nazorati uchun baholash mezonlari hamda bilet/test savollari toʻplami",
-                      assignedTo: "Maʼruzachi oʻqituvchi"
-                    }
-                  );
-                }
-
-                if (teacherTrainingRoles.hasPractical) {
-                  requiredItemsList.push({
-                    type: "PRACTICAL_GUIDE",
-                    name: "Amaliy mashgʻulotlar uslubiy koʻrsatmasi va topshiriqlari",
-                    desc: "Mavzular boʻyicha amaliy masalalar, keyslar, mashqlar va ularni bajarish uslubiy koʻrsatmasi",
-                    assignedTo: "Amaliyotchi oʻqituvchi"
-                  });
-                }
-
-                if (teacherTrainingRoles.hasLab) {
-                  requiredItemsList.push({
-                    type: "LAB_GUIDE",
-                    name: "Laboratoriya ishlari boʻyicha uslubiy koʻrsatma va xavfsizlik yoʻriqnomasi",
-                    desc: "Laboratoriya eksperimentlari, asbob-uskunalar bilan ishlash va xavfsizlik texnikasi qoidalari",
-                    assignedTo: "Laboratoriya oʻqituvchisi"
-                  });
-                }
-
-                if (teacherTrainingRoles.hasSeminar) {
-                  requiredItemsList.push({
-                    type: "SEMINAR_GUIDE",
-                    name: "Seminar mashgʻulotlari uslubiy koʻrsatmasi",
-                    desc: "Seminar muhokama savollari, munozarali mavzular va taqdimot tayyorlash boʻyicha yoʻriqnoma",
-                    assignedTo: "Seminar oʻqituvchisi"
-                  });
-                }
-
-                const completedRequiredCount = requiredItemsList.filter(req =>
-                  courseDocsList.some(d => d.doc_type === req.type)
-                ).length;
-
-                return (
-                  <div className="space-y-4">
-                    {/* Mashg'ulot turlari selektori */}
-                    <div className={`p-4 rounded-2xl border ${
-                      theme === "dark" ? "bg-slate-800/40 border-slate-700/80" : "bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 border-blue-100"
-                    }`}>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                        <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-blue-950 dark:text-blue-200 flex items-center gap-2">
-                            <Sliders className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            <span>Sizga ushbu fandan qaysi dars mashgʻulotlari yuklatilgan?</span>
-                          </h4>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            Mashgʻulot turiga qarab sizdan talab etiladigan majburiy hujjatlar roʻyxati avtomatik shakllanadi
-                          </p>
-                        </div>
-
-                        {/* Tezkor andozalar (Presets) */}
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => setTeacherTrainingRoles({ hasLecture: true, hasPractical: true, hasLab: false, hasSeminar: false })}
-                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-colors cursor-pointer"
-                          >
-                            Barcha qismlari (Maʼruza+Amaliy)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setTeacherTrainingRoles({ hasLecture: true, hasPractical: false, hasLab: false, hasSeminar: false })}
-                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-colors cursor-pointer"
-                          >
-                            Faqat Maʼruza
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setTeacherTrainingRoles({ hasLecture: false, hasPractical: true, hasLab: false, hasSeminar: false })}
-                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-colors cursor-pointer"
-                          >
-                            Faqat Amaliy
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setTeacherTrainingRoles({ hasLecture: false, hasPractical: false, hasLab: true, hasSeminar: false })}
-                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-colors cursor-pointer"
-                          >
-                            Faqat Laboratoriya
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                        <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
-                          teacherTrainingRoles.hasLecture 
-                            ? "bg-blue-600 text-white border-blue-600 shadow-xs" 
-                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                        }`}>
-                          <input
-                            type="checkbox"
-                            checked={teacherTrainingRoles.hasLecture}
-                            onChange={(e) => setTeacherTrainingRoles(prev => ({ ...prev, hasLecture: e.target.checked }))}
-                            className="w-4 h-4 rounded text-blue-600 focus:ring-0"
-                          />
-                          <div className="text-xs font-bold">Maʼruza mashgʻuloti</div>
-                        </label>
-
-                        <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
-                          teacherTrainingRoles.hasPractical 
-                            ? "bg-blue-600 text-white border-blue-600 shadow-xs" 
-                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                        }`}>
-                          <input
-                            type="checkbox"
-                            checked={teacherTrainingRoles.hasPractical}
-                            onChange={(e) => setTeacherTrainingRoles(prev => ({ ...prev, hasPractical: e.target.checked }))}
-                            className="w-4 h-4 rounded text-blue-600 focus:ring-0"
-                          />
-                          <div className="text-xs font-bold">Amaliy mashgʻulot</div>
-                        </label>
-
-                        <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
-                          teacherTrainingRoles.hasLab 
-                            ? "bg-blue-600 text-white border-blue-600 shadow-xs" 
-                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                        }`}>
-                          <input
-                            type="checkbox"
-                            checked={teacherTrainingRoles.hasLab}
-                            onChange={(e) => setTeacherTrainingRoles(prev => ({ ...prev, hasLab: e.target.checked }))}
-                            className="w-4 h-4 rounded text-blue-600 focus:ring-0"
-                          />
-                          <div className="text-xs font-bold">Laboratoriya mashgʻuloti</div>
-                        </label>
-
-                        <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
-                          teacherTrainingRoles.hasSeminar 
-                            ? "bg-blue-600 text-white border-blue-600 shadow-xs" 
-                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                        }`}>
-                          <input
-                            type="checkbox"
-                            checked={teacherTrainingRoles.hasSeminar}
-                            onChange={(e) => setTeacherTrainingRoles(prev => ({ ...prev, hasSeminar: e.target.checked }))}
-                            className="w-4 h-4 rounded text-blue-600 focus:ring-0"
-                          />
-                          <div className="text-xs font-bold">Seminar mashgʻuloti</div>
-                        </label>
-                      </div>
-
-                      {/* Dynamic Role Guidance Note */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
-                        {!teacherTrainingRoles.hasLecture && teacherTrainingRoles.hasPractical && !teacherTrainingRoles.hasLab && (
-                          <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-medium">
-                            <Info className="w-4 h-4 flex-shrink-0" />
-                            <span>
-                              <b>Faqat Amaliyotchi:</b> Siz ushbu fandan faqat amaliy mashgʻulot oʻtuvchi pedagog sifatida belgilangansiz. Sizdan faqat <b>Amaliy mashgʻulotlar uslubiy koʻrsatmasi</b> talab etiladi. Maʼruza matnlari, sillabus va mustaqil taʼlim koʻrsatmasini tuzish maʼruzachi oʻqituvchining zimmasida.
-                            </span>
-                          </div>
-                        )}
-                        {!teacherTrainingRoles.hasLecture && teacherTrainingRoles.hasLab && (
-                          <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-medium">
-                            <Info className="w-4 h-4 flex-shrink-0" />
-                            <span>
-                              <b>Faqat Laboratoriya:</b> Sizdan faqat <b>Laboratoriya ishlari boʻyicha uslubiy koʻrsatma va xavfsizlik yoʻriqnomasi</b> talab etiladi.
-                            </span>
-                          </div>
-                        )}
-                        {teacherTrainingRoles.hasLecture && (
-                          <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-medium">
-                            <CheckCircle className="w-4 h-4 flex-shrink-0 text-blue-600" />
-                            <span>
-                              <b>Maʼruza oʻqituvchisi:</b> Fanning asosiy maʼruzachisi sifatida siz: <b>Fan sillabusi</b>, <b>Maʼruza matnlari va taqdimotlari</b>, <b>Mustaqil taʼlim uslubiy koʻrsatmasi</b> hamda <b>Baholash mezonlari</b>ni yuklashingiz shart! {teacherTrainingRoles.hasPractical && "Shuningdek, amaliy mashgʻulot ham sizda boʻlgani sababli Amaliy koʻrsatmani ham biriktirasiz."} {teacherTrainingRoles.hasLab && "Laboratoriya koʻrsatmasi ham talab etiladi."}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Majburiy Hujjatlar Nazorat Kartasi */}
-                    <div className={`p-4 rounded-2xl border ${
-                      theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
-                    }`}>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                            Sizdan Talab Etiladigan Majburiy Hujjatlar Nazorati
-                          </h4>
-                        </div>
-                        <div className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                          Topshirildi: <span className="text-emerald-600 dark:text-emerald-400 font-black">{completedRequiredCount}</span> / {requiredItemsList.length} ta ({requiredItemsList.length > 0 ? Math.round((completedRequiredCount / requiredItemsList.length) * 100) : 100}%)
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                        {requiredItemsList.map((req) => {
-                          const uploaded = courseDocsList.find(d => d.doc_type === req.type);
-                          return (
-                            <div
-                              key={req.type}
-                              className={`p-3 rounded-xl border flex flex-col justify-between transition-all ${
-                                uploaded
-                                  ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60"
-                                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/80"
-                              }`}
-                            >
-                              <div>
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                    <span>{req.name}</span>
-                                  </div>
-                                  {uploaded ? (
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 flex-shrink-0">
-                                      ✓ Yuklangan
-                                    </span>
-                                  ) : (
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 flex-shrink-0">
-                                      Kutilmoqda
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
-                                  {req.desc}
-                                </p>
-                              </div>
-
-                              <div className="mt-3 pt-2 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between text-[11px]">
-                                {uploaded ? (
-                                  <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 truncate max-w-[220px]">
-                                    <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-                                    <span className="truncate font-medium">{uploaded.title}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-400 italic">Hali fayl yuklanmadi</span>
-                                )}
-
-                                {!uploaded ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setNewCourseDocType(req.type);
-                                      setNewCourseDocTitle(`${selectedWorkflowSubject?.subject_name || "Fan"} boʻyicha ${req.name}`);
-                                      setIsAddCourseDocFormOpen(true);
-                                    }}
-                                    className="px-2.5 py-1 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                    <span>Yuklash</span>
-                                  </button>
-                                ) : (
-                                  <a
-                                    href={uploaded.file_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-blue-600 dark:text-blue-400 hover:underline font-bold text-xs"
-                                  >
-                                    Koʻrish
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Yuklash formasi tugmasi / ochilishi */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Hujjatlar reyestri va yangi fayl qoʻshish
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Oʻqituvchi tomonidan biriktiriladi, kafedra mudiri va dekan tasdiqlaganidan soʻng unikal QR-kodli elektron blank hosil boʻladi.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAddCourseDocFormOpen(!isAddCourseDocFormOpen)}
-                  className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{isAddCourseDocFormOpen ? "Formani yopish" : "Yangi hujjat biriktirish"}</span>
-                </button>
-              </div>
-
-              {/* Yangi hujjat yuklash formasi */}
-              {isAddCourseDocFormOpen && (
-                <form onSubmit={handleUploadCourseDocSubmit} className={`p-4 rounded-2xl border space-y-3 ${
-                  theme === "dark" ? "bg-slate-800/60 border-slate-700" : "bg-slate-50 border-slate-200"
-                }`}>
-                  <div className="font-bold text-xs text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
-                    <Upload className="w-4 h-4" />
-                    <span>Fanga tegishli hujjatni tizimga yuklash</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                        Hujjat turi *
-                      </label>
-                      <select
-                        value={newCourseDocType}
-                        onChange={(e) => setNewCourseDocType(e.target.value as any)}
-                        className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                      >
-                        <option value="SYLLABUS">Fan sillabusi / Ishchi fan dasturi</option>
-                        <option value="LECTURE_NOTES">Maʼruzalar matni / Taqdimotlar toʻplami</option>
-                        <option value="PRACTICAL_GUIDE">Amaliy mashgʻulotlar uslubiy koʻrsatmasi va topshiriqlari</option>
-                        <option value="LAB_GUIDE">Laboratoriya ishlari uslubiy koʻrsatmasi va xavfsizlik yoʻriqnomasi</option>
-                        <option value="SEMINAR_GUIDE">Seminar mashgʻulotlari uslubiy koʻrsatmasi</option>
-                        <option value="INDEPENDENT_STUDY_GUIDE">Mustaqil taʼlim boʻyicha uslubiy koʻrsatma va topshiriqlar</option>
-                        <option value="ASSESSMENT_CRITERIA">Baholash mezonlari va nazorat savollari (JN, ON, YaN)</option>
-                        <option value="OTHER">Boshqa oʻquv-uslubiy material</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                        Hujjat sarlavhasi / Tavsifi *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={newCourseDocTitle}
-                        onChange={(e) => setNewCourseDocTitle(e.target.value)}
-                        placeholder="Masalan: 2025-2026 oʻquv yili uchun tasdiqlangan sillabus"
-                        className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-1 text-xs text-slate-700 dark:text-slate-300">
-                      Faylni tanlang (PDF yoki DOCX formatida, maksimal hajm: <b>10 MB</b>) *
-                    </label>
-                    <input
-                      type="file"
-                      required
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f && f.size > 10 * 1024 * 1024) {
-                          showAlert({
-                            title: "Fayl hajmi katta",
-                            message: `Tanlangan "${f.name}" faylining hajmi ${(f.size / (1024 * 1024)).toFixed(1)} MB. Ruxsat etilgan maksimal hajm 10 MB!`,
-                            type: "danger"
-                          });
-                          e.target.value = "";
-                          setNewCourseDocFile(null);
-                        } else {
-                          setNewCourseDocFile(f || null);
-                        }
-                      }}
-                      className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:text-white hover:file:bg-blue-800 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span>
-                      <b>Eslatma:</b> Hujjat yuklangach, toʻgʻridan-toʻgʻri kafedra mudirining tekshiruv paneliga boradi. Mudir maʼqullasa, dekanatga oʻtadi. Dekan tasdiqlagach, hujjatga unikal QR-kodli elektron tekshiruv muhri beriladi.
-                    </span>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddCourseDocFormOpen(false)}
-                      className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    >
-                      Bekor qilish
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isCourseDocUploading}
-                      className="px-4 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-50"
-                    >
-                      {isCourseDocUploading ? "Yuklanmoqda..." : "Hujjatni yuborish"}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* Yuklangan hujjatlar ro'yxati */}
-              {isCourseDocsLoading ? (
-                <div className="p-8 text-center text-xs text-slate-500">Hujjatlar yuklanmoqda...</div>
-              ) : courseDocsList.length === 0 ? (
-                <div className={`p-8 text-center rounded-2xl border text-xs text-slate-500 ${
-                  theme === "dark" ? "bg-slate-800/30 border-slate-800" : "bg-slate-50 border-slate-200"
-                }`}>
-                  <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                  <p className="font-semibold text-slate-700 dark:text-slate-300">Ushbu fanga hali oʻquv-uslubiy hujjatlar biriktirilmagan</p>
-                  <p className="mt-1 text-slate-400">Yuqoridagi "Yangi hujjat biriktirish" tugmasi orqali sillabus, maʼruzalar yoki uslubiy koʻrsatmani yuklang.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {courseDocsList.map((doc) => {
-                    const isApproved = doc.status === "APPROVED";
-                    const isMudirApproved = doc.mudir_status === "APPROVED";
-                    const isMudirRejected = doc.mudir_status === "REJECTED";
-                    const isDeanRejected = doc.dean_status === "REJECTED";
-
-                    return (
-                      <div
-                        key={doc.id}
-                        className={`p-4 rounded-2xl border transition-all ${
-                          theme === "dark" ? "bg-slate-800/50 border-slate-700/60" : "bg-white border-slate-200 shadow-xs"
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950/70 text-blue-900 dark:text-blue-300">
-                                {getDocTypeLabel(doc.doc_type)}
-                              </span>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                isApproved
-                                  ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
-                                  : isMudirRejected || isDeanRejected
-                                  ? "bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300"
-                                  : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
-                              }`}>
-                                {isApproved
-                                  ? "Dekan tomonidan tasdiqlangan (QR faol)"
-                                  : isDeanRejected
-                                  ? "Dekan tomonidan qaytarilgan"
-                                  : isMudirRejected
-                                  ? "Mudir tomonidan qaytarilgan"
-                                  : isMudirApproved
-                                  ? "Mudir maʼqullagan (Dekanat koʻrigida)"
-                                  : "Kafedra mudiri koʻrigida"}
-                              </span>
-                              <span className="text-[11px] text-slate-400">
-                                Yuklandi: {doc.created_at?.slice(0, 16)}
-                              </span>
-                            </div>
-
-                            <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                              {doc.title}
-                            </h4>
-
-                            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                              <span>Fayl: <b>{doc.file_name}</b></span>
-                              <a
-                                href={doc.file_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1"
-                              >
-                                <Download className="w-3 h-3" />
-                                <span>Yuklab olish</span>
-                              </a>
-                            </div>
-                          </div>
-
-                          {/* Amallar */}
-                          <div className="flex flex-wrap items-center gap-2 self-end sm:self-center">
-                            {/* QR-kod ko'rish tugmasi (faqat tasdiqlanganda) */}
-                            {isApproved && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setVerifyItemData({ type: "doc", data: doc });
-                                  setQrVerifyModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                              >
-                                <QrCode className="w-3.5 h-3.5" />
-                                <span>QR kod tekshiruvi</span>
-                              </button>
-                            )}
-
-                            {/* Kafedra Mudiri ko'rib chiqish tugmasi */}
-                            {(activeRole === "HEAD_OF_DEPT" || activeRole === "ADMIN") && doc.mudir_status === "PENDING" && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveDocForReview(doc);
-                                  setCourseDocReviewRole("mudir");
-                                  setCourseDocReviewStatus("APPROVED");
-                                  setCourseDocReviewComment("");
-                                  setCourseDocReviewModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                              >
-                                <CheckCircle className="w-3.5 h-3.5" />
-                                <span>Mudir xulosasi</span>
-                              </button>
-                            )}
-
-                            {/* Fakultet Dekani ko'rib chiqish tugmasi */}
-                            {(activeRole === "DEAN" || activeRole === "ADMIN") && doc.mudir_status === "APPROVED" && doc.dean_status === "PENDING" && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveDocForReview(doc);
-                                  setCourseDocReviewRole("dean");
-                                  setCourseDocReviewStatus("APPROVED");
-                                  setCourseDocReviewComment("");
-                                  setCourseDocReviewModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 bg-indigo-900 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                              >
-                                <CheckCircle className="w-3.5 h-3.5" />
-                                <span>Dekan tasdigʻi</span>
-                              </button>
-                            )}
-
-                            {/* O'chirish (o'qituvchi o'zi yoki admin) */}
-                            {(activeRole === "ADMIN" || activeRole === "TEACHER") && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteCourseDocConfirm(doc)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                                title="Hujjatni oʻchirish"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Izohlar bloki */}
-                        {(doc.mudir_comment || doc.dean_comment) && (
-                          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-xs space-y-1">
-                            {doc.mudir_comment && (
-                              <div className="text-slate-600 dark:text-slate-400">
-                                <b>Kafedra mudiri izohi:</b> {doc.mudir_comment} <span className="text-[10px] text-slate-400">({doc.mudir_updated_at})</span>
-                              </div>
-                            )}
-                            {doc.dean_comment && (
-                              <div className="text-slate-600 dark:text-slate-400">
-                                <b>Dekan izohi:</b> {doc.dean_comment} <span className="text-[10px] text-slate-400">({doc.dean_updated_at})</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* 3-bosqichli Vizual Stepper */}
-                        <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center text-[10px]">
-                          <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
-                            1. Oʻqituvchi yukladi ✓
-                          </div>
-                          <div className={`p-1.5 rounded-lg font-semibold border ${
-                            isMudirApproved
-                              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                              : isMudirRejected
-                              ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
-                          }`}>
-                            2. Kafedra mudiri {isMudirApproved ? "✓" : isMudirRejected ? "✕" : "..."}
-                          </div>
-                          <div className={`p-1.5 rounded-lg font-semibold border ${
-                            isApproved
-                              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                              : isDeanRejected
-                              ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
-                          }`}>
-                            3. Fakultet dekani {isApproved ? "✓" : isDeanRejected ? "✕" : "..."}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              </button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* ========================================================================= */}
-      {/* MODAL 2: DARSLIK, O'QUV QO'LLANMA VA MONOGRAFIYA (KENGASHLAR ZANJIRI - IXTIYORIY) */}
-      {/* ========================================================================= */}
-      {publicationModalOpen && selectedWorkflowSubject && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
-          <div className={`rounded-3xl max-w-5xl w-full p-5 sm:p-7 shadow-2xl border transition-all max-h-[92vh] flex flex-col ${
-            theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-          }`}>
-            {/* Modal Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-100 dark:bg-indigo-950/70 text-indigo-900 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                    Darslik, oʻquv qoʻllanma va monografiya (Ixtiyoriy)
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Kengashlar zanjiri
-                  </span>
-                </div>
-                <h2 className="text-lg sm:text-xl font-black mt-1 text-slate-900 dark:text-white flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  <span>{selectedWorkflowSubject.subject_name}</span>
-                </h2>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  <span><b>Kafedra:</b> {selectedWorkflowSubject.department_name}</span>
-                  <span>•</span>
-                  <span><b>Oʻqituvchi:</b> {selectedWorkflowSubject.teacher_name}</span>
-                </div>
-              </div>
+          {/* Asosiy kontent maydoni */}
+          <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
 
-              {/* Boshqa bo'limlarga tezkor o'tish & Yopish */}
-              <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPublicationModalOpen(false);
-                    handleOpenCourseDocs(selectedWorkflowSubject, selectedWorkflowSubject.teacher_name);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-300 hover:bg-blue-100 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Fanning majburiy oʻquv-uslubiy hujjatlariga oʻtish"
-                >
-                  <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Oʻquv hujjatlari</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPublicationModalOpen(false);
-                    handleOpenHemisSubjectResources(selectedWorkflowSubject, selectedWorkflowSubject.teacher_name);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="HEMIS dagi rasmiy elektron fayllar va oʻquv reja"
-                >
-                  <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>HEMIS bazasi</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPublicationModalOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  title="Yopish"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable Kontent */}
-            <div className="flex-1 overflow-y-auto pt-4 pr-1 space-y-4">
-              {/* Muhim rasmiy eslatma: Nashrlar har bir fan uchun majburiy emas */}
-              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300 space-y-1.5">
-                <div className="flex items-center gap-1.5 font-bold">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <span>Eslatma: Darslik, oʻquv qoʻllanma yoki monografiya chiqarish har bir fan uchun majburiy EMAS!</span>
-                </div>
-                <p className="leading-relaxed">
-                  Fan boʻyicha oʻquv-uslubiy hujjatlar (sillabus, maʼruzalar, amaliy/laboratoriya va mustaqil taʼlim koʻrsatmalari) oʻqituvchining dars turiga qarab biriktiriladi. Agar siz ushbu fan boʻyicha yangi darslik, oʻquv qoʻllanma yoki monografiya tayyorlagan boʻlsangiz, unga <b>Filial Kengashi bayonnomasidan koʻchirma</b> olish va keyinchalik <b>my.gov.uz</b> orqali vazirlik grifiga ariza yuborish uchun arizangizni ushbu ixtiyoriy boʻlimdan topshirasiz.
-                </p>
-              </div>
-
-              {/* Header & Ariza topshirish tugmasi */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Adabiyotlar Kengashlar Zanjiri (4 bosqichli tasdiq)
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Kafedra yigʻilishi → Fakultet Kengashi → Filial OʻUK (Antiplagiat hisoboti bilan) → Filial Ilmiy Kengashi koʻchirmasi.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPubModalFormOpen(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Yangi adabiyot tavsiya etish</span>
-                </button>
-              </div>
-
-              {/* Nashrlar ro'yxati */}
-              {isPubsLoading ? (
-                <div className="p-8 text-center text-xs text-slate-500">Tavsiyanomalar yuklanmoqda...</div>
-              ) : publicationsList.length === 0 ? (
-                <div className={`p-8 text-center rounded-2xl border text-xs text-slate-500 ${
-                  theme === "dark" ? "bg-slate-800/30 border-slate-800" : "bg-slate-50 border-slate-200"
-                }`}>
-                  <GraduationCap className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                  <p className="font-semibold text-slate-700 dark:text-slate-300">Ushbu fanga hozircha darslik yoki oʻquv qoʻllanma arizasi kiritilmagan</p>
-                  <p className="mt-1 text-slate-400">Agar ushbu fan boʻyicha oʻquv qoʻllanma yoki monografiya yaratgan boʻlsangiz, yuqoridagi tugma orqali tavsiya arizasini topshiring.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {publicationsList.map((pub) => {
-                    const isKafedraDone = pub.kafedra_status === "APPROVED";
-                    const isFakultetDone = pub.fakultet_status === "APPROVED";
-                    const isMethodicalDone = pub.methodical_status === "APPROVED";
-                    const isCouncilDone = pub.council_status === "APPROVED";
-                    const isMyGovSubmitted = !!pub.mygov_app_num;
-                    const isMinistryApproved = !!pub.ministry_grif_num;
-
-                    return (
-                      <div
-                        key={pub.id}
-                        className={`p-5 rounded-2xl border transition-all ${
-                          theme === "dark" ? "bg-slate-800/50 border-slate-700/60" : "bg-white border-slate-200 shadow-sm"
-                        }`}
-                      >
-                        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                          <div className="space-y-1.5 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 dark:bg-blue-950/70 text-blue-900 dark:text-blue-300">
-                                {pub.pub_type}
-                              </span>
-                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                isMinistryApproved
-                                  ? "bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300"
-                                  : isCouncilDone
-                                  ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
-                                  : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
-                              }`}>
-                                {isMinistryApproved
-                                  ? "Vazirlik Grifi berilgan ✓"
-                                  : isMyGovSubmitted
-                                  ? "my.gov.uz da koʻrib chiqilmoqda"
-                                  : isCouncilDone
-                                  ? "Filial Kengashi tavsiya etgan (Koʻchirma tayyor)"
-                                  : isMethodicalDone
-                                  ? "Filial OʻUK maʼqullagan"
-                                  : isFakultetDone
-                                  ? "Fakultet Kengashi maʼqullagan"
-                                  : isKafedraDone
-                                  ? "Kafedra maʼqullagan"
-                                  : "1-bosqich: Kafedra koʻrigida"}
-                              </span>
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                                Antiplagiat: {pub.antiplagiarism_score}% originallik
-                              </span>
-                            </div>
-
-                            <h4 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
-                              {pub.title}
-                            </h4>
-
-                            <div className="text-xs text-slate-600 dark:text-slate-300">
-                              <b>Mualliflar:</b> {pub.authors} {pub.co_authors && `(Hammualliflar: ${pub.co_authors})`}
-                            </div>
-
-                            {/* Ilova qilingan 5 ta fayllar ro'yxati */}
-                            <div className="pt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                              <a href={pub.manuscript_file} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700/60 font-semibold text-blue-600 dark:text-blue-300 hover:underline flex items-center gap-1">
-                                <FileText className="w-3 h-3" />
-                                <span>Qoʻlyozma (PDF)</span>
-                              </a>
-                              <a href={pub.internal_review_file} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700/60 font-semibold text-blue-600 dark:text-blue-300 hover:underline flex items-center gap-1">
-                                <FileText className="w-3 h-3" />
-                                <span>Ichki taqriz ({pub.internal_reviewer_name || "Taqrizchi"})</span>
-                              </a>
-                              <a href={pub.external_review_file} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700/60 font-semibold text-blue-600 dark:text-blue-300 hover:underline flex items-center gap-1">
-                                <FileText className="w-3 h-3" />
-                                <span>Tashqi taqriz ({pub.external_reviewer_name || "Taqrizchi"})</span>
-                              </a>
-                              <a href={pub.curriculum_file} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700/60 font-semibold text-blue-600 dark:text-blue-300 hover:underline flex items-center gap-1">
-                                <FileText className="w-3 h-3" />
-                                <span>Fan dasturi</span>
-                              </a>
-                              <a href={pub.antiplagiarism_file} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:underline flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" />
-                                <span>Antiplagiat hisoboti ({pub.antiplagiarism_score}%)</span>
-                              </a>
-                              {pub.workload_extract_file && (
-                                <a href={pub.workload_extract_file} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700/60 font-semibold text-slate-600 dark:text-slate-300 hover:underline flex items-center gap-1">
-                                <FileText className="w-3 h-3" />
-                                <span>Oʻquv yuklamasi</span>
-                              </a>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Amallar & Ko'chirma tugmalari */}
-                          <div className="flex flex-wrap lg:flex-col items-end gap-2">
-                            {/* Filial Kengashi Bayonnomasidan Ko'chirma (Chop etish / QR) */}
-                            {isCouncilDone && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setVerifyItemData({ type: "pub", data: pub });
-                                  setQrVerifyModalOpen(true);
-                                }}
-                                className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <QrCode className="w-4 h-4" />
-                                <span>Filial Kengashi koʻchirmasi (QR)</span>
-                              </button>
-                            )}
-
-                            {/* my.gov.uz va Vazirlik Grifi arizasini kiritish */}
-                            {isCouncilDone && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActivePubForMyGov(pub);
-                                  setMyGovAppNum(pub.mygov_app_num || "");
-                                  setMinistryGrifNum(pub.ministry_grif_num || "");
-                                  setMinistryCertFile(null);
-                                  setMyGovModalOpen(true);
-                                }}
-                                className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                <span>{isMyGovSubmitted ? "my.gov.uz holati" : "my.gov.uz arizasini kiritish"}</span>
-                              </button>
-                            )}
-
-                            {/* Bosqichni ko'rib chiqish / Bayonnoma biriktirish tugmasi */}
-                            {(activeRole === "ADMIN" || activeRole === "HEAD_OF_DEPT" || activeRole === "DEAN" || activeRole === "RECTORATE") && !isCouncilDone && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActivePubForReview(pub);
-                                  if (!isKafedraDone) setReviewStageName("kafedra");
-                                  else if (!isFakultetDone) setReviewStageName("fakultet");
-                                  else if (!isMethodicalDone) setReviewStageName("methodical");
-                                  else setReviewStageName("council");
-                                  setReviewProtocolNum("");
-                                  setReviewProtocolDate("");
-                                  setReviewProtocolFile(null);
-                                  setReviewComment("");
-                                  setReviewDecision("APPROVED");
-                                  setReviewStageModalOpen(true);
-                                }}
-                                className="px-3.5 py-1.5 bg-indigo-900 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-                              >
-                                <CheckCircle className="w-3.5 h-3.5" />
-                                <span>Bayonnoma biriktirish</span>
-                              </button>
-                            )}
-
-                            {/* O'chirish (o'qituvchi o'zi yoki admin) */}
-                            {(activeRole === "ADMIN" || activeRole === "TEACHER") && !isCouncilDone && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeletePublicationConfirm(pub)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                                title="Nashr arizasini oʻchirish"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* 5-BOSQICHLI PROGRESS STEPPER */}
-                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                            Kengashlar zanjiri boʻylab harakatlanish holati:
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 text-xs">
-                            {/* 1. Kafedra */}
-                            <div className={`p-2.5 rounded-xl border ${
-                              isKafedraDone 
-                                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300"
-                                : "bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500"
-                            }`}>
-                              <div className="flex items-center justify-between font-bold text-[11px]">
-                                <span>1. Kafedra yigʻilishi</span>
-                                <span>{isKafedraDone ? "✓" : "..."}</span>
-                              </div>
-                              <div className="text-[10px] mt-1">
-                                {isKafedraDone ? (
-                                  <>
-                                    Bayonnoma: <b>№{pub.kafedra_protocol_num || "-"}</b> ({pub.kafedra_protocol_date || "-"})
-                                  </>
-                                ) : "Koʻrib chiqilmoqda"}
-                              </div>
-                            </div>
-
-                            {/* 2. Fakultet */}
-                            <div className={`p-2.5 rounded-xl border ${
-                              isFakultetDone 
-                                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300"
-                                : "bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500"
-                            }`}>
-                              <div className="flex items-center justify-between font-bold text-[11px]">
-                                <span>2. Fakultet Kengashi</span>
-                                <span>{isFakultetDone ? "✓" : "..."}</span>
-                              </div>
-                              <div className="text-[10px] mt-1">
-                                {isFakultetDone ? (
-                                  <>
-                                    Bayonnoma: <b>№{pub.fakultet_protocol_num || "-"}</b> ({pub.fakultet_protocol_date || "-"})
-                                  </>
-                                ) : "Kutilmoqda"}
-                              </div>
-                            </div>
-
-                            {/* 3. Filial O'UK */}
-                            <div className={`p-2.5 rounded-xl border ${
-                              isMethodicalDone 
-                                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300"
-                                : "bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500"
-                            }`}>
-                              <div className="flex items-center justify-between font-bold text-[11px]">
-                                <span>3. Filial OʻUK</span>
-                                <span>{isMethodicalDone ? "✓" : "..."}</span>
-                              </div>
-                              <div className="text-[10px] mt-1">
-                                {isMethodicalDone ? (
-                                  <>
-                                    Bayonnoma: <b>№{pub.methodical_protocol_num || "-"}</b> ({pub.methodical_protocol_date || "-"})
-                                  </>
-                                ) : "Kutilmoqda"}
-                              </div>
-                            </div>
-
-                            {/* 4. Filial Ilmiy Kengashi */}
-                            <div className={`p-2.5 rounded-xl border ${
-                              isCouncilDone 
-                                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300"
-                                : "bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500"
-                            }`}>
-                              <div className="flex items-center justify-between font-bold text-[11px]">
-                                <span>4. Filial Ilmiy Kengashi</span>
-                                <span>{isCouncilDone ? "✓" : "..."}</span>
-                              </div>
-                              <div className="text-[10px] mt-1">
-                                {isCouncilDone ? (
-                                  <>
-                                    Bayonnoma: <b>№{pub.council_protocol_num || "-"}</b> ({pub.council_protocol_date || "-"})
-                                  </>
-                                ) : "Kutilmoqda"}
-                              </div>
-                            </div>
-
-                            {/* 5. my.gov.uz & Vazirlik Grifi */}
-                            <div className={`p-2.5 rounded-xl border ${
-                              isMinistryApproved
-                                ? "bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-300"
-                                : isMyGovSubmitted
-                                ? "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-300"
-                                : "bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500"
-                            }`}>
-                              <div className="flex items-center justify-between font-bold text-[11px]">
-                                <span>5. my.gov.uz & Vazirlik</span>
-                                <span>{isMinistryApproved ? "✓" : isMyGovSubmitted ? "..." : ""}</span>
-                              </div>
-                              <div className="text-[10px] mt-1">
-                                {isMinistryApproved ? (
-                                  <>
-                                    Grif №: <b>{pub.ministry_grif_num}</b>
-                                  </>
-                                ) : isMyGovSubmitted ? (
-                                  <>
-                                    Ariza №: <b>{pub.mygov_app_num}</b>
-                                  </>
-                                ) : "Koʻchirma kutilmoqda"}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 3: HEMIS ELEKTRON RESURSLARI VA RASMIY SOATLAR (INSPEKSIYA) */}
-      {/* ========================================================================= */}
-      {hemisSubjectModalOpen && selectedWorkflowSubject && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
-          <div className={`rounded-3xl max-w-5xl w-full p-5 sm:p-7 shadow-2xl border transition-all max-h-[92vh] flex flex-col ${
-            theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-          }`}>
-            {/* Modal Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                    HEMIS elektron resurslari va rasmiy soatlar
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Inspeksiya & KPI asosi
-                  </span>
-                </div>
-                <h2 className="text-lg sm:text-xl font-black mt-1 text-slate-900 dark:text-white flex items-center gap-2">
-                  <Database className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  <span>{selectedWorkflowSubject.subject_name}</span>
-                </h2>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  <span><b>Kafedra:</b> {selectedWorkflowSubject.department_name}</span>
-                  <span>•</span>
-                  <span><b>Oʻqituvchi:</b> {selectedWorkflowSubject.teacher_name}</span>
-                </div>
-              </div>
-
-              {/* Boshqa bo'limlarga tezkor o'tish & Yopish */}
-              <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHemisSubjectModalOpen(false);
-                    handleOpenCourseDocs(selectedWorkflowSubject, selectedWorkflowSubject.teacher_name);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-300 hover:bg-blue-100 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Fanning majburiy oʻquv-uslubiy hujjatlariga oʻtish"
-                >
-                  <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Oʻquv hujjatlari</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHemisSubjectModalOpen(false);
-                    handleOpenPublicationWorkflow(selectedWorkflowSubject, selectedWorkflowSubject.teacher_name);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-300 hover:bg-indigo-100 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Darslik va oʻquv qoʻllanmalar kengashlar zanjiri (Ixtiyoriy)"
-                >
-                  <GraduationCap className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Darslik va grif</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setHemisSubjectModalOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  title="Yopish"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable Kontent */}
-            <div className="flex-1 overflow-y-auto pt-4 pr-1 space-y-4">
-              {/* KPI Synergy Banner */}
-              <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                activeSubjectHemisResources.length > 0
-                  ? theme === "dark" ? "bg-emerald-950/30 border-emerald-800 text-emerald-100" : "bg-emerald-50 border-emerald-200 text-emerald-950"
-                  : theme === "dark" ? "bg-slate-800/40 border-slate-800 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-700"
-              }`}>
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold ${
-                    activeSubjectHemisResources.length > 0
-                      ? "bg-emerald-600 text-white shadow-sm"
-                      : "bg-slate-200 dark:bg-slate-700 text-slate-500"
+            {/* ========================================================================= */}
+            {/* TAB 1: HEMIS BAZASI VA SOATLAR */}
+            {/* ========================================================================= */}
+            {workflowSubTab === "hemis_resources" && (
+              <div className="space-y-5">
+                {/* Fanning o'quv rejadagi rasmiy soatlari */}
+                {activeSubjectCurriculumSubject && (
+                  <div className={`p-5 rounded-2xl border shadow-xs ${
+                    theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                   }`}>
-                    <Database className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold">
-                        Raqamli HEMIS Taʼminlanganlik Indeksi
-                      </h4>
-                      {activeSubjectHemisResources.length > 0 ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
-                          Tasdiqlangan ({activeSubjectHemisResources.length} ta resurs)
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2 mb-4">
+                      <div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                          HEMIS Rasmiy Oʻquv Reja Mezonlari
                         </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300">
-                          Resurs topilmadi
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                          {activeSubjectCurriculumSubject.subject_name} ({activeSubjectCurriculumSubject.semester_name})
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-xs">
+                          {activeSubjectCurriculumSubject.credit} Kredit
                         </span>
-                      )}
-                    </div>
-                    <p className="text-xs mt-1 leading-relaxed opacity-90">
-                      {activeSubjectHemisResources.length > 0
-                        ? "Ushbu fanga HEMIS rasmiy serverida oʻquv materiallari, maʼruzalar yoki amaliy topshiriqlar yuklangan. Bu oʻqituvchining KPI 1.1 va 1.2 mezonlarini baholashda kafedra mudiri va ekspertlarga toʻgʻridan-toʻgʻri raqamli asos boʻlib xizmat qiladi."
-                        : "Ushbu fanga hozircha HEMIS da yuklangan elektron fayllar topilmadi. Oʻqituvchi HEMIS ga materiallarni biriktirishi yoki Administrator bazani sinxronlashi tavsiya etiladi."}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => fetchSubjectHemisDetails(selectedWorkflowSubject?.subject_name, selectedWorkflowSubject?.teacher_name, true)}
-                  disabled={isSubjectHemisResourcesLoading}
-                  className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors self-start md:self-center cursor-pointer flex-shrink-0"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isSubjectHemisResourcesLoading ? "animate-spin" : ""}`} />
-                  <span>Yangilash</span>
-                </button>
-              </div>
-
-              {/* Rasmiy O'quv Reja Mezonlari (Kredit & Soatlar) */}
-              {activeSubjectCurriculumSubject && (
-                <div className={`p-4 rounded-2xl border ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
-                }`}>
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                        HEMIS Rasmiy Oʻquv Reja Soatlari va Baholash Mezoni
-                      </h4>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 font-bold text-xs">
-                        {activeSubjectCurriculumSubject.credit} Kredit
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs">
-                        {activeSubjectCurriculumSubject.total_acload} Jami soat
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
-                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                      <div className="text-[10px] font-bold uppercase text-slate-500">Maʼruza</div>
-                      <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
-                        {activeSubjectCurriculumSubject.lecture_hours} soat
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold text-xs">
+                          Jami: {activeSubjectCurriculumSubject.total_acload} soat
+                        </span>
                       </div>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                      <div className="text-[10px] font-bold uppercase text-slate-500">Amaliy</div>
-                      <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
-                        {activeSubjectCurriculumSubject.practical_hours} soat
-                      </div>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                      <div className="text-[10px] font-bold uppercase text-slate-500">Seminar</div>
-                      <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
-                        {activeSubjectCurriculumSubject.seminar_hours} soat
-                      </div>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                      <div className="text-[10px] font-bold uppercase text-slate-500">Laboratoriya</div>
-                      <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
-                        {activeSubjectCurriculumSubject.lab_hours} soat
-                      </div>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                      <div className="text-[10px] font-bold uppercase text-slate-500">Mustaqil taʼlim</div>
-                      <div className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                        {activeSubjectCurriculumSubject.independent_hours} soat
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="mt-3 pt-2 text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800">
-                    <span>Kafedra: <b>{activeSubjectCurriculumSubject.department_name}</b></span>
-                    <span>Semestr: <b>{activeSubjectCurriculumSubject.semester_name}</b></span>
-                    <span>Fan bloki: <b>{activeSubjectCurriculumSubject.subject_block}</b></span>
-                  </div>
-                </div>
-              )}
-
-              {/* HEMIS Yuklangan Fayllar va Resurslar Ro'yxati */}
-              <div className={`p-4 rounded-2xl border ${
-                theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
-              }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3 gap-2">
-                  <div className="flex items-center gap-2">
-                    <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                      HEMIS Tizimiga Yuklangan Asl Oʻquv Fayllari ({activeSubjectHemisResources.length} ta)
-                    </h4>
-                  </div>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    Server: hemis.jbnuu.uz/static/files
-                  </span>
-                </div>
-
-                {/* Filtrlash va qidiruv paneli */}
-                {activeSubjectHemisResources.length > 0 && (
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                    {/* Dars turi filtri */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {[
-                        { id: "ALL", label: "Barchasi" },
-                        { id: "Ma’ruza", label: "Maʼruza" },
-                        { id: "Amaliy", label: "Amaliy" },
-                        { id: "Laboratoriya", label: "Laboratoriya" },
-                        { id: "Seminar", label: "Seminar" }
-                      ].map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => setHemisResourceFilterType(t.id)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                            hemisResourceFilterType === t.id
-                              ? "bg-emerald-600 text-white shadow-xs"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                          }`}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Qidiruv inputi */}
-                    <div className="relative min-w-[220px]">
-                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={hemisResourceSearch}
-                        onChange={(e) => setHemisResourceSearch(e.target.value)}
-                        placeholder="Mavzu yoki fayl nomi..."
-                        className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      />
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                        <div className="text-[11px] text-slate-500 font-semibold">Maʼruza</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                          {activeSubjectCurriculumSubject.lecture_hours} soat
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                        <div className="text-[11px] text-slate-500 font-semibold">Amaliy mashgʻulot</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                          {activeSubjectCurriculumSubject.practical_hours} soat
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                        <div className="text-[11px] text-slate-500 font-semibold">Laboratoriya</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                          {activeSubjectCurriculumSubject.lab_hours} soat
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                        <div className="text-[11px] text-slate-500 font-semibold">Seminar</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                          {activeSubjectCurriculumSubject.seminar_hours} soat
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 col-span-2 sm:col-span-1">
+                        <div className="text-[11px] text-slate-500 font-semibold">Mustaqil taʼlim</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                          {activeSubjectCurriculumSubject.independent_hours} soat
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {isSubjectHemisResourcesLoading ? (
-                  <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
-                    <span>HEMIS resurslari yuklanmoqda...</span>
-                  </div>
-                ) : activeSubjectHemisResources.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400">
-                    Hozircha HEMIS da bu fanga yuklangan resurslar topilmadi. Yuqoridagi "Yangilash" tugmasini bosing.
-                  </div>
-                ) : (
-                  (() => {
-                    const filteredItems = activeSubjectHemisResources.filter(res => {
-                      const matchesSearch = !hemisResourceSearch || 
-                        (res.title || "").toLowerCase().includes(hemisResourceSearch.toLowerCase()) ||
-                        (res.file_name || "").toLowerCase().includes(hemisResourceSearch.toLowerCase()) ||
-                        (res.employee_name || "").toLowerCase().includes(hemisResourceSearch.toLowerCase());
-                      const matchesType = hemisResourceFilterType === "ALL" || 
-                        (res.training_type || "").toLowerCase().includes(hemisResourceFilterType.toLowerCase());
-                      return matchesSearch && matchesType;
-                    });
+                {/* HEMIS fayllari ro'yxati */}
+                <div className={`p-5 rounded-2xl border shadow-xs ${
+                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>HEMIS Tizimidagi Rasmiy Fayllar ({activeSubjectHemisResources.length} ta)</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        HEMIS serveriga yuklangan maʼruza, amaliyot va boshqa oʻquv materiallari
+                      </p>
+                    </div>
 
-                    if (filteredItems.length === 0) {
-                      return (
-                        <div className="py-6 text-center text-xs text-slate-400">
-                          Tanlangan filtr yoki qidiruv boʻyicha resurs topilmadi.
-                        </div>
-                      );
-                    }
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fetchSubjectHemisDetails(selectedWorkflowSubject?.subject_name, selectedWorkflowSubject?.teacher_name, true)}
+                        disabled={isSubjectHemisResourcesLoading}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                        title="HEMIS API dan jonli qayta yuklash"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isSubjectHemisResourcesLoading ? "animate-spin" : ""}`} />
+                        <span>Qayta tekshirish</span>
+                      </button>
 
-                    return (
-                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {filteredItems.map((res) => (
-                          <div key={res.id || res.file_url} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 p-2 rounded-xl transition-colors">
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={hemisResourceSearch}
+                          onChange={(e) => setHemisResourceSearch(e.target.value)}
+                          placeholder="Fayllar ichidan qidirish..."
+                          className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-600 w-56 ${
+                            theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mashg'ulot turlari filtri */}
+                  <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1">
+                    {[
+                      { id: "ALL", label: "Barchasi" },
+                      { id: "MAʼRUZA", label: "Maʼruza" },
+                      { id: "AMALIY", label: "Amaliy" },
+                      { id: "LABORATORIYA", label: "Laboratoriya" },
+                      { id: "SEMINAR", label: "Seminar" }
+                    ].map(f => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setHemisResourceFilterType(f.id)}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                          hemisResourceFilterType === f.id
+                            ? "bg-emerald-800 text-white shadow-xs"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {isSubjectHemisResourcesLoading ? (
+                    <div className="py-12 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
+                      <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+                      <span>HEMIS tizimidan fanning rasmiy resurslari tekshirilmoqda...</span>
+                    </div>
+                  ) : activeSubjectHemisResources.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                      Ushbu fan boʻyicha HEMIS tizimida hali yuklangan rasmiy fayllar topilmadi. "Qayta tekshirish" tugmasini bosing.
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {activeSubjectHemisResources
+                        .filter(res => {
+                          const term = hemisResourceSearch.toLowerCase();
+                          const matchesSearch = !term || res.title.toLowerCase().includes(term) || (res.file_name && res.file_name.toLowerCase().includes(term)) || (res.employee_name && res.employee_name.toLowerCase().includes(term));
+                          const matchesType = hemisResourceFilterType === "ALL" || (res.training_type && res.training_type.toUpperCase().includes(hemisResourceFilterType));
+                          return matchesSearch && matchesType;
+                        })
+                        .map(res => (
+                          <div
+                            key={res.id}
+                            className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
+                              theme === "dark" ? "bg-slate-800/50 border-slate-800 hover:bg-slate-800" : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/60"
+                            }`}
+                          >
                             <div className="flex items-start gap-3">
-                              <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                                {res.file_name?.toLowerCase().endsWith(".pdf") ? "PDF" : res.file_name?.toLowerCase().endsWith(".ppt") || res.file_name?.toLowerCase().endsWith(".pptx") ? "PPT" : "DOC"}
+                              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <BookOpen className="w-4 h-4" />
                               </div>
                               <div>
-                                <h5 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                  <span>{res.title || res.file_name}</span>
+                                <h5 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                                  <span>{res.title}</span>
                                   <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-300 font-medium">
                                     {res.training_type || "Oʻquv materiali"}
                                   </span>
                                 </h5>
-                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-3">
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
                                   <span>Fayl: <b className="font-mono text-slate-700 dark:text-slate-300">{res.file_name}</b></span>
                                   <span>Hajmi: <b>{res.file_size ? `${(res.file_size / 1024).toFixed(1)} KB` : "Nomaʼlum"}</b></span>
-                                  <span>Oʻqituvchi: <b>{res.employee_name}</b></span>
+                                  <span>Yuklagan: <b>{res.employee_name}</b></span>
                                   {res.updated_at_ts && (
                                     <span>Sana: <b>{new Date(res.updated_at_ts * 1000).toLocaleDateString()}</b></span>
                                   )}
@@ -11617,20 +10522,501 @@ export default function KpiEnterpriseApp() {
                               target="_blank"
                               rel="noreferrer"
                               download
-                              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors self-start sm:self-center flex-shrink-0 cursor-pointer"
-                              title="HEMIS serveridan faylni toʻgʻridan-toʻgʻri koʻrish / yuklab olish"
+                              className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors self-start sm:self-center flex-shrink-0 cursor-pointer"
                             >
                               <Download className="w-3.5 h-3.5" />
                               <span>Koʻrish / Yuklash</span>
                             </a>
                           </div>
                         ))}
-                      </div>
-                    );
-                  })()
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* TAB 2: O'QUV-USLUBIY HUJJATLAR (SILLABUS & MAJBURIY QISM) */}
+            {/* ========================================================================= */}
+            {workflowSubTab === "docs" && (
+              <div className="space-y-5">
+                <div className={`p-5 rounded-2xl border shadow-xs ${
+                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3 mb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <span>Fan Boʻyicha Majburiy Hujjatlar Nazorati</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Oʻquv mashgʻuloti turlariga qarab yuklanishi shart boʻlgan oʻquv-uslubiy materiallar
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsAddCourseDocFormOpen(!isAddCourseDocFormOpen)}
+                      className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{isAddCourseDocFormOpen ? "Formani yopish" : "+ Yangi hujjat yuklash"}</span>
+                    </button>
+                  </div>
+
+                  {/* Mashg'ulot turlari tezkor tekshiruvi */}
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 mb-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      Sizga biriktirilgan mashgʻulot turlari:
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1.5 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={teacherTrainingRoles.hasLecture}
+                          onChange={(e) => setTeacherTrainingRoles(p => ({ ...p, hasLecture: e.target.checked }))}
+                          className="rounded text-blue-900 focus:ring-blue-900"
+                        />
+                        <span>Maʼruza</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={teacherTrainingRoles.hasPractical}
+                          onChange={(e) => setTeacherTrainingRoles(p => ({ ...p, hasPractical: e.target.checked }))}
+                          className="rounded text-blue-900 focus:ring-blue-900"
+                        />
+                        <span>Amaliyot</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={teacherTrainingRoles.hasLab}
+                          onChange={(e) => setTeacherTrainingRoles(p => ({ ...p, hasLab: e.target.checked }))}
+                          className="rounded text-blue-900 focus:ring-blue-900"
+                        />
+                        <span>Laboratoriya</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={teacherTrainingRoles.hasSeminar}
+                          onChange={(e) => setTeacherTrainingRoles(p => ({ ...p, hasSeminar: e.target.checked }))}
+                          className="rounded text-blue-900 focus:ring-blue-900"
+                        />
+                        <span>Seminar</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Yangi hujjat yuklash formasi */}
+                  {isAddCourseDocFormOpen && (
+                    <form onSubmit={handleUploadCourseDocSubmit} className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 mb-5 space-y-3.5">
+                      <h5 className="text-xs font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
+                        <Upload className="w-4 h-4 text-blue-600" />
+                        <span>Yangi oʻquv-uslubiy hujjatni biriktirish</span>
+                      </h5>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                            Hujjat turi *
+                          </label>
+                          <select
+                            value={newCourseDocType}
+                            onChange={(e: any) => setNewCourseDocType(e.target.value)}
+                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium text-xs focus:ring-2 focus:ring-blue-900 focus:outline-none"
+                          >
+                            <option value="SYLLABUS">Fan sillabusi / Ishchi fan dasturi</option>
+                            <option value="WORK_PROGRAM">Ishchi oʻquv dasturi</option>
+                            <option value="LECTURE_NOTES">Maʼruzalar matni va taqdimotlar</option>
+                            <option value="PRACTICAL_GUIDE">Amaliy mashgʻulotlar uslubiy koʻrsatmasi</option>
+                            <option value="LAB_GUIDE">Laboratoriya ishlari uslubiy koʻrsatmasi</option>
+                            <option value="SEMINAR_GUIDE">Seminar mashgʻulotlari uslubiy koʻrsatmasi</option>
+                            <option value="INDEPENDENT_STUDY_GUIDE">Mustaqil taʼlim uslubiy koʻrsatmasi</option>
+                            <option value="ASSESSMENT_CRITERIA">Baholash mezonlari va nazorat savollari</option>
+                            <option value="OTHER">Boshqa oʻquv-uslubiy material</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                            Hujjat sarlavhasi *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={newCourseDocTitle}
+                            onChange={(e) => setNewCourseDocTitle(e.target.value)}
+                            placeholder="Masalan: 2025/2026 oʻquv yili uchun fan sillabusi"
+                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1 text-xs">
+                          Faylni tanlang (PDF, DOCX) *
+                        </label>
+                        <input
+                          type="file"
+                          required
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setNewCourseDocFile(e.target.files[0]);
+                            }
+                          }}
+                          className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-xs font-medium cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setIsAddCourseDocFormOpen(false)}
+                          className="px-3.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                        >
+                          Bekor qilish
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isCourseDocUploading}
+                          className="px-4 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isCourseDocUploading ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                              <span>Yuklanmoqda...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-3 h-3" />
+                              <span>Hujjatni saqlash</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Yuklangan hujjatlar ro'yxati */}
+                  {isCourseDocsLoading ? (
+                    <div className="py-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
+                      <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
+                      <span>Oʻquv hujjatlari yuklanmoqda...</span>
+                    </div>
+                  ) : courseDocsList.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                      Ushbu fan boʻyicha hali oʻquv-uslubiy hujjat yuklanmagan. "+ Yangi hujjat yuklash" tugmasini bosing.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {courseDocsList.map(doc => {
+                        const isApprovedByMudir = doc.mudir_status === "APPROVED";
+                        const isApprovedByDean = doc.dean_status === "APPROVED";
+
+                        return (
+                          <div
+                            key={doc.id}
+                            className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors ${
+                              theme === "dark" ? "bg-slate-800/40 border-slate-800" : "bg-slate-50/70 border-slate-200"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <BookOpen className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                    {doc.title}
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-900">
+                                    {getDocTypeLabel(doc.doc_type)}
+                                  </span>
+                                </div>
+
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                                  <span>Yuklangan: <b>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : ""}</b></span>
+                                  <span>•</span>
+                                  <span>Mudir: <b className={isApprovedByMudir ? "text-emerald-600" : doc.mudir_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{doc.mudir_status || "PENDING"}</b></span>
+                                  <span>•</span>
+                                  <span>Dekan: <b className={isApprovedByDean ? "text-emerald-600" : doc.dean_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{doc.dean_status || "PENDING"}</b></span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-start md:self-center flex-shrink-0">
+                              {(currentUser?.role === "HEAD_OF_DEPT" || currentUser?.role === "ADMIN") && doc.mudir_status !== "APPROVED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveDocForReview(doc);
+                                    setCourseDocReviewRole("mudir");
+                                    setCourseDocReviewStatus("APPROVED");
+                                    setCourseDocReviewComment("");
+                                    setCourseDocReviewModalOpen(true);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold transition-colors cursor-pointer"
+                                >
+                                  Mudir xulosasi
+                                </button>
+                              )}
+
+                              {(currentUser?.role === "DEAN" || currentUser?.role === "ADMIN") && doc.mudir_status === "APPROVED" && doc.dean_status !== "APPROVED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveDocForReview(doc);
+                                    setCourseDocReviewRole("dean");
+                                    setCourseDocReviewStatus("APPROVED");
+                                    setCourseDocReviewComment("");
+                                    setCourseDocReviewModalOpen(true);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold transition-colors cursor-pointer"
+                                >
+                                  Dekan tasdigʻi
+                                </button>
+                              )}
+
+                              {doc.file_url && (
+                                <a
+                                  href={doc.file_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  download
+                                  className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  <span>Koʻrish</span>
+                                </a>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCourseDocConfirm(doc)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                title="Oʻchirish"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* TAB 3: DARSLIK, O'QUV QO'LLANMA VA GRIF TAVSIYANOMASI */}
+            {/* ========================================================================= */}
+            {workflowSubTab === "publications" && (
+              <div className="space-y-5">
+                <div className={`p-5 rounded-2xl border shadow-xs ${
+                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3 mb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                        <span>Fan Boʻyicha Darslik va Oʻquv Qoʻllanmalar Zanjiri</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Kafedra muhokamasi, fakultet va universitet ilmiy kengashidan tavsiyanoma olish
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setPubModalFormOpen(true)}
+                      className="px-3.5 py-2 bg-purple-800 hover:bg-purple-900 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Yangi darslik / qoʻllanma qoʻshish</span>
+                    </button>
+                  </div>
+
+                  {/* Mavjud nashrlar ro'yxati */}
+                  {isPubsLoading ? (
+                    <div className="py-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
+                      <RefreshCw className="w-5 h-5 animate-spin text-purple-600" />
+                      <span>Nashrlar maʼlumotlari yuklanmoqda...</span>
+                    </div>
+                  ) : publicationsList.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                      Ushbu fan boʻyicha hali darslik yoki oʻquv qoʻllanma kiritilmagan. "+ Yangi darslik / qoʻllanma qoʻshish" tugmasini bosing.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {publicationsList.map(pub => (
+                        <div
+                          key={pub.id}
+                          className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors ${
+                            theme === "dark" ? "bg-slate-800/40 border-slate-800" : "bg-slate-50/70 border-slate-200"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <GraduationCap className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                  {pub.title}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 text-[10px] font-bold border border-purple-200 dark:border-purple-900">
+                                  {pub.pub_type}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 font-mono font-bold">
+                                  Originallik: {pub.antiplagiarism_score}%
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                                <span>Mualliflar: <b>{pub.authors}</b></span>
+                                <span>•</span>
+                                <span>Kafedra: <b className={pub.kafedra_status === "APPROVED" ? "text-emerald-600" : pub.kafedra_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{pub.kafedra_status}</b></span>
+                                <span>•</span>
+                                <span>Fakultet: <b className={pub.fakultet_status === "APPROVED" ? "text-emerald-600" : pub.fakultet_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{pub.fakultet_status}</b></span>
+                                <span>•</span>
+                                <span>OʻUK: <b className={pub.methodical_status === "APPROVED" ? "text-emerald-600" : pub.methodical_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{pub.methodical_status}</b></span>
+                                <span>•</span>
+                                <span>Filial Kengashi: <b className={pub.council_status === "APPROVED" ? "text-emerald-600" : pub.council_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{pub.council_status}</b></span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-start md:self-center flex-shrink-0 flex-wrap">
+                            {/* Kafedra mudiri bosqichi */}
+                            {(currentUser?.role === "HEAD_OF_DEPT" || currentUser?.role === "ADMIN") && pub.kafedra_status === "PENDING" && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActivePubForReview(pub);
+                                  setReviewStageName("kafedra");
+                                  setReviewDecision("APPROVED");
+                                  setReviewProtocolNum("");
+                                  setReviewProtocolDate(new Date().toISOString().split("T")[0]);
+                                  setReviewProtocolFile(null);
+                                  setReviewComment("");
+                                  setReviewStageModalOpen(true);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold transition-colors cursor-pointer"
+                              >
+                                Kafedra xulosasi
+                              </button>
+                            )}
+
+                            {/* Dekan bosqichi */}
+                            {(currentUser?.role === "DEAN" || currentUser?.role === "ADMIN") && pub.kafedra_status === "APPROVED" && pub.fakultet_status === "PENDING" && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActivePubForReview(pub);
+                                  setReviewStageName("fakultet");
+                                  setReviewDecision("APPROVED");
+                                  setReviewProtocolNum("");
+                                  setReviewProtocolDate(new Date().toISOString().split("T")[0]);
+                                  setReviewProtocolFile(null);
+                                  setReviewComment("");
+                                  setReviewStageModalOpen(true);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold transition-colors cursor-pointer"
+                              >
+                                Fakultet kengashi
+                              </button>
+                            )}
+
+                            {/* O'quv-uslubiy boshqarma bosqichi */}
+                            {(currentUser?.role === "ADMIN" || currentUser?.role === "RECTORATE") && pub.fakultet_status === "APPROVED" && pub.methodical_status === "PENDING" && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActivePubForReview(pub);
+                                  setReviewStageName("methodical");
+                                  setReviewDecision("APPROVED");
+                                  setReviewProtocolNum("");
+                                  setReviewProtocolDate(new Date().toISOString().split("T")[0]);
+                                  setReviewProtocolFile(null);
+                                  setReviewComment("");
+                                  setReviewStageModalOpen(true);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-900 text-white text-xs font-semibold transition-colors cursor-pointer"
+                              >
+                                OʻUK xulosasi
+                              </button>
+                            )}
+
+                            {/* Filial kengashi bosqichi */}
+                            {(currentUser?.role === "ADMIN" || currentUser?.role === "RECTORATE") && pub.methodical_status === "APPROVED" && pub.council_status === "PENDING" && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActivePubForReview(pub);
+                                  setReviewStageName("council");
+                                  setReviewDecision("APPROVED");
+                                  setReviewProtocolNum("");
+                                  setReviewProtocolDate(new Date().toISOString().split("T")[0]);
+                                  setReviewProtocolFile(null);
+                                  setReviewComment("");
+                                  setReviewStageModalOpen(true);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-amber-800 hover:bg-amber-900 text-white text-xs font-semibold transition-colors cursor-pointer"
+                              >
+                                Filial Kengashi
+                              </button>
+                            )}
+
+                            {/* my.gov.uz va Grif */}
+                            {pub.council_status === "APPROVED" && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActivePubForMyGov(pub);
+                                  setMyGovAppNum(pub.mygov_app_num || "");
+                                  setMinistryGrifNum(pub.ministry_grif_num || "");
+                                  setMinistryCertFile(null);
+                                  setMyGovModalOpen(true);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold transition-colors cursor-pointer"
+                              >
+                                my.gov.uz & Grif
+                              </button>
+                            )}
+
+                            {pub.manuscript_file && (
+                              <a
+                                href={pub.manuscript_file}
+                                target="_blank"
+                                rel="noreferrer"
+                                download
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Qoʻlyozma</span>
+                              </a>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePublicationConfirm(pub)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                              title="Oʻchirish"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
