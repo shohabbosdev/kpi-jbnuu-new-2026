@@ -475,43 +475,44 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md overflow-y-auto flex flex-col animate-in fade-in duration-150">
+      <div className="fixed inset-0 z-50 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md overflow-y-auto overflow-x-hidden w-full max-w-full flex flex-col animate-in fade-in duration-150">
         {/* Tepa navigatsiya paneli (Sticky Header) */}
-        <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs px-4 sm:px-8 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs px-3 sm:px-8 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full max-w-full overflow-hidden">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+              className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 sm:gap-2 transition-colors cursor-pointer shrink-0"
               title="Fanlar roʻyxatiga qaytish"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Fanlar roʻyxatiga qaytish</span>
+              <span className="hidden sm:inline">Fanlar roʻyxatiga qaytish</span>
+              <span className="sm:hidden">Orqaga</span>
             </button>
 
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block shrink-0" />
 
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>{selectedSubject.subject_name}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 min-w-0">
+                  <span className="truncate">{selectedSubject.subject_name}</span>
                 </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono shrink-0">
                   {selectedSubject.total_hours} soat
                 </span>
               </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-                <span>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 truncate">
+                <span className="truncate">
                   Kafedra: <b>{selectedSubject.department_name}</b>
                 </span>
                 <span>•</span>
-                <span>
+                <span className="truncate">
                   Oʻqituvchi: <b>{selectedSubject.teacher_name}</b>
                 </span>
                 {selectedSubject.education_type_name && (
                   <>
                     <span>•</span>
-                    <span>
+                    <span className="truncate">
                       Taʼlim shakli: <b>{selectedSubject.education_type_name}</b>
                     </span>
                   </>
@@ -573,7 +574,7 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
         </div>
 
         {/* Asosiy kontent maydoni */}
-        <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
+        <div className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-8 py-4 sm:py-6 space-y-6 min-w-0 overflow-x-hidden">
           {/* TAB 1: HEMIS BAZASI VA SOATLAR */}
           {workflowSubTab === "hemis_resources" && (
             <div className="space-y-5">

@@ -13,8 +13,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({ confirmModal, onClos
   if (!confirmModal || !confirmModal.isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
+    <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden w-full max-w-full animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100 min-w-0">
         <div className="flex items-start gap-3.5 mb-4">
           <div
             className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${

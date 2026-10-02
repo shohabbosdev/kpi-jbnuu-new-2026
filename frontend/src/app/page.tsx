@@ -2584,7 +2584,7 @@ export default function KpiEnterpriseApp() {
   // VIEW 2: AUTHENTICATED USER INTERFACE
   // =========================================================================
   return (
-    <div className={`flex min-h-screen font-sans transition-colors duration-200 ${theme === "dark" ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"
+    <div className={`flex min-h-screen font-sans transition-colors duration-200 w-full max-w-full overflow-x-hidden relative min-w-0 ${theme === "dark" ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"
       }`}>
       {/* Force Password Change Modal (Cannot be closed until password changed) */}
       {currentUser?.must_change_password && (
@@ -3373,12 +3373,12 @@ export default function KpiEnterpriseApp() {
       </aside>
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 min-w-0 w-full max-w-full overflow-x-hidden ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}>
         {/* Top Header */}
-        <header className={`sticky top-0 z-20 h-16 border-b px-3 sm:px-6 flex items-center justify-between backdrop-blur-md transition-colors ${theme === "dark" ? "bg-slate-900/95 border-slate-800 text-slate-100" : "bg-white/95 border-slate-200 text-slate-900"
+        <header className={`sticky top-0 z-20 h-16 border-b px-2.5 sm:px-6 flex items-center justify-between backdrop-blur-md transition-colors w-full max-w-full overflow-hidden ${theme === "dark" ? "bg-slate-900/95 border-slate-800 text-slate-100" : "bg-white/95 border-slate-200 text-slate-900"
           }`}>
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">
             <button
               onClick={toggleSidebar}
               className={`p-2 rounded-lg transition-colors flex-shrink-0 cursor-pointer ${theme === "dark" ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-100 text-slate-600"
@@ -3388,7 +3388,7 @@ export default function KpiEnterpriseApp() {
               <Menu className="w-4 h-4" />
             </button>
 
-            <h2 className="text-xs sm:text-sm font-bold truncate max-w-[100px] sm:max-w-[180px] md:max-w-xs lg:max-w-md">
+            <h2 className="text-xs sm:text-sm font-bold truncate max-w-[110px] sm:max-w-[180px] md:max-w-xs lg:max-w-md">
               {activePage === "dashboard" && activeRole === "ADMIN" && "Tizim administratori boshqaruv portali"}
               {activePage === "dashboard" && activeRole === "DEAN" && "Fakultet dekanati KPI monitoring va kafedralar tahlili"}
               {activePage === "dashboard" && activeRole === "HEAD_OF_DEPT" && "Kafedra boshqaruvi va oʻqituvchilar monitoringi"}
@@ -3489,7 +3489,7 @@ export default function KpiEnterpriseApp() {
 
             {/* Non-admin user role badge */}
             {currentUser.role !== "ADMIN" && (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${theme === "dark" ? "bg-slate-800/80 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"
+              <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${theme === "dark" ? "bg-slate-800/80 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"
                 }`}>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>
@@ -3539,19 +3539,19 @@ export default function KpiEnterpriseApp() {
                   setModalNotification(null);
                   setIsAddModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer flex-shrink-0"
+                className="px-2.5 sm:px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer flex-shrink-0"
                 title="Yangi KPI natijasini kiritish"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">+ Yangi natija</span>
-                <span className="sm:hidden">+ Natija</span>
+                <span className="hidden sm:inline">Yangi natija</span>
+                <span className="sm:hidden">Natija</span>
               </button>
             )}
           </div>
         </header>
 
         {/* Content Container */}
-        <main className={`p-3 sm:p-5 lg:p-8 flex-1 transition-colors ${theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
+        <main className={`p-3 sm:p-5 lg:p-8 flex-1 transition-colors min-w-0 w-full max-w-full overflow-x-hidden ${theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
           {/* ========================================================================= */}
           {/* ADMIN VIEW: HEMIS INTEGRATION */}
           {/* ========================================================================= */}
@@ -7910,8 +7910,8 @@ export default function KpiEnterpriseApp() {
         const isDoiRelevant = modalIndicator.startsWith("1.") || (currentSelectedInd && currentSelectedInd.block.toLowerCase() === "ilm");
 
         return (
-          <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 my-4 flex flex-col max-h-[92vh] overflow-hidden">
+          <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto overflow-x-hidden w-full max-w-full">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 my-4 flex flex-col max-h-[92vh] overflow-hidden min-w-0">
 
               {/* Modal Header */}
               <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">

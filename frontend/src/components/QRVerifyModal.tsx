@@ -20,8 +20,8 @@ export const QRVerifyModal: React.FC<QRVerifyModalProps> = ({
   if (!isOpen || !verifyItemData) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 text-slate-900 animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden w-full max-w-full">
+      <div className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-8 shadow-2xl border border-slate-200 text-slate-900 animate-in zoom-in-95 duration-150 min-w-0">
         {/* Blank header */}
         <div className="text-center pb-4 border-b-2 border-slate-900 space-y-1">
           <div className="text-[11px] font-black uppercase tracking-widest text-slate-500">
