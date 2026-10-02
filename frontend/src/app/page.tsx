@@ -7029,8 +7029,68 @@ export default function KpiEnterpriseApp() {
             }
             const allUniqueTeachers = Array.from(teacherMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
-            // Determine target teacher
-            const targetTeacherName = selectedSubjectTeacherName || currentUser?.name || (allUniqueTeachers[0]?.name ?? "");
+            // Mantiqiy zanjir (Role-based Hierarchical Access Control):
+            // - TEACHER: Faqat o'zining shaxsiy yuklamasi (boshqa o'qituvchilarni ko'rish cheklangan)
+            // - HEAD_OF_DEPT: O'z kafedrasi o'qituvchilari
+            // - DEAN: O'z fakultetiga qarashli barcha kafedralar o'qituvchilari
+            // - RECTORATE / ADMIN: Butun filial miqyosidagi barcha o'qituvchilar
+
+            const allowedTeachers = allUniqueTeachers.filter(t => {
+              // 1. RECTORATE yoki ADMIN: butun filial bo'yicha barchani ko'ra oladi
+              if (activeRole === "ADMIN" || activeRole === "RECTORATE") return true;
+
+              // 2. TEACHER: FAQAT VA FAQAT O'ZINING SHAXSIY YUKLAMASINI KO'RADI
+              if (activeRole === "TEACHER") {
+                if (!currentUser?.name) return false;
+                const myName = currentUser.name.toLowerCase().trim();
+                const tName = t.name.toLowerCase().trim();
+                return tName === myName || tName.includes(myName) || myName.includes(tName);
+              }
+
+              // 3. HEAD_OF_DEPT: O'z kafedrasi o'qituvchilari va mudirning o'z shaxsiy darslari
+              if (activeRole === "HEAD_OF_DEPT") {
+                if (currentUser?.name && (t.name.toLowerCase().includes(currentUser.name.toLowerCase()) || currentUser.name.toLowerCase().includes(t.name.toLowerCase()))) {
+                  return true;
+                }
+                if (!currentUser?.department) return false;
+                const myDept = currentUser.department.toLowerCase().trim();
+                const tDept = (t.department || "").toLowerCase().trim();
+                return tDept.includes(myDept) || myDept.includes(tDept);
+              }
+
+              // 4. DEAN: O'z fakultetiga qarashli kafedralar o'qituvchilari va dekanning o'z darslari
+              if (activeRole === "DEAN") {
+                if (currentUser?.name && (t.name.toLowerCase().includes(currentUser.name.toLowerCase()) || currentUser.name.toLowerCase().includes(t.name.toLowerCase()))) {
+                  return true;
+                }
+                if (!currentUser?.faculty) return false;
+                const myFaculty = currentUser.faculty.toLowerCase().trim();
+                const facultyDepts = structureHierarchy?.faculties
+                  ?.find(f => f.name.toLowerCase().includes(myFaculty) || myFaculty.includes(f.name.toLowerCase()))
+                  ?.departments.map(d => d.name.toLowerCase().trim()) || [];
+                const tDept = (t.department || "").toLowerCase().trim();
+                return facultyDepts.some(d => tDept.includes(d) || d.includes(tDept));
+              }
+
+              return false;
+            });
+
+            // Target teacher resolution strictly bounded by allowedTeachers
+            let targetTeacherName = "";
+            if (activeRole === "TEACHER") {
+              // O'qituvchi o'z profilida faqat o'zinikini ko'radi
+              targetTeacherName = currentUser?.name || (allowedTeachers[0]?.name ?? "");
+            } else {
+              const isSelectedAllowed = selectedSubjectTeacherName && allowedTeachers.some(t => t.name === selectedSubjectTeacherName);
+              if (isSelectedAllowed) {
+                targetTeacherName = selectedSubjectTeacherName;
+              } else {
+                targetTeacherName = (currentUser?.name && allowedTeachers.some(t => t.name === currentUser.name))
+                  ? currentUser.name
+                  : (allowedTeachers[0]?.name ?? "");
+              }
+            }
+
             const workloadData = getTeacherWorkloadData(targetTeacherName);
 
             // Filter & sort subjects
@@ -7050,9 +7110,9 @@ export default function KpiEnterpriseApp() {
               return a.subject_name.localeCompare(b.subject_name);
             });
 
-            // Department colleagues for fast comparison
+            // Department colleagues strictly bounded by allowedTeachers
             const deptColleagues = workloadData?.departmentName 
-              ? allUniqueTeachers.filter(t => t.department.toLowerCase() === workloadData.departmentName.toLowerCase())
+              ? allowedTeachers.filter(t => t.department.toLowerCase() === workloadData.departmentName.toLowerCase())
               : [];
 
             const totalHours = workloadData?.totalHours || 0;
@@ -7082,7 +7142,7 @@ export default function KpiEnterpriseApp() {
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                            Fanlarim va Oʻquv Yuklamasi
+                            {activeRole === "TEACHER" ? "Mening Fanlarim va Oʻquv Yuklamam" : "Fanlar va Oʻquv Yuklamalari Monitoringi"}
                           </h3>
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -7113,38 +7173,58 @@ export default function KpiEnterpriseApp() {
 
                     {/* Quick controls on header */}
                     <div className="flex flex-wrap items-center gap-2.5">
-                      {/* Search / Select teacher dropdown */}
-                      <div className="relative">
-                        <select
-                          value={selectedSubjectTeacherName || workloadData?.teacherName || ""}
-                          onChange={(e) => setSelectedSubjectTeacherName(e.target.value)}
-                          className={`text-xs font-semibold py-2 pl-3 pr-8 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[220px] truncate cursor-pointer ${
-                            theme === "dark" 
-                              ? "bg-slate-800 border-slate-700 text-slate-200" 
-                              : "bg-slate-50 border-slate-200 text-slate-800"
-                          }`}
-                          title="Boshqa oʻqituvchi yuklamasini koʻrish"
-                        >
-                          {currentUser && (
-                            <option value={currentUser.name}>Mening yuklamam ({currentUser.name})</option>
-                          )}
-                          {allUniqueTeachers.map((t) => (
-                            <option key={t.id + t.name} value={t.name}>
-                              {t.name} ({t.totalHours} s.)
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      {/* Role-based Controls */}
+                      {activeRole === "TEACHER" ? (
+                        <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60 shadow-2xs">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                          <span>Shaxsiy kabinet (faqat oʻzingizning yuklamangiz)</span>
+                        </div>
+                      ) : allowedTeachers.length > 1 ? (
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <select
+                              value={selectedSubjectTeacherName || workloadData?.teacherName || ""}
+                              onChange={(e) => setSelectedSubjectTeacherName(e.target.value)}
+                              className={`text-xs font-semibold py-2 pl-3 pr-8 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[240px] truncate cursor-pointer ${
+                                theme === "dark" 
+                                  ? "bg-slate-800 border-slate-700 text-slate-200" 
+                                  : "bg-slate-50 border-slate-200 text-slate-800"
+                              }`}
+                              title={
+                                activeRole === "HEAD_OF_DEPT"
+                                  ? "Kafedrangiz oʻqituvchisini tanlang"
+                                  : activeRole === "DEAN"
+                                  ? "Fakultetingiz oʻqituvchisini tanlang"
+                                  : "Filial oʻqituvchisini tanlang"
+                              }
+                            >
+                              <optgroup label={
+                                activeRole === "HEAD_OF_DEPT"
+                                  ? `Kafedra oʻqituvchilari (${allowedTeachers.length} nafar)`
+                                  : activeRole === "DEAN"
+                                  ? `Fakultet oʻqituvchilari (${allowedTeachers.length} nafar)`
+                                  : `Filial barcha oʻqituvchilari (${allowedTeachers.length} nafar)`
+                              }>
+                                {allowedTeachers.map((t) => (
+                                  <option key={t.id + t.name} value={t.name}>
+                                    {t.name} ({t.totalHours} s. • {t.department})
+                                  </option>
+                                ))}
+                              </optgroup>
+                            </select>
+                          </div>
 
-                      {selectedSubjectTeacherName && currentUser?.name && selectedSubjectTeacherName !== currentUser.name && (
-                        <button
-                          onClick={() => setSelectedSubjectTeacherName("")}
-                          className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
-                          title="Oʻz shaxsiy profilim yuklamasiga qaytish"
-                        >
-                          Mening yuklamam
-                        </button>
-                      )}
+                          {selectedSubjectTeacherName && currentUser?.name && selectedSubjectTeacherName !== currentUser.name && (
+                            <button
+                              onClick={() => setSelectedSubjectTeacherName(currentUser.name)}
+                              className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                              title="Oʻz shaxsiy dars yuklamamga qaytish"
+                            >
+                              Mening darslarim
+                            </button>
+                          )}
+                        </div>
+                      ) : null}
 
                       <button
                         onClick={handleSyncWorkloads}
@@ -7575,8 +7655,8 @@ export default function KpiEnterpriseApp() {
                   </div>
                 )}
 
-                {/* Department Colleagues Workload Summary */}
-                {deptColleagues.length > 1 && (
+                {/* Department Colleagues Workload Summary (Faqat rahbarlar: Mudir, Dekan va Rektorat uchun) */}
+                {activeRole !== "TEACHER" && deptColleagues.length > 1 && (
                   <div className={`p-5 rounded-2xl border shadow-sm ${
                     theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
                   }`}>
@@ -7584,10 +7664,16 @@ export default function KpiEnterpriseApp() {
                       <div>
                         <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                           <Building className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                          <span>{workloadData?.departmentName} Kafedrasi Oʻqituvchilari Yuklamasi</span>
+                          <span>
+                            {activeRole === "HEAD_OF_DEPT" 
+                              ? `${workloadData?.departmentName || "Kafedra"} Oʻqituvchilari Yuklamasi`
+                              : activeRole === "DEAN"
+                              ? `${currentUser?.faculty || "Fakultet"} Kafedralari Oʻqituvchilari Yuklamasi`
+                              : `${workloadData?.departmentName || "Kafedra"} Oʻqituvchilari Yuklamasi`}
+                          </span>
                         </h4>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          Kafedra boʻyicha jami {deptColleagues.length} nafar oʻqituvchining umumiy dars soatlari
+                          Tegishli boʻlim boʻyicha jami {deptColleagues.length} nafar oʻqituvchining umumiy dars soatlari
                         </p>
                       </div>
                     </div>
@@ -8189,6 +8275,54 @@ export default function KpiEnterpriseApp() {
       {/* MODAL: HEMIS O'QUV YUKLAMASI BATAFSIL TAHLIL MODALI (WORKLOAD MODAL) */}
       {/* ========================================================================= */}
       {selectedWorkloadTeacher && (() => {
+        // Mantiqiy zanjir xavfsizlik nazorati (Security verification):
+        const isAccessAllowed = activeRole === "ADMIN" || activeRole === "RECTORATE"
+          || (activeRole === "TEACHER" && currentUser?.name && (
+              selectedWorkloadTeacher.name.toLowerCase().includes(currentUser.name.toLowerCase())
+              || currentUser.name.toLowerCase().includes(selectedWorkloadTeacher.name.toLowerCase())
+            ))
+          || (activeRole === "HEAD_OF_DEPT" && (
+              selectedWorkloadTeacher.name.toLowerCase().includes(currentUser?.name?.toLowerCase() || "")
+              || (selectedWorkloadTeacher.department && currentUser?.department && (
+                  selectedWorkloadTeacher.department.toLowerCase().includes(currentUser.department.toLowerCase())
+                  || currentUser.department.toLowerCase().includes(selectedWorkloadTeacher.department.toLowerCase())
+                ))
+            ))
+          || (activeRole === "DEAN" && (
+              selectedWorkloadTeacher.name.toLowerCase().includes(currentUser?.name?.toLowerCase() || "")
+              || (() => {
+                  if (!currentUser?.faculty) return false;
+                  const facName = currentUser.faculty.toLowerCase().trim();
+                  const facultyDepts = structureHierarchy?.faculties
+                    ?.find(f => f.name.toLowerCase().includes(facName) || facName.includes(f.name.toLowerCase()))
+                    ?.departments.map(d => d.name.toLowerCase().trim()) || [];
+                  return facultyDepts.some(d => (selectedWorkloadTeacher.department || "").toLowerCase().includes(d) || d.includes((selectedWorkloadTeacher.department || "").toLowerCase()));
+                })()
+            ));
+
+        if (!isAccessAllowed) {
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 text-center ${
+                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+              }`}>
+                <ShieldAlert className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+                <h4 className="text-base font-bold">Ruxsat cheklangan</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                  Mantiqiy zanjir qoidalariga binoan oʻqituvchi faqat oʻzining shaxsiy dars yuklamasini koʻrish huquqiga ega. Boshqa oʻqituvchilar yuklamalarini koʻrish faqat tegishli kafedra mudiri, dekan yoki rahbariyatga ruxsat etilgan.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedWorkloadTeacher(null)}
+                  className="mt-5 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                >
+                  Tushundim, yopish
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         const wData = getTeacherWorkloadData(selectedWorkloadTeacher.id || selectedWorkloadTeacher.name);
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
