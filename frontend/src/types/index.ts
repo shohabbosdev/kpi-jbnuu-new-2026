@@ -121,6 +121,23 @@ export interface AuthUser {
   hemis_id?: number | string;
   image?: string;
   must_change_password?: boolean;
+  permissions?: string[];
+}
+
+export interface RbacPermission {
+  code: string;
+  module: string;
+  name: string;
+  description?: string;
+}
+
+export interface RbacRole {
+  code: string;
+  name: string;
+  description?: string;
+  is_system: boolean;
+  permissions: string[];
+  created_at?: string;
 }
 
 export interface DepartmentHierarchy {

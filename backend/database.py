@@ -411,10 +411,194 @@ def init_db():
         );
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_name ON hemis_doctorate_students(full_name);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_dept ON hemis_doctorate_students(department_name);")
+    # 17. Granular Dynamic RBAC: Roles, Permissions & Role-Permission Matrix
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rbac_roles (
+            code TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            is_system INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rbac_permissions (
+            code TEXT PRIMARY KEY,
+            module TEXT NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT
+        );
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rbac_role_permissions (
+            role_code TEXT NOT NULL,
+            permission_code TEXT NOT NULL,
+            PRIMARY KEY (role_code, permission_code)
+        );
+    """)
+
+    # RBAC standart ruxsatlar katalogini urug'lantirish (Seed Permissions)
+    default_permissions = [
+        # Dashboard & Navigation
+        ("dashboard:view", "Umumiy", "Bosh sahifani koʻrish", "Foydalanuvchi oʻz rolidagi bosh sahifani koʻra oladi"),
+        ("structure:view", "Tuzilma", "Tashkiliy tuzilmani koʻrish", "Filial, fakultetlar va kafedralar ierarxiyasi"),
+        ("logs:view", "Xavfsizlik", "Audit jurnallarini koʻrish", "Tizimga kirishlar va amallar tarixini kuzatish"),
+        
+        # O'quv yuklamalari & Fan kabineti
+        ("subjects:view_own", "Oʻquv yuklamalari", "Shaxsiy yuklamani koʻrish", "Faqat oʻziga biriktirilgan dars soatlarini koʻrish"),
+        ("subjects:view_dept", "Oʻquv yuklamalari", "Kafedra yuklamalarini koʻrish", "Oʻz kafedrasi oʻqituvchilari oʻquv yuklamalarini monitoring qilish"),
+        ("subjects:view_faculty", "Oʻquv yuklamalari", "Fakultet yuklamalarini koʻrish", "Fakultet kafedralari oʻqituvchilari yuklamalarini monitoring qilish"),
+        ("subjects:view_all", "Oʻquv yuklamalari", "Barcha filial yuklamalarini koʻrish", "Filial miqyosidagi barcha oʻqituvchilar yuklamalarini toʻliq koʻrish"),
+        ("subjects:manage_docs", "Oʻquv yuklamalari", "Fan hujjatlarini yuklash", "Sillabus, ishchi dastur va materiallarni kabinetga yuklash"),
+        ("subjects:approve_mudir", "Oʻquv yuklamalari", "Kafedra mudiri tasdigʻi", "Fan hujjatlarini kafedra darajasida tekshirish va tasdiqlash"),
+        ("subjects:approve_dekan", "Oʻquv yuklamalari", "Fakultet dekani tasdigʻi", "Fan hujjatlarini dekanat darajasida tasdiqlash"),
+        
+        # HEMIS integratsiyasi
+        ("hemis:view", "HEMIS", "HEMIS maʼlumotlarini koʻrish", "Xodimlar, yuklamalar, oʻquv rejalari va ilmiy faoliyat"),
+        ("hemis:sync", "HEMIS", "HEMIS bilan toʻliq sinxronlash", "HEMIS REST API dan yangi maʼlumotlarni qayta yuklab olish"),
+        
+        # KPI Baholash & Hujjat topshirish
+        ("kpi:submit", "KPI Baholash", "Natijalar topshirish", "Shaxsiy kabinet orqali mezonlar boʻyicha hisobot topshirish"),
+        ("kpi:review_mudir", "KPI Baholash", "Kafedra mudiri ekspertizasi", "Kafedra aʼzolarining KPI arizalarini dastlabki tekshirish"),
+        ("kpi:review_expert", "KPI Baholash", "Ekspert komissiyasi baholashi", "Tegishli yoʻnalish boʻyicha arizalarni yakuniy baholash"),
+        ("kpi:appeal", "KPI Baholash", "Apellyatsiya berish", "Norozilik arizasini komissiyaga taqdim etish"),
+        ("kpi:appeal_review", "KPI Baholash", "Apellyatsiyani koʻrib chiqish", "Apellyatsiya arizalarini koʻrib chiqish va qaror qabul qilish"),
+        ("svetafor:view", "KPI Baholash", "Svetafor reytingini koʻrish", "Professor-oʻqituvchilarning integral reytingi va ustamalarini koʻrish"),
+        
+        # Tizim boshqaruvi
+        ("users:manage", "Tizim", "Foydalanuvchilarni boshqarish", "Foydalanuvchilar, rollar va parollarni boshqarish"),
+        ("settings:manage", "Tizim", "Tizim sozlamalari", "Baholash davri, mezonlar va komissiya aʼzolarini sozlash"),
+        ("rbac:manage", "Tizim", "Rollar va huquqlarni boshqarish", "Dinamik RBAC rollari va huquqlarini oʻzgartirish")
+    ]
+    cursor.executemany("""
+        INSERT OR IGNORE INTO rbac_permissions (code, module, name, description)
+        VALUES (?, ?, ?, ?)
+    """, default_permissions)
+
+    # Standart tizim rollari (Seed Roles)
+    default_roles = [
+        ("ADMIN", "Tizim Administratori", "Tizimning toʻliq texnik va maʼmuriy boshqaruvi", 1),
+        ("RECTORATE", "Filial Rahbariyati", "Filial miqyosidagi umumiy integral monitoring va nazorat", 1),
+        ("DEAN", "Fakultet Dekani", "Fakultet dekanati boʻyicha monitoring va tasdiqlash", 1),
+        ("HEAD_OF_DEPT", "Kafedra Mudiri", "Kafedra professor-oʻqituvchilari ustidan monitoring va tekshiruv", 1),
+        ("TEACHER", "Professor-oʻqituvchi", "Shaxsiy kabinet, oʻquv yuklamasi va hisobot topshirish", 1)
+    ]
+    cursor.executemany("""
+        INSERT OR IGNORE INTO rbac_roles (code, name, description, is_system)
+        VALUES (?, ?, ?, ?)
+    """, default_roles)
+
+    # Rollar va huquqlar matritsasi (Seed Role-Permissions)
+    role_perms_map = {
+        "ADMIN": [p[0] for p in default_permissions],
+        "RECTORATE": [
+            "dashboard:view", "structure:view", "subjects:view_all", "hemis:view",
+            "svetafor:view", "logs:view"
+        ],
+        "DEAN": [
+            "dashboard:view", "structure:view", "subjects:view_faculty", "subjects:view_own",
+            "subjects:manage_docs", "subjects:approve_dekan", "hemis:view", "kpi:submit",
+            "kpi:appeal", "svetafor:view"
+        ],
+        "HEAD_OF_DEPT": [
+            "dashboard:view", "structure:view", "subjects:view_dept", "subjects:view_own",
+            "subjects:manage_docs", "subjects:approve_mudir", "hemis:view", "kpi:submit",
+            "kpi:review_mudir", "kpi:appeal", "svetafor:view"
+        ],
+        "TEACHER": [
+            "dashboard:view", "subjects:view_own", "subjects:manage_docs", "kpi:submit",
+            "kpi:appeal", "svetafor:view"
+        ]
+    }
+    for r_code, p_list in role_perms_map.items():
+        for p_code in p_list:
+            cursor.execute("""
+                INSERT OR IGNORE INTO rbac_role_permissions (role_code, permission_code)
+                VALUES (?, ?)
+            """, (r_code, p_code))
 
     conn.commit()
     conn.close()
+
+# -------------------------------------------------------------
+# RBAC (Role-Based Access Control) Ma'lumotlar Bazasi Metodlari
+# -------------------------------------------------------------
+def db_get_rbac_roles() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM rbac_roles ORDER BY is_system DESC, code ASC")
+    roles = [dict(r) for r in cursor.fetchall()]
+    for role in roles:
+        role["is_system"] = bool(role.get("is_system", 0))
+        cursor.execute("SELECT permission_code FROM rbac_role_permissions WHERE role_code = ?", (role["code"],))
+        role["permissions"] = [r[0] for r in cursor.fetchall()]
+    conn.close()
+    return roles
+
+def db_get_rbac_permissions() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM rbac_permissions ORDER BY module ASC, code ASC")
+    perms = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return perms
+
+def db_get_user_permissions(role_code: str) -> List[str]:
+    """Berilgan rolga tegishli barcha faol huquq kodlarini olish"""
+    if not role_code:
+        return []
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT permission_code FROM rbac_role_permissions WHERE role_code = ?", (role_code.upper(),))
+    perms = [r[0] for r in cursor.fetchall()]
+    conn.close()
+    return perms
+
+def db_create_rbac_role(code: str, name: str, description: str = "") -> bool:
+    clean_code = code.strip().upper().replace(" ", "_")
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO rbac_roles (code, name, description, is_system)
+            VALUES (?, ?, ?, 0)
+        """, (clean_code, name.strip(), description.strip()))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        conn.close()
+        return False
+
+def db_update_role_permissions(role_code: str, permission_codes: List[str]) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM rbac_role_permissions WHERE role_code = ?", (role_code.upper(),))
+    for p in permission_codes:
+        cursor.execute("""
+            INSERT OR IGNORE INTO rbac_role_permissions (role_code, permission_code)
+            VALUES (?, ?)
+        """, (role_code.upper(), p.strip()))
+    conn.commit()
+    conn.close()
+    return True
+
+def db_delete_rbac_role(role_code: str) -> bool:
+    """Tizim standart rollarini o'chirish taqiqlangan"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT is_system FROM rbac_roles WHERE code = ?", (role_code.upper(),))
+    row = cursor.fetchone()
+    if not row or row[0] == 1:
+        conn.close()
+        return False
+    cursor.execute("DELETE FROM rbac_role_permissions WHERE role_code = ?", (role_code.upper(),))
+    cursor.execute("DELETE FROM rbac_roles WHERE code = ?", (role_code.upper(),))
+    conn.commit()
+    conn.close()
+    return True
 
 # Foydalanuvchilar amallari
 def db_load_users() -> Dict[str, Dict[str, Any]]:

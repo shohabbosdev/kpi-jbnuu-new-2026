@@ -36,7 +36,9 @@ from database import (
     db_save_hemis_subject_teachers, db_get_hemis_subject_teachers,
     db_save_hemis_scientific_activities, db_get_hemis_scientific_activities,
     db_save_hemis_doctorate_students, db_get_hemis_doctorate_students,
-    db_get_hemis_academic_stats
+    db_get_hemis_academic_stats,
+    db_get_rbac_roles, db_get_rbac_permissions, db_get_user_permissions,
+    db_create_rbac_role, db_update_role_permissions, db_delete_rbac_role
 )
 
 
@@ -178,6 +180,7 @@ class UserProfile(BaseModel):
     employee_id_number: Optional[str] = None
     image: Optional[str] = None
     must_change_password: bool = False
+    permissions: List[str] = []
 
 class LoginResponse(BaseModel):
     success: bool
@@ -1001,7 +1004,8 @@ def login(creds: LoginRequest, request: Request):
         fte=user_record.get("fte", 1.0),
         employee_id_number=user_record.get("employee_id_number"),
         image=user_img,
-        must_change_password=must_change
+        must_change_password=must_change,
+        permissions=db_get_user_permissions(user_record["role"])
     )
 
     success_msg = f"Tizimga muvaffaqiyatli kirdi (IP: {client_ip}, Rol: {user_record['role']}, Birlamchi parol holati: {'Almashtirish shart' if must_change else 'Faol'})"
@@ -3449,6 +3453,51 @@ def verify_publication(token: str):
         "is_recommended": pub.get("council_status") == "APPROVED",
         "publication": pub
     }
+
+# =============================================================
+# Granular Dynamic RBAC (Role-Based Access Control) Endpoints
+# =============================================================
+class CreateRoleRequest(BaseModel):
+    code: str
+    name: str
+    description: Optional[str] = ""
+
+class UpdateRolePermissionsRequest(BaseModel):
+    permissions: List[str]
+
+@app.get("/api/rbac/roles")
+def get_rbac_roles_endpoint():
+    """Barcha rollar va ularga biriktirilgan huquqlar ro'yxati"""
+    roles = db_get_rbac_roles()
+    return {"success": True, "roles": roles}
+
+@app.get("/api/rbac/permissions")
+def get_rbac_permissions_endpoint():
+    """Tizimda mavjud barcha huquqlar katalogi"""
+    perms = db_get_rbac_permissions()
+    return {"success": True, "permissions": perms}
+
+@app.post("/api/rbac/roles")
+def create_rbac_role_endpoint(req: CreateRoleRequest):
+    """Yangi rol yaratish"""
+    ok = db_create_rbac_role(req.code, req.name, req.description or "")
+    if not ok:
+        raise HTTPException(status_code=400, detail="Ushbu rol kodi allaqachon mavjud yoki noto'g'ri")
+    return {"success": True, "message": f"'{req.name}' roli muvaffaqiyatli yaratildi"}
+
+@app.put("/api/rbac/roles/{role_code}/permissions")
+def update_role_permissions_endpoint(role_code: str, req: UpdateRolePermissionsRequest):
+    """Rolga tegishli huquqlarni yangilash"""
+    db_update_role_permissions(role_code, req.permissions)
+    return {"success": True, "message": f"'{role_code}' roli huquqlari yangilandi"}
+
+@app.delete("/api/rbac/roles/{role_code}")
+def delete_rbac_role_endpoint(role_code: str):
+    """Maxsus yaratilgan rolni o'chirish"""
+    ok = db_delete_rbac_role(role_code)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Tizim standart rollarini o'chirish taqiqlanadi")
+    return {"success": True, "message": f"'{role_code}' roli o'chirildi"}
 
 if __name__ == "__main__":
     import uvicorn

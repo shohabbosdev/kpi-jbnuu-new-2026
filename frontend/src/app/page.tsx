@@ -106,6 +106,8 @@ import { AdminSettingsPanel } from "@/components/AdminSettingsPanel";
 import { HemisIntegrationPanel } from "@/components/HemisIntegrationPanel";
 import { SearchableTeacherSelect } from "@/components/SearchableTeacherSelect";
 import { AdminDashboardView } from "@/components/AdminDashboardView";
+import { RbacRolesPanel } from "@/components/RbacRolesPanel";
+import { hasPermission } from "@/utils/rbac";
 
 export default function KpiEnterpriseApp() {
   // Authentication State
@@ -121,7 +123,7 @@ export default function KpiEnterpriseApp() {
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators" | "profile" | "subjects"
+    "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators" | "profile" | "subjects" | "admin_rbac"
   >("dashboard");
 
   // Teacher Subjects & Workload Page State
@@ -2886,6 +2888,19 @@ export default function KpiEnterpriseApp() {
                 {!sidebarCollapsed && <span>Tizim sozlamalari</span>}
               </button>
               <button
+                onClick={() => setActivePage("admin_rbac")}
+                title="Dinamik rollar va ruxsatlar (RBAC)"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "admin_rbac"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                  }`}
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Rollar va huquqlar (RBAC)</span>}
+              </button>
+              <button
                 onClick={() => setActivePage("admin_indicators")}
                 title="Baholash mezonlari (CRUD)"
                 className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "admin_indicators"
@@ -3602,6 +3617,18 @@ export default function KpiEnterpriseApp() {
               setIsAddEvaluatorModalOpen={setIsAddEvaluatorModalOpen}
               handleDeleteEvaluator={handleDeleteEvaluator}
               theme={theme}
+            />
+          )}
+
+          {/* ========================================================================= */}
+          {/* ADMIN VIEW: GRANULAR RBAC ROLES & PERMISSIONS */}
+          {/* ========================================================================= */}
+          {activePage === "admin_rbac" && (
+            <RbacRolesPanel
+              theme={theme}
+              API_BASE={API_BASE}
+              showAlert={showAlert}
+              showConfirm={showConfirm}
             />
           )}
 

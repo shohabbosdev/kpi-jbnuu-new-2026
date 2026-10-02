@@ -16,7 +16,8 @@ import {
   IconUser,
   IconBuilding,
   IconBook,
-  IconDatabase
+  IconDatabase,
+  IconShield
 } from "./AppCustomIcons";
 import {
   Activity,
@@ -283,6 +284,31 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </p>
               <div className="mt-2 text-[11px] font-semibold text-blue-900 dark:text-blue-400 font-mono">
                 {totalUsersCount} ta roʻyxatdan oʻtgan hisob
+              </div>
+            </div>
+          </button>
+
+          {/* RBAC Rollar va Huquqlar */}
+          <button
+            type="button"
+            onClick={() => setActivePage("admin_rbac")}
+            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${
+              theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-indigo-800" : "bg-white border-slate-200 hover:border-indigo-300"
+            }`}
+          >
+            <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 flex items-center justify-center shrink-0">
+              <IconShield size={24} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center justify-between">
+                <span>Rollar va Huquqlar (RBAC)</span>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                Dinamik ruxsatlar matritsasi va maxsus lavozimlar boshqaruvi.
+              </p>
+              <div className="mt-2 text-[11px] font-semibold text-indigo-700 dark:text-indigo-400">
+                21 ta granular ruxsat
               </div>
             </div>
           </button>
