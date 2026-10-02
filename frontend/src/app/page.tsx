@@ -105,6 +105,7 @@ import { SubjectWorkloadDistribution } from "@/components/SubjectWorkloadDistrib
 import { AdminSettingsPanel } from "@/components/AdminSettingsPanel";
 import { HemisIntegrationPanel } from "@/components/HemisIntegrationPanel";
 import { SearchableTeacherSelect } from "@/components/SearchableTeacherSelect";
+import { AdminDashboardView } from "@/components/AdminDashboardView";
 
 export default function KpiEnterpriseApp() {
   // Authentication State
@@ -4543,6 +4544,26 @@ export default function KpiEnterpriseApp() {
                 />
               </div>
             </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* ADMIN VIEW: ADMIN DASHBOARD */}
+          {/* ========================================================================= */}
+          {activePage === "dashboard" && activeRole === "ADMIN" && (
+            <AdminDashboardView
+              theme={theme}
+              currentUser={currentUser}
+              systemSettings={systemSettings}
+              hemisStatus={hemisStatus}
+              hemisStats={hemisStats}
+              structureHierarchy={structureHierarchy}
+              teachers={teachers}
+              adminUsers={adminUsers}
+              submissions={submissions}
+              appeals={appeals}
+              adminLogs={adminLogs}
+              setActivePage={setActivePage}
+            />
           )}
 
           {/* ========================================================================= */}
