@@ -2286,8 +2286,10 @@ export default function KpiEnterpriseApp() {
 
   // Filtered indicators list
   let filteredIndicators = indicators;
-  if (selectedBlockFilter !== "ALL") {
-    filteredIndicators = filteredIndicators.filter(i => i.block === selectedBlockFilter);
+  if (selectedBlockFilter.toUpperCase() !== "ALL") {
+    filteredIndicators = filteredIndicators.filter(i =>
+      (i.block || "").toLowerCase() === selectedBlockFilter.toLowerCase()
+    );
   }
 
   // Filtered HEMIS Employees
@@ -3679,20 +3681,26 @@ export default function KpiEnterpriseApp() {
                     { id: "ILM", label: "Ilmiy-tadqiqot (2.x)" },
                     { id: "XAL", label: "Xalqaro hamkorlik (3.x)" },
                     { id: "MAN", label: "Maʼnaviy-maʼrifiy (4.x)" },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setSelectedBlockFilter(tab.id)}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${selectedBlockFilter === tab.id
-                        ? "bg-blue-900 text-white shadow-sm"
-                        : theme === "dark"
-                          ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                  ].map((tab) => {
+                    const isTabActive = selectedBlockFilter.toLowerCase() === tab.id.toLowerCase();
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setSelectedBlockFilter(tab.id);
+                          setIndicatorsPage(1);
+                        }}
+                        className={`px-3 py-1.5 rounded-lg font-medium transition-all ${isTabActive
+                          ? "bg-blue-900 text-white shadow-sm"
+                          : theme === "dark"
+                            ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -3715,79 +3723,83 @@ export default function KpiEnterpriseApp() {
                     </thead>
                     <tbody className={`divide-y ${theme === "dark" ? "divide-slate-800" : "divide-slate-100"}`}>
                       {indicators
-                        .filter(i => selectedBlockFilter === "ALL" || i.block === selectedBlockFilter)
+                        .filter(i => selectedBlockFilter.toUpperCase() === "ALL" || (i.block || "").toLowerCase() === selectedBlockFilter.toLowerCase())
                         .slice((indicatorsPage - 1) * indicatorsPerPage, indicatorsPage * indicatorsPerPage)
-                        .map((ind) => (
-                          <tr key={ind.id} className={`transition-colors ${theme === "dark" ? "hover:bg-slate-800/50" : "hover:bg-slate-50"}`}>
-                            <td className={`py-3.5 px-4 font-mono font-bold text-xs ${theme === "dark" ? "text-blue-400" : "text-blue-900"}`}>
-                              {ind.id}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${ind.block === "ILM"
-                                ? theme === "dark" ? "bg-purple-950/60 text-purple-300 border-purple-800" : "bg-purple-50 text-purple-800 border-purple-200"
-                                : ind.block === "OQV"
-                                  ? theme === "dark" ? "bg-blue-950/60 text-blue-300 border-blue-800" : "bg-blue-50 text-blue-800 border-blue-100"
-                                  : ind.block === "XAL"
-                                    ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                    : theme === "dark" ? "bg-amber-950/60 text-amber-300 border-amber-800" : "bg-amber-50 text-amber-800 border-amber-200"
-                                }`}>
-                                {ind.block}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 max-w-md">
-                              <div className={`font-semibold text-xs leading-snug ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{ind.name}</div>
-                              <div className="text-[11px] text-slate-400 mt-0.5 font-mono">Yaroqlilik: {ind.validity}</div>
-                            </td>
-                            <td className={`py-3.5 px-4 font-bold text-xs ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
-                              {ind.max_ball} ball
-                            </td>
-                            <td className={`py-3.5 px-4 text-xs ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>
-                              {ind.dept}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${ind.is_active !== false
-                                ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                : theme === "dark" ? "bg-slate-800 text-slate-400 border-slate-700" : "bg-slate-100 text-slate-500 border-slate-200"
-                                }`}>
-                                {ind.is_active !== false ? "Faol" : "Arxivlangan"}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => {
-                                    setEditingIndicator(ind);
-                                    setIndFormId(ind.id);
-                                    setIndFormName(ind.name);
-                                    setIndFormBlock(ind.block);
-                                    setIndFormMaxBall(ind.max_ball);
-                                    setIndFormValidity(ind.validity);
-                                    setIndFormDept(ind.dept);
-                                    setIndFormError("");
-                                    setIsAddIndicatorModalOpen(true);
-                                  }}
-                                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${theme === "dark" ? "bg-slate-800 hover:bg-slate-700 text-slate-200" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                                    }`}
-                                >
-                                  Tahrirlash
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteIndicator(ind.id)}
-                                  className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${theme === "dark" ? "bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border-rose-800" : "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200"
-                                    }`}
-                                >
-                                  Arxivlash
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                        .map((ind) => {
+                          const b = (ind.block || "").toLowerCase();
+                          const badgeLabel = b === "ilm" ? "Ilmiy" : b === "oqv" ? "Oʻquv" : b === "xal" ? "Xalqaro" : "Maʼnaviy";
+                          const badgeStyle = b === "ilm"
+                            ? (theme === "dark" ? "bg-purple-950/60 text-purple-300 border-purple-800" : "bg-purple-50 text-purple-800 border-purple-200")
+                            : b === "oqv"
+                              ? (theme === "dark" ? "bg-blue-950/60 text-blue-300 border-blue-800" : "bg-blue-50 text-blue-800 border-blue-100")
+                              : b === "xal"
+                                ? (theme === "dark" ? "bg-amber-950/60 text-amber-300 border-amber-800" : "bg-amber-50 text-amber-800 border-amber-200")
+                                : (theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200");
+                          return (
+                            <tr key={ind.id} className={`transition-colors ${theme === "dark" ? "hover:bg-slate-800/50" : "hover:bg-slate-50"}`}>
+                              <td className={`py-3.5 px-4 font-mono font-bold text-xs ${theme === "dark" ? "text-blue-400" : "text-blue-900"}`}>
+                                {ind.id}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${badgeStyle}`}>
+                                  {badgeLabel}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 max-w-md">
+                                <div className={`font-semibold text-xs leading-snug ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{ind.name}</div>
+                                <div className="text-[11px] text-slate-400 mt-0.5 font-mono">Yaroqlilik: {ind.validity}</div>
+                              </td>
+                              <td className={`py-3.5 px-4 font-bold text-xs ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
+                                {ind.max_ball} ball
+                              </td>
+                              <td className={`py-3.5 px-4 text-xs ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                                {ind.dept}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${ind.is_active !== false
+                                  ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                  : theme === "dark" ? "bg-slate-800 text-slate-400 border-slate-700" : "bg-slate-100 text-slate-500 border-slate-200"
+                                  }`}>
+                                  {ind.is_active !== false ? "Faol" : "Arxivlangan"}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setEditingIndicator(ind);
+                                      setIndFormId(ind.id);
+                                      setIndFormName(ind.name);
+                                      setIndFormBlock(ind.block);
+                                      setIndFormMaxBall(ind.max_ball);
+                                      setIndFormValidity(ind.validity);
+                                      setIndFormDept(ind.dept);
+                                      setIndFormError("");
+                                      setIsAddIndicatorModalOpen(true);
+                                    }}
+                                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${theme === "dark" ? "bg-slate-800 hover:bg-slate-700 text-slate-200" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                      }`}
+                                  >
+                                    Tahrirlash
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteIndicator(ind.id)}
+                                    className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${theme === "dark" ? "bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border-rose-800" : "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200"
+                                      }`}
+                                  >
+                                    Arxivlash
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
 
                   {/* Pagination Bar for Indicators */}
                   {(() => {
-                    const blockFiltered = indicators.filter(i => selectedBlockFilter === "ALL" || i.block === selectedBlockFilter);
+                    const blockFiltered = indicators.filter(i => selectedBlockFilter.toUpperCase() === "ALL" || (i.block || "").toLowerCase() === selectedBlockFilter.toLowerCase());
                     const totalPages = Math.ceil(blockFiltered.length / indicatorsPerPage) || 1;
                     const safePage = Math.max(1, Math.min(indicatorsPage, totalPages));
                     return (
