@@ -104,6 +104,7 @@ import { SubjectCabinet } from "@/components/SubjectCabinet";
 import { SubjectWorkloadDistribution } from "@/components/SubjectWorkloadDistribution";
 import { AdminSettingsPanel } from "@/components/AdminSettingsPanel";
 import { HemisIntegrationPanel } from "@/components/HemisIntegrationPanel";
+import { SearchableTeacherSelect } from "@/components/SearchableTeacherSelect";
 
 export default function KpiEnterpriseApp() {
   // Authentication State
@@ -6164,42 +6165,19 @@ export default function KpiEnterpriseApp() {
                         </div>
                       ) : allowedTeachers.length > 1 ? (
                         <div className="flex items-center gap-2">
-                          <div className="relative">
-                            <select
-                              value={selectedSubjectTeacherName || workloadData?.teacherName || ""}
-                              onChange={(e) => setSelectedSubjectTeacherName(e.target.value)}
-                              className={`text-xs font-semibold py-2 pl-3 pr-8 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[240px] truncate cursor-pointer ${theme === "dark"
-                                ? "bg-slate-800 border-slate-700 text-slate-200"
-                                : "bg-slate-50 border-slate-200 text-slate-800"
-                                }`}
-                              title={
-                                activeRole === "HEAD_OF_DEPT"
-                                  ? "Kafedrangiz oʻqituvchisini tanlang"
-                                  : activeRole === "DEAN"
-                                    ? "Fakultetingiz oʻqituvchisini tanlang"
-                                    : "Filial oʻqituvchisini tanlang"
-                              }
-                            >
-                              <optgroup label={
-                                activeRole === "HEAD_OF_DEPT"
-                                  ? `Kafedra oʻqituvchilari (${allowedTeachers.length} nafar)`
-                                  : activeRole === "DEAN"
-                                    ? `Fakultet oʻqituvchilari (${allowedTeachers.length} nafar)`
-                                    : `Filial barcha oʻqituvchilari (${allowedTeachers.length} nafar)`
-                              }>
-                                {allowedTeachers.map((t) => (
-                                  <option key={t.id + t.name} value={t.name}>
-                                    {t.name} ({t.totalHours} s. • {t.department})
-                                  </option>
-                                ))}
-                              </optgroup>
-                            </select>
-                          </div>
+                          <SearchableTeacherSelect
+                            teachers={allowedTeachers}
+                            selectedTeacherName={selectedSubjectTeacherName || workloadData?.teacherName || ""}
+                            onSelectTeacher={(name) => setSelectedSubjectTeacherName(name)}
+                            activeRole={activeRole}
+                            currentUserName={currentUser?.name}
+                            theme={theme}
+                          />
 
                           {selectedSubjectTeacherName && currentUser?.name && selectedSubjectTeacherName !== currentUser.name && (
                             <button
                               onClick={() => setSelectedSubjectTeacherName(currentUser.name)}
-                              className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                              className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
                               title="Oʻz shaxsiy dars yuklamamga qaytish"
                             >
                               Mening darslarim

@@ -1130,7 +1130,7 @@ def get_structure_hierarchy():
                     "id": 6,
                     "name": "Biotexnologiya",
                     "code": "401-101-02",
-                    "head": "Dots. Karimov Jamshid Anvarovich",
+                    "head": "Dots. Oʻralov Abdumannon Iskandarovich",
                     "head_fte": 1.0,
                     "teachers_count": 16,
                     "avg_score": 79.4
@@ -1148,7 +1148,7 @@ def get_structure_hierarchy():
                     "id": 77,
                     "name": "Psixologiya kafedrasi",
                     "code": "401-102-09",
-                    "head": "Dots. Umarova Dilfuza Mahmudovna",
+                    "head": "Dots. Norbekova Barno Shavkatovna",
                     "head_fte": 1.0,
                     "teachers_count": 26,
                     "avg_score": 85.0
