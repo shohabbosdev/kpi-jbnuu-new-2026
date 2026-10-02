@@ -285,13 +285,13 @@ export const RbacRolesPanel: React.FC<RbacRolesPanelProps> = ({
 
       {/* Asosiy Ishchi Maydon: Chapda Rollar, O'ngda Huquqlar Matritsasi */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Chap ustun: Rollar Ro'yxati (4 ustun) */}
-        <div className="lg:col-span-4 space-y-2">
+        {/* Chap ustun: Rollar Ro'yxati (4 ustun, sticky va mustaqil scroll bilan) */}
+        <div className="lg:col-span-4 space-y-2 lg:sticky lg:top-6">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1 mb-2">
             Mavjud Rollar ({roles.length} ta)
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
             {roles.map((role) => {
               const isSelected = role.code === selectedRoleCode;
               return (
@@ -357,14 +357,14 @@ export const RbacRolesPanel: React.FC<RbacRolesPanelProps> = ({
 
         {/* O'ng ustun: Tanlangan Rol Huquqlari Matritsasi (8 ustun) */}
         <div
-          className={`lg:col-span-8 rounded-3xl border shadow-sm p-6 ${
+          className={`lg:col-span-8 rounded-3xl border shadow-sm p-6 flex flex-col ${
             theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
           }`}
         >
           {selectedRole ? (
-            <div className="space-y-6">
-              {/* Rol Tafsilotlari va Saqlash Tugmasi */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="space-y-4">
+              {/* Rol Tafsilotlari va Saqlash Tugmasi (Doim ko'rinib turadigan sticky header) */}
+              <div className="sticky -top-6 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md pb-4 pt-1 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="text-base font-bold text-slate-900 dark:text-white">
@@ -390,8 +390,8 @@ export const RbacRolesPanel: React.FC<RbacRolesPanelProps> = ({
                 </button>
               </div>
 
-              {/* Modullar va Huquqlar Ro'yxati */}
-              <div className="space-y-5">
+              {/* Modullar va Huquqlar Ro'yxati (Ichki mustaqil scroll bilan) */}
+              <div className="space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2">
                 {Object.entries(groupedPermissions).map(([moduleName, modulePerms]) => {
                   const allInModuleSelected = modulePerms.every((p) =>
                     activePermissions.includes(p.code)
