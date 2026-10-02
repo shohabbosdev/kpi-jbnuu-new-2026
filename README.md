@@ -69,7 +69,26 @@ npm install
 npm run build
 npm run start -- -p 3000
 ```
-Brauzerda `http://localhost:3000` manzilini oching.
+### 4. Docker & Docker Compose orqali ishga tushirish (Tavsiya etiladi)
+
+Loyiha toʻliq konteynerlashtirilgan. Barcha xizmatlarni (Frontend, Backend, Nginx) birgina buyruq bilan ishga tushirish mumkin:
+
+```bash
+# Konteynerlarni yig'ish va ishga tushirish:
+docker compose up -d --build
+
+# Konteynerlar holatini tekshirish:
+docker compose ps
+
+# Loglarni kuzatish:
+docker compose logs -f
+```
+Platforma manzillari:
+- **Asosiy tizim (Nginx orqali):** `http://localhost` (Port 80)
+- **Frontend (Next.js):** `http://localhost:3000`
+- **Backend API (FastAPI):** `http://localhost:8080/docs`
+
+> **Fayl yuklash cheklovi:** Tizimda xavfsizlik va server barqarorligini taʼminlash maqsadida bitta asoslovchi hujjat hajmi **maksimal 10 MB** (PDF, DOCX, ZIP, JPG, PNG) etib belgilangan. Ushbu qoida Nginx (`client_max_body_size 10M`), FastAPI backend va Frontend formalarida qatʼiy nazorat qilinadi.
 
 ---
 

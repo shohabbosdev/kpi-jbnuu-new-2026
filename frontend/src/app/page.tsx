@@ -6314,12 +6314,27 @@ export default function KpiEnterpriseApp() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Qoʻshimcha tasdiqlovchi hujjat (PDF)</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Qoʻshimcha tasdiqlovchi hujjat (PDF)</label>
+                        <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">Maks. 10 MB</span>
+                      </div>
                       <input
                         type="file"
                         accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file && file.size > 10 * 1024 * 1024) {
+                            showAlert({
+                              title: "Hajm cheklovi",
+                              message: "Yuklanadigan hujjat hajmi 10 MB dan oshmasligi kerak!",
+                              type: "warning"
+                            });
+                            e.target.value = "";
+                          }
+                        }}
                         className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300"
                       />
+                      <p className="text-[10px] text-slate-400 mt-1">Eslatma: Fayl hajmi 10 MB gacha boʻlishi lozim (PDF formatda)</p>
                     </div>
                   </div>
 
@@ -6962,9 +6977,12 @@ export default function KpiEnterpriseApp() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          5. Asoslovchi fayl (PDF / DOCX) *
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                            5. Asoslovchi fayl (PDF / DOCX) *
+                          </label>
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">Maks. 10 MB</span>
+                        </div>
                         <label className="cursor-pointer flex flex-col items-center justify-center p-2.5 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 rounded-lg bg-slate-50 dark:bg-slate-800/40 hover:bg-blue-50/30 transition-all text-center">
                           <input
                             type="file"
@@ -6972,6 +6990,15 @@ export default function KpiEnterpriseApp() {
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                if (file.size > 10 * 1024 * 1024) {
+                                  showAlert({
+                                    title: "Fayl hajmi 10 MB dan katta",
+                                    message: `Tanlangan fayl hajmi (${(file.size / (1024 * 1024)).toFixed(1)} MB) ruxsat etilgan 10 MB meʼyoridan oshib ketdi. Iltimos, faylni siqib yoki kichikroq hajmda yuklang.`,
+                                    type: "warning"
+                                  });
+                                  e.target.value = "";
+                                  return;
+                                }
                                 setModalUploadedFile(file);
                                 setModalUploadedFileName(file.name);
                               }
@@ -6989,7 +7016,7 @@ export default function KpiEnterpriseApp() {
                                   setModalUploadedFile(null);
                                   setModalUploadedFileName("");
                                 }}
-                                className="text-xs text-rose-500 hover:text-rose-700 ml-1 font-bold"
+                                className="text-xs text-rose-500 hover:text-rose-700 ml-1 font-bold cursor-pointer"
                                 title="Faylni olib tashlash"
                               >
                                 ✕
@@ -7002,6 +7029,10 @@ export default function KpiEnterpriseApp() {
                             </div>
                           )}
                         </label>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                          <span className="text-amber-500 font-bold">ℹ Eslatma:</span>
+                          <span>Bitta yuklanadigan fayl hajmi <strong>10 MB</strong> dan oshmasligi lozim.</span>
+                        </p>
                       </div>
                     </div>
 

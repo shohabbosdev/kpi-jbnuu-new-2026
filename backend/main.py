@@ -845,13 +845,13 @@ if db_saved_users:
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".zip", ".rar", ".png", ".jpg", ".jpeg"}
-MAX_FILE_SIZE_MB = 15
+MAX_FILE_SIZE_MB = 10
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     """
     KPI daliliy hujjatlarini xavfsiz qabul qilish va diskka saqlash.
-    Maksimal hajm: 15 MB. Ruxsat etilgan formatlar: PDF, DOCX, ZIP, PNG, JPG.
+    Maksimal hajm: 10 MB. Ruxsat etilgan formatlar: PDF, DOCX, ZIP, PNG, JPG.
     """
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
