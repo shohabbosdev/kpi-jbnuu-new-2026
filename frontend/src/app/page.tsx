@@ -490,6 +490,41 @@ function NavbarCountdownTimer({ settings, theme, onOpenSettings }: NavbarCountdo
   useEffect(() => {
     setMounted(true);
 
+    const parseDateSafe = (dateStr?: string): number | null => {
+      if (!dateStr) return null;
+      const trimmed = String(dateStr).trim();
+
+      // YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss
+      if (/^\d{4}-\d{1,2}-\d{1,2}/.test(trimmed)) {
+        const clean = trimmed.includes("T") ? trimmed.split("T")[0] : trimmed;
+        const d = new Date(`${clean}T23:59:59`);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+
+      // DD.MM.YYYY (masalan 15.06.2026 yoki 25.10.2026)
+      if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(trimmed)) {
+        const parts = trimmed.split(".");
+        const day = parts[0].padStart(2, "0");
+        const month = parts[1].padStart(2, "0");
+        const year = parts[2];
+        const d = new Date(`${year}-${month}-${day}T23:59:59`);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+
+      // DD/MM/YYYY
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(trimmed)) {
+        const parts = trimmed.split("/");
+        const day = parts[0].padStart(2, "0");
+        const month = parts[1].padStart(2, "0");
+        const year = parts[2];
+        const d = new Date(`${year}-${month}-${day}T23:59:59`);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+
+      const fallback = new Date(trimmed).getTime();
+      return isNaN(fallback) ? null : fallback;
+    };
+
     const calculateTime = () => {
       const stage = settings.current_stage || "ALL_OPEN";
 
@@ -500,30 +535,56 @@ function NavbarCountdownTimer({ settings, theme, onOpenSettings }: NavbarCountdo
           minutes: 0,
           seconds: 0,
           isExpired: true,
-          stageName: "Reyting yakunlangan",
+          stageName: !settings.submissions_open ? "Qabul toʻxtatilgan" : "Reyting yakunlangan",
           targetDateStr: "",
           isClosed: true
         };
       }
 
-      let stageLabel = "Qabul davri";
-      let dateStr = settings.submission_deadline || settings.deadline_date || "";
+      const now = Date.now();
+      const subTime = parseDateSafe(settings.submission_deadline || settings.deadline_date);
+      const revTime = parseDateSafe(settings.review_deadline);
+      const appTime = parseDateSafe(settings.appeal_deadline);
 
-      if (stage === "SUBMISSION_STAGE") {
+      let targetTime: number | null = null;
+      let stageLabel = "Ariza topshirish";
+      let targetDateDisplay = settings.submission_deadline || settings.deadline_date || "";
+
+      if (stage === "ALL_OPEN") {
+        // Intellektual ketma-ketlik: Hali o'tmagan eng birinchi bosqich muddatini ko'rsatadi
+        if (subTime && subTime > now) {
+          stageLabel = "Ariza topshirish";
+          targetTime = subTime;
+          targetDateDisplay = settings.submission_deadline || settings.deadline_date || "";
+        } else if (revTime && revTime > now) {
+          stageLabel = "Ekspertlar baholashi";
+          targetTime = revTime;
+          targetDateDisplay = settings.review_deadline || "";
+        } else if (appTime && appTime > now) {
+          stageLabel = "Apellyatsiya davri";
+          targetTime = appTime;
+          targetDateDisplay = settings.appeal_deadline || "";
+        } else {
+          // Barcha sanalar o'tgan bo'lsa, eng oxirgi belgilangan sanani olamiz
+          targetTime = appTime || revTime || subTime;
+          stageLabel = "Baholash muddati";
+          targetDateDisplay = settings.appeal_deadline || settings.review_deadline || settings.submission_deadline || "";
+        }
+      } else if (stage === "SUBMISSION_STAGE") {
         stageLabel = "Ariza topshirish";
-        dateStr = settings.submission_deadline || settings.deadline_date || "";
+        targetTime = subTime;
+        targetDateDisplay = settings.submission_deadline || settings.deadline_date || "";
       } else if (stage === "REVIEW_STAGE") {
         stageLabel = "Ekspertlar baholashi";
-        dateStr = settings.review_deadline || "";
+        targetTime = revTime;
+        targetDateDisplay = settings.review_deadline || "";
       } else if (stage === "APPEAL_STAGE") {
         stageLabel = "Apellyatsiya davri";
-        dateStr = settings.appeal_deadline || "";
-      } else if (stage === "ALL_OPEN") {
-        stageLabel = "Baholash muddati";
-        dateStr = settings.submission_deadline || settings.deadline_date || "";
+        targetTime = appTime;
+        targetDateDisplay = settings.appeal_deadline || "";
       }
 
-      if (!dateStr) {
+      if (!targetTime) {
         return {
           days: 0,
           hours: 0,
@@ -536,13 +597,9 @@ function NavbarCountdownTimer({ settings, theme, onOpenSettings }: NavbarCountdo
         };
       }
 
-      // Deadline ni ko'rsatilgan kunning oxiri (23:59:59) deb hisoblaymiz
-      const cleanDate = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
-      const targetTime = new Date(`${cleanDate}T23:59:59`).getTime();
-      const now = Date.now();
       const diff = targetTime - now;
 
-      if (isNaN(targetTime) || diff <= 0) {
+      if (diff <= 0) {
         return {
           days: 0,
           hours: 0,
@@ -550,7 +607,7 @@ function NavbarCountdownTimer({ settings, theme, onOpenSettings }: NavbarCountdo
           seconds: 0,
           isExpired: true,
           stageName: stageLabel,
-          targetDateStr: cleanDate,
+          targetDateStr: targetDateDisplay,
           isClosed: false
         };
       }
@@ -567,7 +624,7 @@ function NavbarCountdownTimer({ settings, theme, onOpenSettings }: NavbarCountdo
         seconds,
         isExpired: false,
         stageName: stageLabel,
-        targetDateStr: cleanDate,
+        targetDateStr: targetDateDisplay,
         isClosed: false
       };
     };
@@ -721,10 +778,10 @@ export default function KpiEnterpriseApp() {
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
     academic_year: "2025/2026-oʻquv yili",
     submissions_open: true,
-    deadline_date: "2026-05-30",
-    submission_deadline: "2026-06-15",
-    review_deadline: "2026-06-25",
-    appeal_deadline: "2026-07-05",
+    deadline_date: "2026-10-25",
+    submission_deadline: "2026-10-25",
+    review_deadline: "2026-11-05",
+    appeal_deadline: "2026-11-15",
     current_stage: "ALL_OPEN",
     budget_cap_monthly: 150000000.0
   });
@@ -3988,7 +4045,7 @@ export default function KpiEnterpriseApp() {
                     <input
                       type="date"
                       required
-                      value={systemSettings.review_deadline || "2026-06-25"}
+                      value={systemSettings.review_deadline || "2026-11-05"}
                       onChange={(e) => setSystemSettings({ ...systemSettings, review_deadline: e.target.value })}
                       className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
                         theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
@@ -4006,7 +4063,7 @@ export default function KpiEnterpriseApp() {
                     <input
                       type="date"
                       required
-                      value={systemSettings.appeal_deadline || "2026-07-05"}
+                      value={systemSettings.appeal_deadline || "2026-11-15"}
                       onChange={(e) => setSystemSettings({ ...systemSettings, appeal_deadline: e.target.value })}
                       className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
                         theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"

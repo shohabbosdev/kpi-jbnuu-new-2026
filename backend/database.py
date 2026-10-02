@@ -393,10 +393,10 @@ def db_save_settings(data: Dict[str, Any]):
     """, (
         data.get("academic_year", "2025/2026-oʻquv yili"),
         1 if data.get("submissions_open", True) else 0,
-        data.get("deadline_date", "2026-05-30"),
-        data.get("submission_deadline", "2026-06-15"),
-        data.get("review_deadline", "2026-06-25"),
-        data.get("appeal_deadline", "2026-07-05"),
+        data.get("deadline_date", "2026-10-25"),
+        data.get("submission_deadline", "2026-10-25"),
+        data.get("review_deadline", "2026-11-05"),
+        data.get("appeal_deadline", "2026-11-15"),
         data.get("current_stage", "ALL_OPEN"),
         data.get("budget_cap_monthly", 150000000.0)
     ))
@@ -413,9 +413,10 @@ def db_load_settings() -> Optional[Dict[str, Any]]:
         return None
     d = dict(row)
     d["submissions_open"] = bool(d.get("submissions_open", 1))
-    d["submission_deadline"] = d.get("submission_deadline") or "2026-06-15"
-    d["review_deadline"] = d.get("review_deadline") or "2026-06-25"
-    d["appeal_deadline"] = d.get("appeal_deadline") or "2026-07-05"
+    d["submission_deadline"] = d.get("submission_deadline") or "2026-10-25"
+    d["review_deadline"] = d.get("review_deadline") or "2026-11-05"
+    d["appeal_deadline"] = d.get("appeal_deadline") or "2026-11-15"
+    d["deadline_date"] = d.get("deadline_date") or "2026-10-25"
     d["current_stage"] = d.get("current_stage") or "ALL_OPEN"
     return d
 

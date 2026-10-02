@@ -397,7 +397,11 @@ USERS_DB: Dict[str, Dict[str, Any]] = {
 SYSTEM_SETTINGS = SystemSettings(
     academic_year="2025/2026-oʻquv yili",
     submissions_open=True,
-    deadline_date="2026-05-30",
+    deadline_date="2026-10-25",
+    submission_deadline="2026-10-25",
+    review_deadline="2026-11-05",
+    appeal_deadline="2026-11-15",
+    current_stage="ALL_OPEN",
     budget_cap_monthly=150000000.0  # 150 mln so'm
 )
 
