@@ -29,7 +29,12 @@ from database import (
     db_save_course_doc, db_get_course_docs, db_update_course_doc_review,
     db_get_course_doc_by_token, db_delete_course_doc,
     db_save_publication, db_get_publications, db_update_publication_stage,
-    db_update_publication_mygov, db_get_publication_by_token, db_delete_publication
+    db_update_publication_mygov, db_get_publication_by_token, db_delete_publication,
+    db_save_hemis_curriculums, db_get_hemis_curriculums,
+    db_save_hemis_curriculum_subjects, db_get_hemis_curriculum_subjects,
+    db_save_hemis_subject_resources, db_get_hemis_subject_resources,
+    db_save_hemis_subject_teachers, db_get_hemis_subject_teachers,
+    db_get_hemis_academic_stats
 )
 
 
@@ -2502,6 +2507,172 @@ def get_single_teacher_workload(emp_id_or_name: str):
         "subjects_count": len(items),
         "subjects": items
     }
+
+# -------------------------------------------------------------
+# HEMIS O'QUV REJALAR, FANLAR VA ELEKTRON RESURSLAR INTEGRATSIYASI
+# -------------------------------------------------------------
+
+def fetch_all_hemis_curriculums():
+    """HEMIS API dan barcha o'quv rejalarni (curriculums) yuklab olish (197 ta)"""
+    url = f"{HEMIS_BASE_URL}/data/curriculum-list?limit=200"
+    try:
+        res = requests.get(url, headers=get_hemis_headers(), timeout=20)
+        if res.status_code == 200:
+            items = res.json().get("data", {}).get("items", [])
+            if items:
+                db_save_hemis_curriculums(items)
+            return items
+    except Exception as e:
+        print(f"Error fetching curriculums: {e}")
+    return []
+
+def fetch_all_hemis_curriculum_subjects(max_pages: int = 5):
+    """HEMIS API dan o'quv reja fanlarini yuklab olish"""
+    items = []
+    for page in range(1, max_pages + 1):
+        url = f"{HEMIS_BASE_URL}/data/curriculum-subject-list?page={page}&limit=200"
+        try:
+            res = requests.get(url, headers=get_hemis_headers(), timeout=20)
+            if res.status_code != 200:
+                break
+            p_items = res.json().get("data", {}).get("items", [])
+            if not p_items:
+                break
+            items.extend(p_items)
+            if len(p_items) < 200:
+                break
+        except Exception:
+            break
+    if items:
+        db_save_hemis_curriculum_subjects(items)
+    return items
+
+def fetch_all_hemis_subject_resources(max_pages: int = 3):
+    """HEMIS API dan o'quv resurslari va yuklangan fayllar ro'yxatini yuklab olish"""
+    items = []
+    for page in range(1, max_pages + 1):
+        url = f"{HEMIS_BASE_URL}/data/subject-file-resource-list?page={page}&limit=200"
+        try:
+            res = requests.get(url, headers=get_hemis_headers(), timeout=25)
+            if res.status_code != 200:
+                break
+            p_items = res.json().get("data", {}).get("items", [])
+            if not p_items:
+                break
+            items.extend(p_items)
+            if len(p_items) < 200:
+                break
+        except Exception:
+            break
+    if items:
+        db_save_hemis_subject_resources(items)
+    return items
+
+def fetch_all_hemis_subject_teachers(max_pages: int = 5):
+    """HEMIS API dan fanlarga biriktirilgan o'qituvchilar va guruhlarni yuklab olish"""
+    items = []
+    for page in range(1, max_pages + 1):
+        url = f"{HEMIS_BASE_URL}/data/curriculum-subject-teacher-list?page={page}&limit=200"
+        try:
+            res = requests.get(url, headers=get_hemis_headers(), timeout=20)
+            if res.status_code != 200:
+                break
+            p_items = res.json().get("data", {}).get("items", [])
+            if not p_items:
+                break
+            items.extend(p_items)
+            if len(p_items) < 200:
+                break
+        except Exception:
+            break
+    if items:
+        db_save_hemis_subject_teachers(items)
+    return items
+
+_last_academic_sync_timestamp = 0
+
+@app.post("/api/hemis/sync-academic")
+def sync_hemis_academic_data():
+    """
+    HEMIS dan o'quv rejalar, fanlar, elektron resurslar va o'qituvchi biriktiruvlarini sinxronlash.
+    Faqat Administrator tomonidan chaqirilishi mumkin. Anti-spam (30s) himoyalangan.
+    """
+    global _last_academic_sync_timestamp
+    import time
+    now = time.time()
+    
+    if now - _last_academic_sync_timestamp < 30:
+        stats = db_get_hemis_academic_stats()
+        return {
+            "success": True,
+            "message": "HEMIS oʻquv maʼlumotlari yaqinda sinxronlangan.",
+            "stats": stats
+        }
+        
+    try:
+        currs = fetch_all_hemis_curriculums()
+        subjs = fetch_all_hemis_curriculum_subjects(max_pages=5)
+        res = fetch_all_hemis_subject_resources(max_pages=3)
+        teachers = fetch_all_hemis_subject_teachers(max_pages=5)
+        _last_academic_sync_timestamp = time.time()
+        
+        stats = db_get_hemis_academic_stats()
+        audit_msg = (
+            f"HEMIS oʻquv mezonlari sinxronlandi: {stats['curriculums_count']} ta oʻquv reja, "
+            f"{stats['curriculum_subjects_count']} ta fan, {stats['subject_resources_count']} ta oʻquv resurs/fayl, "
+            f"{stats['subject_teachers_count']} ta dars biriktiruvi."
+        )
+        db_save_audit_log(datetime.now().strftime("%Y-%m-%d %H:%M"), "ADMIN", audit_msg)
+        AUDIT_LOGS.insert(0, {
+            "id": len(AUDIT_LOGS) + 1,
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "user": "ADMIN",
+            "action": audit_msg
+        })
+        
+        return {
+            "success": True,
+            "message": f"HEMIS oʻquv rejalari va resurslari muvaffaqiyatli yangilandi!",
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"HEMIS oʻquv maʼlumotlarini sinxronlashda xatolik: {str(e)}")
+
+@app.get("/api/hemis/academic-stats")
+def get_hemis_academic_stats():
+    """HEMIS o'quv rejalari va resurslari bo'yicha bazadagi jami statistika"""
+    stats = db_get_hemis_academic_stats()
+    return {"success": True, "stats": stats}
+
+@app.get("/api/hemis/curriculums")
+def get_hemis_curriculums():
+    """O'quv rejalar ro'yxati (197 ta)"""
+    items = db_get_hemis_curriculums()
+    if not items:
+        fetch_all_hemis_curriculums()
+        items = db_get_hemis_curriculums()
+    return {"success": True, "items": items}
+
+@app.get("/api/hemis/curriculum-subjects")
+def get_hemis_curriculum_subjects(curriculum_id: Optional[int] = None, subject_name: Optional[str] = None):
+    """O'quv reja fanlari ro'yxati, soatlar taqsimoti va kreditlar"""
+    items = db_get_hemis_curriculum_subjects(curriculum_id=curriculum_id, subject_name=subject_name)
+    return {"success": True, "items": items}
+
+@app.get("/api/hemis/subject-resources")
+def get_hemis_subject_resources(employee_name: Optional[str] = None, subject_name: Optional[str] = None):
+    """
+    HEMIS ga yuklangan fan resurslari va fayllar ro'yxati (https://hemis.jbnuu.uz/static/... bevosita havolalari bilan).
+    O'qituvchi yoki fan nomi bo'yicha filtrlash mumkin.
+    """
+    items = db_get_hemis_subject_resources(employee_name=employee_name, subject_name=subject_name)
+    return {"success": True, "items": items}
+
+@app.get("/api/hemis/subject-teachers")
+def get_hemis_subject_teachers(employee_name: Optional[str] = None, subject_name: Optional[str] = None):
+    """Fanlarga biriktirilgan o'qituvchilar va talabalar guruhlari"""
+    items = db_get_hemis_subject_teachers(employee_name=employee_name, subject_name=subject_name)
+    return {"success": True, "items": items}
 
 
 

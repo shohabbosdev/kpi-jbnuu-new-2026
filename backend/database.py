@@ -280,6 +280,98 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_pub_subject ON publication_recommendations(subject_name);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_pub_token ON publication_recommendations(verification_token);")
     
+    # 11. HEMIS O'quv rejalar (Curriculums)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS hemis_curriculums (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            specialty_code TEXT,
+            specialty_name TEXT,
+            department_name TEXT,
+            department_code TEXT,
+            education_year TEXT,
+            education_type TEXT,
+            education_form TEXT,
+            marking_system TEXT,
+            semester_count INTEGER DEFAULT 8,
+            education_period INTEGER DEFAULT 4,
+            is_active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    # 12. HEMIS O'quv rejadagi fanlar (Curriculum Subjects)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS hemis_curriculum_subjects (
+            id INTEGER PRIMARY KEY,
+            curriculum_id INTEGER,
+            subject_id INTEGER,
+            subject_name TEXT NOT NULL,
+            subject_code TEXT,
+            subject_type TEXT,
+            subject_block TEXT,
+            semester_name TEXT,
+            semester_code TEXT,
+            total_acload INTEGER DEFAULT 0,
+            credit INTEGER DEFAULT 0,
+            lecture_hours INTEGER DEFAULT 0,
+            practical_hours INTEGER DEFAULT 0,
+            seminar_hours INTEGER DEFAULT 0,
+            lab_hours INTEGER DEFAULT 0,
+            independent_hours INTEGER DEFAULT 0,
+            department_name TEXT,
+            resource_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_curr_subj_name ON hemis_curriculum_subjects(subject_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_curr_subj_cid ON hemis_curriculum_subjects(curriculum_id);")
+
+    # 13. HEMIS Fan resurslari (Subject File Resources - Ma'ruza, Amaliyot fayllari)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS hemis_subject_resources (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            subject_id INTEGER,
+            subject_name TEXT NOT NULL,
+            subject_code TEXT,
+            training_type TEXT,
+            employee_id INTEGER,
+            employee_name TEXT NOT NULL,
+            resource_type TEXT,
+            file_name TEXT,
+            file_size INTEGER DEFAULT 0,
+            file_url TEXT NOT NULL,
+            updated_at_ts INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_res_emp_name ON hemis_subject_resources(employee_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_res_subj_name ON hemis_subject_resources(subject_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_res_subj_id ON hemis_subject_resources(subject_id);")
+
+    # 14. HEMIS Fanlarga biriktirilgan o'qituvchilar va guruhlar (Subject Teachers)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS hemis_subject_teachers (
+            id INTEGER PRIMARY KEY,
+            curriculum_id INTEGER,
+            semester_code TEXT,
+            education_year TEXT,
+            department_id INTEGER,
+            subject_id INTEGER,
+            subject_name TEXT NOT NULL,
+            subject_code TEXT,
+            employee_id INTEGER,
+            employee_name TEXT NOT NULL,
+            training_type TEXT,
+            group_id INTEGER,
+            students_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_st_emp_name ON hemis_subject_teachers(employee_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_st_subj_name ON hemis_subject_teachers(subject_name);")
+    
     conn.commit()
     conn.close()
 
@@ -1078,6 +1170,282 @@ def db_delete_publication(pub_id: int):
     cursor.execute("DELETE FROM publication_recommendations WHERE id = ?", (pub_id,))
     conn.commit()
     conn.close()
+
+# -------------------------------------------------------------
+# HEMIS O'quv rejalar (Curriculums)
+# -------------------------------------------------------------
+def db_save_hemis_curriculums(items: List[Dict[str, Any]]) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM hemis_curriculums")
+    
+    rows = []
+    for it in items:
+        spec = it.get("specialty") or {}
+        dept = it.get("department") or {}
+        eyear = it.get("educationYear") or {}
+        etype = it.get("educationType") or {}
+        eform = it.get("educationForm") or {}
+        msys = it.get("markingSystem") or {}
+        rows.append((
+            it.get("id"),
+            it.get("name", ""),
+            spec.get("code", ""),
+            spec.get("name", ""),
+            dept.get("name", ""),
+            dept.get("code", ""),
+            eyear.get("name", ""),
+            etype.get("name", ""),
+            eform.get("name", ""),
+            msys.get("name", ""),
+            it.get("semester_count", 8),
+            it.get("education_period", 4),
+            1 if it.get("active", True) else 0
+        ))
+    cursor.executemany("""
+        INSERT OR REPLACE INTO hemis_curriculums (
+            id, name, specialty_code, specialty_name, department_name, department_code,
+            education_year, education_type, education_form, marking_system,
+            semester_count, education_period, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, rows)
+    conn.commit()
+    count = cursor.rowcount
+    conn.close()
+    return count
+
+def db_get_hemis_curriculums() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM hemis_curriculums ORDER BY education_year DESC, name ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+# -------------------------------------------------------------
+# HEMIS O'quv rejadagi fanlar (Curriculum Subjects)
+# -------------------------------------------------------------
+def db_save_hemis_curriculum_subjects(items: List[Dict[str, Any]]) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM hemis_curriculum_subjects")
+    
+    rows = []
+    for it in items:
+        subj = it.get("subject") or {}
+        stype = it.get("subjectType") or {}
+        sblock = it.get("subjectBlock") or {}
+        sem = it.get("semester") or {}
+        dept = it.get("department") or {}
+        
+        # Details (hours breakdown)
+        details = it.get("subjectDetails") or []
+        lec = 0
+        prac = 0
+        sem_h = 0
+        lab = 0
+        indep = 0
+        for d in details:
+            t_type = (d.get("trainingType") or {}).get("code")
+            load = int(d.get("academic_load") or 0)
+            if t_type == "11":
+                lec += load
+            elif t_type == "13":
+                prac += load
+            elif t_type == "14":
+                sem_h += load
+            elif t_type == "12":
+                lab += load
+            elif t_type == "17":
+                indep += load
+                
+        rows.append((
+            it.get("id"),
+            it.get("_curriculum"),
+            subj.get("id"),
+            subj.get("name", ""),
+            subj.get("code", ""),
+            stype.get("name", ""),
+            sblock.get("name", ""),
+            sem.get("name", ""),
+            str(sem.get("code", "")),
+            int(it.get("total_acload") or 0),
+            int(it.get("credit") or 0),
+            lec, prac, sem_h, lab, indep,
+            dept.get("name", ""),
+            int(it.get("resource_count") or 0)
+        ))
+    cursor.executemany("""
+        INSERT OR REPLACE INTO hemis_curriculum_subjects (
+            id, curriculum_id, subject_id, subject_name, subject_code,
+            subject_type, subject_block, semester_name, semester_code,
+            total_acload, credit, lecture_hours, practical_hours,
+            seminar_hours, lab_hours, independent_hours,
+            department_name, resource_count
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, rows)
+    conn.commit()
+    count = cursor.rowcount
+    conn.close()
+    return count
+
+def db_get_hemis_curriculum_subjects(curriculum_id: Optional[int] = None, subject_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM hemis_curriculum_subjects WHERE 1=1"
+    params = []
+    if curriculum_id:
+        query += " AND curriculum_id = ?"
+        params.append(curriculum_id)
+    if subject_name:
+        query += " AND subject_name LIKE ?"
+        params.append(f"%{subject_name.strip()}%")
+    query += " ORDER BY semester_code ASC, subject_name ASC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+# -------------------------------------------------------------
+# HEMIS Fan resurslari (Subject File Resources)
+# -------------------------------------------------------------
+def db_save_hemis_subject_resources(items: List[Dict[str, Any]]) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM hemis_subject_resources")
+    
+    rows = []
+    for it in items:
+        subj = it.get("subject") or {}
+        ttype = it.get("trainingType") or {}
+        emp = it.get("employee") or {}
+        
+        # Files list
+        file_items = it.get("subjectFileResourceItems") or []
+        for fi in file_items:
+            rtype = fi.get("resourceType") or {}
+            files = fi.get("files") or []
+            ts = fi.get("updated_at") or it.get("updated_at") or 0
+            for f in files:
+                rows.append((
+                    it.get("id"),
+                    it.get("title", ""),
+                    subj.get("id"),
+                    subj.get("name", ""),
+                    subj.get("code", ""),
+                    ttype.get("name", ""),
+                    emp.get("id"),
+                    emp.get("name", ""),
+                    rtype.get("name", ""),
+                    f.get("name", ""),
+                    int(f.get("size") or 0),
+                    f.get("url", ""),
+                    ts
+                ))
+    cursor.executemany("""
+        INSERT OR REPLACE INTO hemis_subject_resources (
+            id, title, subject_id, subject_name, subject_code,
+            training_type, employee_id, employee_name,
+            resource_type, file_name, file_size, file_url, updated_at_ts
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, rows)
+    conn.commit()
+    count = cursor.rowcount
+    conn.close()
+    return count
+
+def db_get_hemis_subject_resources(employee_name: Optional[str] = None, subject_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM hemis_subject_resources WHERE 1=1"
+    params = []
+    if employee_name:
+        query += " AND employee_name LIKE ?"
+        params.append(f"%{employee_name.strip()}%")
+    if subject_name:
+        query += " AND subject_name LIKE ?"
+        params.append(f"%{subject_name.strip()}%")
+    query += " ORDER BY updated_at_ts DESC, id DESC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+# -------------------------------------------------------------
+# HEMIS Fanlarga biriktirilgan o'qituvchilar va guruhlar (Subject Teachers)
+# -------------------------------------------------------------
+def db_save_hemis_subject_teachers(items: List[Dict[str, Any]]) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM hemis_subject_teachers")
+    
+    rows = []
+    for it in items:
+        subj = it.get("subject") or {}
+        emp = it.get("employee") or {}
+        ttype = (it.get("curriculumSubjectDetail") or {}).get("trainingType") or {}
+        rows.append((
+            it.get("id"),
+            it.get("_curriculum"),
+            str(it.get("_semester") or ""),
+            str(it.get("_education_year") or ""),
+            it.get("_department"),
+            subj.get("id"),
+            subj.get("name", ""),
+            subj.get("code", ""),
+            emp.get("id"),
+            emp.get("name", ""),
+            ttype.get("name", ""),
+            it.get("_group"),
+            int(it.get("students_count") or 0)
+        ))
+    cursor.executemany("""
+        INSERT OR REPLACE INTO hemis_subject_teachers (
+            id, curriculum_id, semester_code, education_year, department_id,
+            subject_id, subject_name, subject_code,
+            employee_id, employee_name, training_type, group_id, students_count
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, rows)
+    conn.commit()
+    count = cursor.rowcount
+    conn.close()
+    return count
+
+def db_get_hemis_subject_teachers(employee_name: Optional[str] = None, subject_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM hemis_subject_teachers WHERE 1=1"
+    params = []
+    if employee_name:
+        query += " AND employee_name LIKE ?"
+        params.append(f"%{employee_name.strip()}%")
+    if subject_name:
+        query += " AND subject_name LIKE ?"
+        params.append(f"%{subject_name.strip()}%")
+    query += " ORDER BY id DESC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def db_get_hemis_academic_stats() -> Dict[str, Any]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM hemis_curriculums")
+    c_count = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM hemis_curriculum_subjects")
+    cs_count = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM hemis_subject_resources")
+    res_count = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM hemis_subject_teachers")
+    st_count = cursor.fetchone()[0]
+    conn.close()
+    return {
+        "curriculums_count": c_count,
+        "curriculum_subjects_count": cs_count,
+        "subject_resources_count": res_count,
+        "subject_teachers_count": st_count
+    }
 
 # Bazani ishga tushirish
 init_db()

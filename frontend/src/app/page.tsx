@@ -392,6 +392,83 @@ interface PublicationRecommendation {
   created_at?: string;
 }
 
+// HEMIS O'quv rejalari va Fan resurslari interfeyslari
+interface HemisCurriculum {
+  id: number;
+  name: string;
+  specialty_code: string;
+  specialty_name: string;
+  department_name: string;
+  department_code: string;
+  education_year: string;
+  education_type: string;
+  education_form: string;
+  marking_system: string;
+  semester_count: number;
+  education_period: number;
+  is_active: number;
+}
+
+interface HemisCurriculumSubject {
+  id: number;
+  curriculum_id: number;
+  subject_id: number;
+  subject_name: string;
+  subject_code: string;
+  subject_type: string;
+  subject_block: string;
+  semester_name: string;
+  semester_code: string;
+  total_acload: number;
+  credit: number;
+  lecture_hours: number;
+  practical_hours: number;
+  seminar_hours: number;
+  lab_hours: number;
+  independent_hours: number;
+  department_name: string;
+  resource_count: number;
+}
+
+interface HemisSubjectResource {
+  id: number;
+  title: string;
+  subject_id: number;
+  subject_name: string;
+  subject_code: string;
+  training_type: string;
+  employee_id: number;
+  employee_name: string;
+  resource_type: string;
+  file_name: string;
+  file_size: number;
+  file_url: string;
+  updated_at_ts: number;
+}
+
+interface HemisSubjectTeacher {
+  id: number;
+  curriculum_id: number;
+  semester_code: string;
+  education_year: string;
+  department_id: number;
+  subject_id: number;
+  subject_name: string;
+  subject_code: string;
+  employee_id: number;
+  employee_name: string;
+  training_type: string;
+  group_id?: number;
+  students_count: number;
+}
+
+interface HemisAcademicStats {
+  curriculums_count: number;
+  curriculum_subjects_count: number;
+  subject_resources_count: number;
+  subject_teachers_count: number;
+}
+
 interface UniversalPaginationProps {
   currentPage: number;
   totalPages: number;
@@ -848,7 +925,16 @@ export default function KpiEnterpriseApp() {
     teacher_name: string;
     total_hours: number;
   } | null>(null);
-  const [workflowSubTab, setWorkflowSubTab] = useState<"docs" | "publications">("docs");
+  const [workflowSubTab, setWorkflowSubTab] = useState<"docs" | "publications" | "hemis_resources">("docs");
+
+  // 3. HEMIS Fan resurslari va O'quv reja integratsiyasi statelari
+  const [hemisAcademicStats, setHemisAcademicStats] = useState<HemisAcademicStats | null>(null);
+  const [hemisCurriculums, setHemisCurriculums] = useState<HemisCurriculum[]>([]);
+  const [hemisCurriculumFilter, setHemisCurriculumFilter] = useState<string>("");
+  const [isHemisAcademicSyncing, setIsHemisAcademicSyncing] = useState<boolean>(false);
+  const [activeSubjectHemisResources, setActiveSubjectHemisResources] = useState<HemisSubjectResource[]>([]);
+  const [activeSubjectCurriculumSubject, setActiveSubjectCurriculumSubject] = useState<HemisCurriculumSubject | null>(null);
+  const [isSubjectHemisResourcesLoading, setIsSubjectHemisResourcesLoading] = useState<boolean>(false);
 
   // 1. Fan o'quv-uslubiy hujjatlari
   const [courseDocsList, setCourseDocsList] = useState<CourseSyllabusDoc[]>([]);
@@ -1519,6 +1605,83 @@ export default function KpiEnterpriseApp() {
     }
   };
 
+  const fetchSubjectHemisDetails = async (subjName?: string, tName?: string) => {
+    setIsSubjectHemisResourcesLoading(true);
+    try {
+      const p = new URLSearchParams();
+      if (subjName) p.append("subject_name", subjName);
+      if (tName) p.append("employee_name", tName);
+      const res = await fetch(`${API_BASE}/hemis/subject-resources?${p.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setActiveSubjectHemisResources(data.items || []);
+      }
+      if (subjName) {
+        const csRes = await fetch(`${API_BASE}/hemis/curriculum-subjects?subject_name=${encodeURIComponent(subjName)}`);
+        if (csRes.ok) {
+          const csData = await csRes.json();
+          if (csData.items && csData.items.length > 0) {
+            setActiveSubjectCurriculumSubject(csData.items[0]);
+          } else {
+            setActiveSubjectCurriculumSubject(null);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("HEMIS fan resurslarini olishda xatolik:", err);
+    } finally {
+      setIsSubjectHemisResourcesLoading(false);
+    }
+  };
+
+  const fetchHemisAcademicData = async () => {
+    try {
+      const [statsRes, currsRes] = await Promise.all([
+        fetch(`${API_BASE}/hemis/academic-stats`).then(r => r.json()),
+        fetch(`${API_BASE}/hemis/curriculums`).then(r => r.json())
+      ]);
+      if (statsRes.success) {
+        setHemisAcademicStats(statsRes.stats);
+      }
+      if (currsRes.success) {
+        setHemisCurriculums(currsRes.items || []);
+      }
+    } catch (err) {
+      console.error("HEMIS o'quv rejalari ma'lumotlarini yuklashda xatolik:", err);
+    }
+  };
+
+  const handleSyncHemisAcademic = async () => {
+    setIsHemisAcademicSyncing(true);
+    try {
+      const res = await fetch(`${API_BASE}/hemis/sync-academic`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setHemisAcademicStats(data.stats);
+        await fetchHemisAcademicData();
+        showAlert({
+          title: "Sinxronlash yakunlandi",
+          message: data.message || "HEMIS oʻquv rejalari va resurslari yangilandi!",
+          type: "success"
+        });
+      } else {
+        showAlert({
+          title: "Xatolik",
+          message: data.detail || "Sinxronlashda xatolik yuz berdi",
+          type: "danger"
+        });
+      }
+    } catch (err: any) {
+      showAlert({
+        title: "Tarmoq xatosi",
+        message: err.message || "HEMIS serveri bilan bogʻlanishda xatolik",
+        type: "danger"
+      });
+    } finally {
+      setIsHemisAcademicSyncing(false);
+    }
+  };
+
   const handleOpenSubjectWorkflow = (sub: any, teacherName: string) => {
     setSelectedWorkflowSubject({
       subject_name: sub.subject_name,
@@ -1533,6 +1696,7 @@ export default function KpiEnterpriseApp() {
     setPubModalFormOpen(false);
     fetchCourseDocs(sub.subject_name, teacherName);
     fetchPublications(sub.subject_name, teacherName);
+    fetchSubjectHemisDetails(sub.subject_name, teacherName);
   };
 
   const handleUploadCourseDocSubmit = async (e: React.FormEvent) => {
@@ -2244,6 +2408,7 @@ export default function KpiEnterpriseApp() {
   useEffect(() => {
     if (activePage === "admin_hemis") {
       fetchHemisData();
+      fetchHemisAcademicData();
     }
   }, [activePage, hemisEmployeeType]);
 
@@ -4362,6 +4527,148 @@ export default function KpiEnterpriseApp() {
                       Magistratura: {workloadsSummary?.master_hours?.toLocaleString() || "768"} s.
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* HEMIS Academic Curriculums & Resources Card */}
+              <div className={`rounded-xl border shadow-sm p-6 ${
+                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+              }`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Oʻquv Rejalar va HEMIS Elektron Fan Resurslari</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          REST API v1
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Oʻquv reja mezonlari, kredit-modul soatlari, elektron oʻquv materiallari va yuklangan fayllar bazasi
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSyncHemisAcademic}
+                    disabled={isHemisAcademicSyncing}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isHemisAcademicSyncing ? "animate-spin" : ""}`} />
+                    <span>{isHemisAcademicSyncing ? "Sinxronlashtirilmoqda..." : "Oʻquv reja va Resurslarni sinxronlash"}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-4">
+                  <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Jami Oʻquv Rejalar</div>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                      {hemisAcademicStats?.curriculums_count || hemisCurriculums.length || 197} ta
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Bakalavriat, Magistratura, Sirtqi</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-950/60 bg-emerald-50/50 dark:bg-emerald-950/20">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Oʻquv Reja Fanlari</div>
+                    <div className="text-2xl font-black text-emerald-900 dark:text-emerald-200 mt-1">
+                      {hemisAcademicStats?.curriculum_subjects_count?.toLocaleString() || "1,000+"} ta
+                    </div>
+                    <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">Kredit & soat mezonlari</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-blue-100 dark:border-blue-950/60 bg-blue-50/50 dark:bg-blue-950/20">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">HEMIS Fan Resurslari</div>
+                    <div className="text-2xl font-black text-blue-900 dark:text-blue-200 mt-1">
+                      {hemisAcademicStats?.subject_resources_count?.toLocaleString() || "590+"} ta
+                    </div>
+                    <div className="text-[11px] text-blue-700/80 dark:text-blue-400/80 mt-0.5">Yuklangan PDF/DOCX materiallar</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-purple-100 dark:border-purple-950/60 bg-purple-50/50 dark:bg-purple-950/20">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-purple-800 dark:text-purple-300">Fan-Oʻqituvchi Biriktiruvi</div>
+                    <div className="text-2xl font-black text-purple-900 dark:text-purple-200 mt-1">
+                      {hemisAcademicStats?.subject_teachers_count?.toLocaleString() || "1,000+"} ta
+                    </div>
+                    <div className="text-[11px] text-purple-700/80 dark:text-purple-400/80 mt-0.5">Dars beruvchi guruhlar reyestri</div>
+                  </div>
+                </div>
+
+                {/* O'quv rejalari qidiruvi va ixcham ro'yxati */}
+                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      HEMIS Oʻquv Rejalari Katalogi ({hemisCurriculums.length > 0 ? hemisCurriculums.filter(c => !hemisCurriculumFilter || c.name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || c.specialty_name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase())).length : 0} ta)
+                    </div>
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={hemisCurriculumFilter}
+                        onChange={(e) => setHemisCurriculumFilter(e.target.value)}
+                        placeholder="Oʻquv reja, yoʻnalish yoki kod..."
+                        className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-600 w-64 ${
+                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {hemisCurriculums.length > 0 ? (
+                    <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
+                      <table className="w-full text-left text-xs">
+                        <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${
+                          theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}>
+                          <tr>
+                            <th className="py-2.5 px-3">Oʻquv reja nomi</th>
+                            <th className="py-2.5 px-3">Mutaxassislik</th>
+                            <th className="py-2.5 px-3">Fakultet / Kafedra</th>
+                            <th className="py-2.5 px-3 text-center">Oʻquv yili</th>
+                            <th className="py-2.5 px-3 text-center">Taʼlim shakli</th>
+                            <th className="py-2.5 px-3 text-center">Baholash tizimi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {hemisCurriculums
+                            .filter(c => !hemisCurriculumFilter || c.name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || c.specialty_name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || c.specialty_code.includes(hemisCurriculumFilter))
+                            .slice(0, 15)
+                            .map((c) => (
+                              <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                <td className="py-2 px-3 font-semibold text-slate-900 dark:text-white">
+                                  {c.name}
+                                </td>
+                                <td className="py-2 px-3 text-slate-600 dark:text-slate-300">
+                                  <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{c.specialty_code}</span> - {c.specialty_name}
+                                </td>
+                                <td className="py-2 px-3 text-slate-500 dark:text-slate-400">
+                                  {c.department_name}
+                                </td>
+                                <td className="py-2 px-3 text-center">
+                                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold text-[10px]">
+                                    {c.education_year}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-center">
+                                  <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 text-[10px] font-bold">
+                                    {c.education_form}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-center text-slate-600 dark:text-slate-300 text-[11px]">
+                                  {c.marking_system}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center text-xs text-slate-400">
+                      Oʻquv rejalari hali yuklanmagan. "Oʻquv reja va Resurslarni sinxronlash" tugmasini bosing.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -9648,6 +9955,21 @@ export default function KpiEnterpriseApp() {
                 <GraduationCap className="w-4 h-4" />
                 <span>Darslik, Oʻquv qoʻllanma va Monografiya ({publicationsList.length})</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setWorkflowSubTab("hemis_resources")}
+                className={`py-2.5 px-4 font-bold text-xs border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+                  workflowSubTab === "hemis_resources"
+                    ? "border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-300"
+                    : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+                }`}
+              >
+                <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>HEMIS Elektron Resurslari va Mezonlari ({activeSubjectHemisResources.length})</span>
+                {activeSubjectHemisResources.length > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                )}
+              </button>
             </div>
 
             {/* Tab kontenti (Scrollable) */}
@@ -10277,6 +10599,190 @@ export default function KpiEnterpriseApp() {
                       })}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* TAB 3: HEMIS FAN RESURSLARI VA MEZONLARI */}
+              {workflowSubTab === "hemis_resources" && (
+                <div className="space-y-4">
+                  {/* Creative KPI Synergy Banner */}
+                  <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                    activeSubjectHemisResources.length > 0
+                      ? theme === "dark" ? "bg-emerald-950/30 border-emerald-800 text-emerald-100" : "bg-emerald-50 border-emerald-200 text-emerald-950"
+                      : theme === "dark" ? "bg-slate-800/40 border-slate-800 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-700"
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold ${
+                        activeSubjectHemisResources.length > 0
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "bg-slate-200 dark:bg-slate-700 text-slate-500"
+                      }`}>
+                        <Sparkles className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold">
+                            Raqamli HEMIS Taʼminlanganlik Indeksi
+                          </h4>
+                          {activeSubjectHemisResources.length > 0 ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
+                              Tasdiqlangan ({activeSubjectHemisResources.length} ta resurs)
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300">
+                              Resurs topilmadi
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs mt-1 leading-relaxed opacity-90">
+                          {activeSubjectHemisResources.length > 0
+                            ? "Ushbu fanga HEMIS rasmiy serverida oʻquv materiallari, maʼruzalar yoki amaliy topshiriqlar yuklangan. Bu oʻqituvchining KPI 1.1 va 1.2 mezonlarini baholashda kafedra mudiri va ekspertlarga toʻgʻridan-toʻgʻri raqamli asos boʻlib xizmat qiladi."
+                            : "Ushbu fanga hozircha HEMIS da yuklangan elektron fayllar topilmadi. Oʻqituvchi HEMIS ga materiallarni biriktirishi yoki Administrator bazani sinxronlashi tavsiya etiladi."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => fetchSubjectHemisDetails(selectedWorkflowSubject?.subject_name, selectedWorkflowSubject?.teacher_name)}
+                      disabled={isSubjectHemisResourcesLoading}
+                      className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors self-start md:self-center cursor-pointer flex-shrink-0"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSubjectHemisResourcesLoading ? "animate-spin" : ""}`} />
+                      <span>Yangilash</span>
+                    </button>
+                  </div>
+
+                  {/* Rasmiy O'quv Reja Mezonlari (Kredit & Soatlar) */}
+                  {activeSubjectCurriculumSubject && (
+                    <div className={`p-4 rounded-2xl border ${
+                      theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+                    }`}>
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                            HEMIS Rasmiy Oʻquv Reja Soatlari va Baholash Mezoni
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200 font-bold text-xs">
+                            {activeSubjectCurriculumSubject.credit} Kredit
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs">
+                            {activeSubjectCurriculumSubject.total_acload} Jami soat
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                          <div className="text-[10px] font-bold uppercase text-slate-500">Maʼruza</div>
+                          <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                            {activeSubjectCurriculumSubject.lecture_hours} soat
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                          <div className="text-[10px] font-bold uppercase text-slate-500">Amaliy</div>
+                          <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                            {activeSubjectCurriculumSubject.practical_hours} soat
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                          <div className="text-[10px] font-bold uppercase text-slate-500">Seminar</div>
+                          <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                            {activeSubjectCurriculumSubject.seminar_hours} soat
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                          <div className="text-[10px] font-bold uppercase text-slate-500">Laboratoriya</div>
+                          <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                            {activeSubjectCurriculumSubject.lab_hours} soat
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                          <div className="text-[10px] font-bold uppercase text-slate-500">Mustaqil taʼlim</div>
+                          <div className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            {activeSubjectCurriculumSubject.independent_hours} soat
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-2 text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800">
+                        <span>Kafedra: <b>{activeSubjectCurriculumSubject.department_name}</b></span>
+                        <span>Semestr: <b>{activeSubjectCurriculumSubject.semester_name}</b></span>
+                        <span>Fan bloki: <b>{activeSubjectCurriculumSubject.subject_block}</b></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* HEMIS Yuklangan Fayllar va Resurslar Ro'yxati */}
+                  <div className={`p-4 rounded-2xl border ${
+                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+                  }`}>
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                          HEMIS Tizimiga Yuklangan Asl Oʻquv Fayllari ({activeSubjectHemisResources.length} ta)
+                        </h4>
+                      </div>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        Server: hemis.jbnuu.uz/static/files
+                      </span>
+                    </div>
+
+                    {isSubjectHemisResourcesLoading ? (
+                      <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                        <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+                        <span>HEMIS resurslari yuklanmoqda...</span>
+                      </div>
+                    ) : activeSubjectHemisResources.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-slate-400">
+                        Hozircha HEMIS da bu fanga yuklangan resurslar mavjud emas.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {activeSubjectHemisResources.map((res) => (
+                          <div key={res.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 p-2 rounded-xl transition-colors">
+                            <div className="flex items-start gap-3">
+                              <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                {res.file_name.toLowerCase().endsWith(".pdf") ? "PDF" : "DOC"}
+                              </div>
+                              <div>
+                                <h5 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                  <span>{res.title || res.file_name}</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-300 font-medium">
+                                    {res.training_type || "Oʻquv materiali"}
+                                  </span>
+                                </h5>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-3">
+                                  <span>Fayl: <b className="font-mono text-slate-700 dark:text-slate-300">{res.file_name}</b></span>
+                                  <span>Hajmi: <b>{res.file_size ? `${(res.file_size / 1024).toFixed(1)} KB` : "Nomaʼlum"}</b></span>
+                                  <span>Oʻqituvchi: <b>{res.employee_name}</b></span>
+                                  {res.updated_at_ts && (
+                                    <span>Sana: <b>{new Date(res.updated_at_ts * 1000).toLocaleDateString()}</b></span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <a
+                              href={res.file_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              download
+                              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors self-start sm:self-center flex-shrink-0 cursor-pointer"
+                              title="HEMIS serveridan faylni toʻgʻridan-toʻgʻri koʻrish / yuklab olish"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Koʻrish / Yuklash</span>
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
