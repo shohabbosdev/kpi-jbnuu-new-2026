@@ -55,7 +55,9 @@ import {
   Paperclip,
   Pencil,
   Trash2,
-  BookOpen
+  BookOpen,
+  LayoutGrid,
+  List
 } from "lucide-react";
 
 interface TeacherScoreDetail {
@@ -178,6 +180,7 @@ interface AuthUser {
   degree?: string;
   fte: number;
   employee_id_number?: string;
+  hemis_id?: number | string;
   image?: string;
   must_change_password?: boolean;
 }
@@ -754,8 +757,15 @@ export default function KpiEnterpriseApp() {
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
   const [activePage, setActivePage] = useState<
-    "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators" | "profile"
+    "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators" | "profile" | "subjects"
   >("dashboard");
+
+  // Teacher Subjects & Workload Page State
+  const [subjectSearchQuery, setSubjectSearchQuery] = useState<string>("");
+  const [subjectEduTypeFilter, setSubjectEduTypeFilter] = useState<"ALL" | "11" | "12">("ALL");
+  const [subjectSortBy, setSubjectSortBy] = useState<"hours_desc" | "hours_asc" | "name">("hours_desc");
+  const [subjectViewMode, setSubjectViewMode] = useState<"cards" | "table">("cards");
+  const [selectedSubjectTeacherName, setSelectedSubjectTeacherName] = useState<string>("");
 
   // Editing Submission State (Baholanmagan arizani tahrirlash uchun)
   const [editingSubmission, setEditingSubmission] = useState<Submission | null>(null);
@@ -2899,7 +2909,10 @@ export default function KpiEnterpriseApp() {
                 </div>
               )}
               <button
-                onClick={() => setActivePage("dashboard")}
+                onClick={() => {
+                  setActivePage("dashboard");
+                  setMobileMenuOpen(false);
+                }}
                 title="Kafedra boshqaruvi"
                 className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
                   activePage === "dashboard"
@@ -2911,6 +2924,34 @@ export default function KpiEnterpriseApp() {
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Kafedra monitoringi</span>}
+              </button>
+              <button
+                onClick={() => {
+                  setActivePage("subjects");
+                  setMobileMenuOpen(false);
+                }}
+                title="Kafedra fanlari va oʻquv yuklamalari"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "subjects"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <BookOpen className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+                  {!sidebarCollapsed && <span className="truncate">Fanlar va yuklama</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${
+                    activePage === "subjects"
+                      ? "bg-blue-800 text-emerald-300"
+                      : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                  }`}>
+                    HEMIS
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setActivePage("svetafor")}
@@ -2982,7 +3023,10 @@ export default function KpiEnterpriseApp() {
                 </div>
               )}
               <button
-                onClick={() => setActivePage("dashboard")}
+                onClick={() => {
+                  setActivePage("dashboard");
+                  setMobileMenuOpen(false);
+                }}
                 title="Fakultet KPI portali"
                 className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
                   activePage === "dashboard"
@@ -2994,6 +3038,23 @@ export default function KpiEnterpriseApp() {
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Fakultet boshqaruvi</span>}
+              </button>
+              <button
+                onClick={() => {
+                  setActivePage("subjects");
+                  setMobileMenuOpen(false);
+                }}
+                title="Fakultet oʻqituvchilari oʻquv yuklamalari"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "subjects"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Oʻquv yuklamalari</span>}
               </button>
               <button
                 onClick={() => setActivePage("svetafor")}
@@ -3065,7 +3126,10 @@ export default function KpiEnterpriseApp() {
                 </div>
               )}
               <button
-                onClick={() => setActivePage("dashboard")}
+                onClick={() => {
+                  setActivePage("dashboard");
+                  setMobileMenuOpen(false);
+                }}
                 title="Integral KPI boshqaruv portali"
                 className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
                   activePage === "dashboard"
@@ -3077,6 +3141,23 @@ export default function KpiEnterpriseApp() {
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Integral KPI portali</span>}
+              </button>
+              <button
+                onClick={() => {
+                  setActivePage("subjects");
+                  setMobileMenuOpen(false);
+                }}
+                title="Filial oʻqituvchilari oʻquv yuklamalari"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "subjects"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                {!sidebarCollapsed && <span>Oʻquv yuklamalari</span>}
               </button>
               <button
                 onClick={() => setActivePage("structure")}
@@ -3162,7 +3243,10 @@ export default function KpiEnterpriseApp() {
                 </div>
               )}
               <button
-                onClick={() => setActivePage("dashboard")}
+                onClick={() => {
+                  setActivePage("dashboard");
+                  setMobileMenuOpen(false);
+                }}
                 title="Shaxsiy kabinet"
                 className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
                   activePage === "dashboard"
@@ -3174,6 +3258,37 @@ export default function KpiEnterpriseApp() {
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Shaxsiy kabinet</span>}
+              </button>
+              <button
+                onClick={() => {
+                  setActivePage("subjects");
+                  setMobileMenuOpen(false);
+                }}
+                title="Mening fanlarim va dars yuklamam"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
+                  activePage === "subjects"
+                    ? "bg-blue-900 text-white shadow-sm"
+                    : theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <BookOpen className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+                  {!sidebarCollapsed && <span className="truncate">Fanlarim va yuklama</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${
+                    activePage === "subjects"
+                      ? "bg-blue-800 text-emerald-300"
+                      : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                  }`}>
+                    {(() => {
+                      const wl = currentUser ? getTeacherWorkloadData(currentUser.hemis_id || currentUser.name) : null;
+                      return wl?.totalHours ? `${wl.totalHours} s.` : "HEMIS";
+                    })()}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setActivePage("indicators")}
@@ -3342,6 +3457,7 @@ export default function KpiEnterpriseApp() {
               {activePage === "appeals" && "Apellyatsiya arizalarini koʻrib chiqish komissiyasi"}
               {activePage === "doc" && "OʻzMU JBNUU KPI Nizomi (13 bob, 6 ilova)"}
               {activePage === "profile" && "Mening profilim va hisob xavfsizligi"}
+              {activePage === "subjects" && "HEMIS oʻquv yuklamasi va fanlar reyestri"}
             </h2>
 
             <span className={`hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${
@@ -6889,6 +7005,630 @@ export default function KpiEnterpriseApp() {
               </div>
             </div>
           )}
+
+          {/* ========================================================================= */}
+          {/* PAGE: TEACHER SUBJECTS & HEMIS WORKLOAD (FANLAR VA OʻQUV YUKLAMASI) */}
+          {/* ========================================================================= */}
+          {activePage === "subjects" && (() => {
+            // Build unique teachers list for switching / browsing
+            const teacherMap = new Map<string, { id: number; name: string; department: string; totalHours: number }>();
+            if (teacherWorkloads && teacherWorkloads.length > 0) {
+              for (const item of teacherWorkloads) {
+                if (!teacherMap.has(item.employee_name)) {
+                  teacherMap.set(item.employee_name, {
+                    id: item.employee_id,
+                    name: item.employee_name,
+                    department: item.department_name,
+                    totalHours: item.total_hours
+                  });
+                } else {
+                  const exist = teacherMap.get(item.employee_name)!;
+                  exist.totalHours += item.total_hours;
+                }
+              }
+            }
+            const allUniqueTeachers = Array.from(teacherMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+            // Determine target teacher
+            const targetTeacherName = selectedSubjectTeacherName || currentUser?.name || (allUniqueTeachers[0]?.name ?? "");
+            const workloadData = getTeacherWorkloadData(targetTeacherName);
+
+            // Filter & sort subjects
+            const rawSubjects = workloadData?.subjects || [];
+            const filteredSubjects = rawSubjects.filter(sub => {
+              const matchEdu = subjectEduTypeFilter === "ALL" 
+                || (subjectEduTypeFilter === "11" && (sub.education_type_code === "11" || sub.education_type_name === "Bakalavr"))
+                || (subjectEduTypeFilter === "12" && (sub.education_type_code === "12" || sub.education_type_name === "Magistr"));
+              const q = subjectSearchQuery.trim().toLowerCase();
+              const matchQuery = !q 
+                || sub.subject_name.toLowerCase().includes(q) 
+                || sub.department_name.toLowerCase().includes(q);
+              return matchEdu && matchQuery;
+            }).sort((a, b) => {
+              if (subjectSortBy === "hours_desc") return b.total_hours - a.total_hours;
+              if (subjectSortBy === "hours_asc") return a.total_hours - b.total_hours;
+              return a.subject_name.localeCompare(b.subject_name);
+            });
+
+            // Department colleagues for fast comparison
+            const deptColleagues = workloadData?.departmentName 
+              ? allUniqueTeachers.filter(t => t.department.toLowerCase() === workloadData.departmentName.toLowerCase())
+              : [];
+
+            const totalHours = workloadData?.totalHours || 0;
+            const bachelorHours = workloadData?.bachelorHours || 0;
+            const masterHours = workloadData?.masterHours || 0;
+            const bachelorPercent = totalHours > 0 ? Math.round((bachelorHours / totalHours) * 100) : 0;
+            const masterPercent = totalHours > 0 ? Math.round((masterHours / totalHours) * 100) : 0;
+
+            const segmentColors = [
+              "bg-emerald-500", "bg-blue-500", "bg-indigo-500", "bg-purple-500", 
+              "bg-amber-500", "bg-rose-500", "bg-teal-500", "bg-cyan-500"
+            ];
+
+            return (
+              <div className="space-y-6">
+                {/* Hero Card */}
+                <div className={`rounded-2xl border shadow-sm p-6 relative overflow-hidden ${
+                  theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                }`}>
+                  <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-emerald-500/10 via-blue-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                    <div className="flex items-start sm:items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-blue-700 text-white flex items-center justify-center shadow-lg shadow-emerald-900/20 flex-shrink-0">
+                        <BookOpen className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                            Fanlarim va Oʻquv Yuklamasi
+                          </h3>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            HEMIS REST API
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          2024–2025 oʻquv yili uchun tasdiqlangan pedagogik dars soatlari va fanlar reyestri
+                        </p>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap text-xs">
+                          <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                            <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                            {workloadData?.teacherName || targetTeacherName}
+                          </span>
+                          {workloadData?.departmentName && (
+                            <span className="text-slate-400 dark:text-slate-500">
+                              • Kafedra: <b className="text-slate-700 dark:text-slate-300">{workloadData.departmentName}</b>
+                            </span>
+                          )}
+                          {workloadData?.employeeId && (
+                            <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                              ID: {workloadData.employeeId}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick controls on header */}
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {/* Search / Select teacher dropdown */}
+                      <div className="relative">
+                        <select
+                          value={selectedSubjectTeacherName || workloadData?.teacherName || ""}
+                          onChange={(e) => setSelectedSubjectTeacherName(e.target.value)}
+                          className={`text-xs font-semibold py-2 pl-3 pr-8 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[220px] truncate cursor-pointer ${
+                            theme === "dark" 
+                              ? "bg-slate-800 border-slate-700 text-slate-200" 
+                              : "bg-slate-50 border-slate-200 text-slate-800"
+                          }`}
+                          title="Boshqa oʻqituvchi yuklamasini koʻrish"
+                        >
+                          {currentUser && (
+                            <option value={currentUser.name}>Mening yuklamam ({currentUser.name})</option>
+                          )}
+                          {allUniqueTeachers.map((t) => (
+                            <option key={t.id + t.name} value={t.name}>
+                              {t.name} ({t.totalHours} s.)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {selectedSubjectTeacherName && currentUser?.name && selectedSubjectTeacherName !== currentUser.name && (
+                        <button
+                          onClick={() => setSelectedSubjectTeacherName("")}
+                          className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                          title="Oʻz shaxsiy profilim yuklamasiga qaytish"
+                        >
+                          Mening yuklamam
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handleSyncWorkloads}
+                        disabled={isWorkloadsLoading}
+                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                        title="HEMIS axborot tizimidan yuklamalarni qayta sinxronlash"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isWorkloadsLoading ? "animate-spin" : ""}`} />
+                        <span className="hidden sm:inline">{isWorkloadsLoading ? "Yangilanmoqda..." : "Sinxronlash"}</span>
+                      </button>
+
+                      <button
+                        onClick={() => window.print()}
+                        className="px-3 py-2 border rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                        title="Oʻquv yuklamasini chop etish yoki PDF sifatida saqlash"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Chop etish</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPI Metrics Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Total Hours */}
+                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${
+                    theme === "dark" ? "bg-slate-900 border-emerald-950/80" : "bg-white border-emerald-100"
+                  }`}>
+                    <div className="flex justify-between items-start">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                        Jami oʻquv yuklamasi
+                      </span>
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-3xl font-black text-slate-900 dark:text-white mt-2">
+                      {totalHours} <span className="text-sm font-semibold text-slate-500">soat</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                      <span>Yillik oʻquv rejasi meʼyori</span>
+                    </div>
+                  </div>
+
+                  {/* Subjects Count */}
+                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${
+                    theme === "dark" ? "bg-slate-900 border-blue-950/80" : "bg-white border-blue-100"
+                  }`}>
+                    <div className="flex justify-between items-start">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                        Biriktirilgan fanlar
+                      </span>
+                      <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+                        <BookOpen className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-3xl font-black text-slate-900 dark:text-white mt-2">
+                      {workloadData?.subjectsCount || 0} <span className="text-sm font-semibold text-slate-500">ta fan</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                      {workloadData?.departmentName || "Kafedra fanlari"}
+                    </div>
+                  </div>
+
+                  {/* Bachelor Hours */}
+                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${
+                    theme === "dark" ? "bg-slate-900 border-cyan-950/80" : "bg-white border-cyan-100"
+                  }`}>
+                    <div className="flex justify-between items-start">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
+                        Bakalavriat soati
+                      </span>
+                      <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400">
+                        {bachelorPercent}%
+                      </span>
+                    </div>
+                    <div className="text-3xl font-black text-slate-900 dark:text-white mt-2">
+                      {bachelorHours} <span className="text-sm font-semibold text-slate-500">soat</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                      <div className="bg-cyan-500 h-full rounded-full transition-all duration-500" style={{ width: `${bachelorPercent}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Master Hours */}
+                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${
+                    theme === "dark" ? "bg-slate-900 border-purple-950/80" : "bg-white border-purple-100"
+                  }`}>
+                    <div className="flex justify-between items-start">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                        Magistratura soati
+                      </span>
+                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                        {masterPercent}%
+                      </span>
+                    </div>
+                    <div className="text-3xl font-black text-slate-900 dark:text-white mt-2">
+                      {masterHours} <span className="text-sm font-semibold text-slate-500">soat</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                      <div className="bg-purple-500 h-full rounded-full transition-all duration-500" style={{ width: `${masterPercent}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Creative Workload Distribution Progress Bar */}
+                {totalHours > 0 && rawSubjects.length > 0 && (
+                  <div className={`p-5 rounded-2xl border shadow-sm ${
+                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                  }`}>
+                    <div className="flex justify-between items-center mb-3">
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                          Fanlar Kesimida Yuklama Taqsimoti
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          Har bir fanning umumiy dars soatlaridagi foiz ulushi
+                        </p>
+                      </div>
+                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                        Jami 100% ({totalHours} soat)
+                      </span>
+                    </div>
+
+                    {/* Segmented bar */}
+                    <div className="w-full h-4 rounded-full overflow-hidden flex bg-slate-100 dark:bg-slate-800 p-0.5 gap-0.5">
+                      {rawSubjects.map((sub, idx) => {
+                        const pct = (sub.total_hours / totalHours) * 100;
+                        const colorClass = segmentColors[idx % segmentColors.length];
+                        return (
+                          <div
+                            key={sub.id || idx}
+                            style={{ width: `${pct}%` }}
+                            className={`${colorClass} h-full first:rounded-l-full last:rounded-r-full transition-all duration-300 relative group`}
+                            title={`${sub.subject_name}: ${sub.total_hours} soat (${pct.toFixed(1)}%)`}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {/* Legend */}
+                    <div className="flex flex-wrap items-center gap-3 mt-4 text-xs">
+                      {rawSubjects.map((sub, idx) => {
+                        const pct = ((sub.total_hours / totalHours) * 100).toFixed(1);
+                        const colorClass = segmentColors[idx % segmentColors.length];
+                        return (
+                          <div key={sub.id || idx} className="flex items-center gap-1.5">
+                            <span className={`w-2.5 h-2.5 rounded-full ${colorClass} flex-shrink-0`} />
+                            <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[180px]">
+                              {sub.subject_name}
+                            </span>
+                            <span className="font-bold text-slate-900 dark:text-slate-100 font-mono text-[11px]">
+                              {sub.total_hours}s ({pct}%)
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Filter & Search Bar */}
+                <div className={`p-4 rounded-2xl border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                  theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                }`}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Education filter pills */}
+                    <div className={`p-1 rounded-xl border flex items-center gap-1 text-xs ${
+                      theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
+                    }`}>
+                      <button
+                        onClick={() => setSubjectEduTypeFilter("ALL")}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                          subjectEduTypeFilter === "ALL"
+                            ? "bg-blue-900 text-white shadow-xs"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                      >
+                        Barchasi ({rawSubjects.length})
+                      </button>
+                      <button
+                        onClick={() => setSubjectEduTypeFilter("11")}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                          subjectEduTypeFilter === "11"
+                            ? "bg-blue-900 text-white shadow-xs"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                      >
+                        Bakalavr ({rawSubjects.filter(s => s.education_type_code === "11" || s.education_type_name === "Bakalavr").length})
+                      </button>
+                      <button
+                        onClick={() => setSubjectEduTypeFilter("12")}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                          subjectEduTypeFilter === "12"
+                            ? "bg-blue-900 text-white shadow-xs"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                      >
+                        Magistr ({rawSubjects.filter(s => s.education_type_code === "12" || s.education_type_name === "Magistr").length})
+                      </button>
+                    </div>
+
+                    {/* Sort Dropdown */}
+                    <div className="relative">
+                      <select
+                        value={subjectSortBy}
+                        onChange={(e) => setSubjectSortBy(e.target.value as any)}
+                        className={`text-xs font-semibold py-2 pl-3 pr-7 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer ${
+                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-white border-slate-200 text-slate-800"
+                        }`}
+                      >
+                        <option value="hours_desc">Soatlar: Kamayish</option>
+                        <option value="hours_asc">Soatlar: Oʻsish</option>
+                        <option value="name">Fan nomi (A-Z)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* Search input */}
+                    <div className="relative flex-1 sm:w-64">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={subjectSearchQuery}
+                        onChange={(e) => setSubjectSearchQuery(e.target.value)}
+                        placeholder="Fan yoki kafedra qidirish..."
+                        className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
+                          theme === "dark" 
+                            ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" 
+                            : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400"
+                        }`}
+                      />
+                    </div>
+
+                    {/* View Mode Toggle */}
+                    <div className={`p-1 rounded-xl border flex items-center ${
+                      theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
+                    }`}>
+                      <button
+                        onClick={() => setSubjectViewMode("cards")}
+                        title="Kartochkalar koʻrinishi"
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          subjectViewMode === "cards"
+                            ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-white shadow-xs"
+                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                        }`}
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setSubjectViewMode("table")}
+                        title="Jadval koʻrinishi"
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          subjectViewMode === "table"
+                            ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-white shadow-xs"
+                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                        }`}
+                      >
+                        <List className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subjects Content */}
+                {filteredSubjects.length === 0 ? (
+                  <div className={`p-12 text-center rounded-2xl border ${
+                    theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-400" : "bg-white border-slate-200 text-slate-500"
+                  }`}>
+                    <BookOpen className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+                    <h4 className="text-base font-bold text-slate-800 dark:text-slate-200">
+                      Hech qanday fan topilmadi
+                    </h4>
+                    <p className="text-xs mt-1 max-w-md mx-auto">
+                      Qidiruv mezonlariga mos keladigan fan mavjud emas yoki ushbu oʻqituvchiga hozircha HEMIS tizimida oʻquv yuklamasi kiritilmagan.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSubjectSearchQuery("");
+                        setSubjectEduTypeFilter("ALL");
+                      }}
+                      className="mt-4 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-semibold"
+                    >
+                      Filtrlarni tozalash
+                    </button>
+                  </div>
+                ) : subjectViewMode === "cards" ? (
+                  /* Cards View */
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredSubjects.map((sub, idx) => {
+                      const pct = totalHours > 0 ? ((sub.total_hours / totalHours) * 100).toFixed(1) : "0";
+                      const weeklyEst = (sub.total_hours / 30).toFixed(1);
+                      const isMaster = sub.education_type_code === "12" || sub.education_type_name === "Magistr";
+                      return (
+                        <div
+                          key={sub.id || idx}
+                          className={`rounded-2xl border p-5 transition-all hover:shadow-md relative flex flex-col justify-between group ${
+                            theme === "dark" 
+                              ? "bg-slate-900 border-slate-800 hover:border-emerald-800/60" 
+                              : "bg-white border-slate-200 hover:border-emerald-300"
+                          }`}
+                        >
+                          <div>
+                            <div className="flex justify-between items-start gap-2 mb-3">
+                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border flex items-center gap-1 ${
+                                isMaster
+                                  ? "bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                                  : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                              }`}>
+                                <GraduationCap className="w-3 h-3" />
+                                {sub.education_type_name || (isMaster ? "Magistr" : "Bakalavr")}
+                              </span>
+
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                #{idx + 1}
+                              </span>
+                            </div>
+
+                            <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                              {sub.subject_name}
+                            </h4>
+
+                            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                              <Building className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                              <span className="truncate">{sub.department_name}</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex items-end justify-between">
+                              <div>
+                                <span className="text-[10px] uppercase font-bold text-slate-400">Dars soati</span>
+                                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                                  {sub.total_hours} <span className="text-xs font-semibold text-slate-500">soat</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[10px] uppercase font-bold text-slate-400">Ulushi</span>
+                                <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                                  {pct}%
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-2.5 overflow-hidden">
+                              <div 
+                                className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                                style={{ width: `${Math.min(100, Number(pct))}%` }} 
+                              />
+                            </div>
+
+                            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                              <span>Oʻrtacha yuklama:</span>
+                              <span className="font-semibold text-slate-700 dark:text-slate-300">~{weeklyEst} soat / hafta</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* Table View */
+                  <div className={`rounded-2xl border shadow-sm overflow-hidden ${
+                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                  }`}>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${
+                            theme === "dark" ? "border-slate-800 text-slate-400 bg-slate-800/40" : "border-slate-200 text-slate-500 bg-slate-50"
+                          }`}>
+                            <th className="py-3 px-4 w-12 text-center">№</th>
+                            <th className="py-3 px-4">Fan nomi</th>
+                            <th className="py-3 px-4">Kafedra</th>
+                            <th className="py-3 px-4">Taʼlim bosqichi</th>
+                            <th className="py-3 px-4 text-center">Dars soati</th>
+                            <th className="py-3 px-4">Yuklamadagi ulushi</th>
+                            <th className="py-3 px-4 text-right">Oʻrtacha haftalik</th>
+                          </tr>
+                        </thead>
+                        <tbody className={`divide-y text-xs ${theme === "dark" ? "divide-slate-800 text-slate-200" : "divide-slate-100 text-slate-800"}`}>
+                          {filteredSubjects.map((sub, idx) => {
+                            const pct = totalHours > 0 ? ((sub.total_hours / totalHours) * 100).toFixed(1) : "0";
+                            const weeklyEst = (sub.total_hours / 30).toFixed(1);
+                            const isMaster = sub.education_type_code === "12" || sub.education_type_name === "Magistr";
+                            return (
+                              <tr key={sub.id || idx} className={`transition-colors ${theme === "dark" ? "hover:bg-slate-800/50" : "hover:bg-slate-50"}`}>
+                                <td className="py-3.5 px-4 text-center font-bold text-slate-400">
+                                  #{idx + 1}
+                                </td>
+                                <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
+                                  {sub.subject_name}
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">
+                                  {sub.department_name}
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${
+                                    isMaster
+                                      ? "bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                                      : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                                  }`}>
+                                    {sub.education_type_name || (isMaster ? "Magistr" : "Bakalavr")}
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 text-center font-black text-emerald-600 dark:text-emerald-400 font-mono text-sm">
+                                  {sub.total_hours}
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-24 bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                      <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, Number(pct))}%` }} />
+                                    </div>
+                                    <span className="font-semibold text-slate-600 dark:text-slate-400 text-[11px]">{pct}%</span>
+                                  </div>
+                                </td>
+                                <td className="py-3.5 px-4 text-right font-medium text-slate-500 dark:text-slate-400">
+                                  ~{weeklyEst} s./hafta
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Department Colleagues Workload Summary */}
+                {deptColleagues.length > 1 && (
+                  <div className={`p-5 rounded-2xl border shadow-sm ${
+                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                  }`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <Building className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <span>{workloadData?.departmentName} Kafedrasi Oʻqituvchilari Yuklamasi</span>
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Kafedra boʻyicha jami {deptColleagues.length} nafar oʻqituvchining umumiy dars soatlari
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {deptColleagues.map((colleague) => {
+                        const isSelected = (workloadData?.teacherName || targetTeacherName) === colleague.name;
+                        return (
+                          <div
+                            key={colleague.id + colleague.name}
+                            onClick={() => setSelectedSubjectTeacherName(colleague.name)}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                              isSelected
+                                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 ring-2 ring-emerald-500/20"
+                                : theme === "dark"
+                                ? "bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 text-slate-200"
+                                : "bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800"
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className="font-semibold text-xs truncate">
+                                {colleague.name}
+                              </div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                {isSelected ? "Tanlangan profil" : "Yuklamani koʻrish uchun bosing"}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <span className="font-black text-xs text-emerald-600 dark:text-emerald-400">
+                                {colleague.totalHours} soat
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </main>
       </div>
 
