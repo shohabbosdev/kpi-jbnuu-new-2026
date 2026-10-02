@@ -31,6 +31,9 @@ import {
   Building,
   KeyRound,
   AlertCircle,
+  Info,
+  HelpCircle,
+  QrCode,
   Database,
   RefreshCw,
   Briefcase,
@@ -50,7 +53,6 @@ import {
   UserCog,
   AlertTriangle,
   Upload,
-  Sparkles,
   Calculator,
   Paperclip,
   Pencil,
@@ -4352,7 +4354,7 @@ export default function KpiEnterpriseApp() {
                 className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer flex-shrink-0"
                 title="Yangi KPI natijasini kiritish"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <Plus className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">+ Yangi natija</span>
                 <span className="sm:hidden">+ Natija</span>
               </button>
@@ -8477,15 +8479,15 @@ export default function KpiEnterpriseApp() {
                               <span className="font-semibold text-slate-700 dark:text-slate-300">~{weeklyEst} soat / hafta</span>
                             </div>
 
-                            {/* 3 ta alohida, juda qulay tugmalar */}
+                            {/* 3 ta alohida, qulay tugmalar */}
                             <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
                               <button
                                 type="button"
                                 onClick={() => handleOpenCourseDocs(sub, targetTeacherName)}
-                                className="w-full py-2 px-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer group"
+                                className="w-full py-2 px-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
                               >
-                                <FileText className="w-4 h-4 text-blue-200 group-hover:scale-110 transition-transform" />
-                                <span>📁 Oʻquv-uslubiy Hujjatlar</span>
+                                <FileText className="w-4 h-4 text-blue-200" />
+                                <span>Oʻquv-uslubiy hujjatlar</span>
                               </button>
                               <div className="grid grid-cols-2 gap-2">
                                 <button
@@ -8495,7 +8497,7 @@ export default function KpiEnterpriseApp() {
                                   title="Darslik yoki oʻquv qoʻllanma uchun Kengash bayonnomasi koʻchirmasi (Ixtiyoriy)"
                                 >
                                   <GraduationCap className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                                  <span>🎓 Darslik / Grif</span>
+                                  <span>Darslik va grif</span>
                                 </button>
                                 <button
                                   type="button"
@@ -8504,7 +8506,7 @@ export default function KpiEnterpriseApp() {
                                   title="HEMIS tizimidagi asl elektron resurslar va rasmiy soatlar"
                                 >
                                   <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                  <span>🌐 HEMIS bazasi</span>
+                                  <span>HEMIS bazasi</span>
                                 </button>
                               </div>
                             </div>
@@ -8582,7 +8584,7 @@ export default function KpiEnterpriseApp() {
                                       title="Fan oʻquv-uslubiy hujjatlarini topshirish va koʻrish"
                                     >
                                       <FileText className="w-3.5 h-3.5" />
-                                      <span>📁 Hujjatlar</span>
+                                      <span>Hujjatlar</span>
                                     </button>
                                     <button
                                       type="button"
@@ -8591,7 +8593,7 @@ export default function KpiEnterpriseApp() {
                                       title="Darslik va oʻquv qoʻllanmalar Kengashlar zanjiri"
                                     >
                                       <GraduationCap className="w-3.5 h-3.5" />
-                                      <span>🎓 Grif</span>
+                                      <span>Grif</span>
                                     </button>
                                     <button
                                       type="button"
@@ -8600,7 +8602,7 @@ export default function KpiEnterpriseApp() {
                                       title="HEMIS dagi elektron fayllar va oʻquv reja soatlari"
                                     >
                                       <Database className="w-3.5 h-3.5" />
-                                      <span>🌐 HEMIS</span>
+                                      <span>HEMIS</span>
                                     </button>
                                   </div>
                                 </td>
@@ -8712,7 +8714,7 @@ export default function KpiEnterpriseApp() {
               <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-md flex-shrink-0">
-                    <Sparkles className="w-5 h-5 text-amber-300" />
+                    <Award className="w-5 h-5 text-blue-200" />
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -8978,7 +8980,7 @@ export default function KpiEnterpriseApp() {
                               </>
                             ) : (
                               <>
-                                <Sparkles className="w-3 h-3 text-amber-300" />
+                                <Search className="w-3 h-3 text-blue-300" />
                                 <span>Maʼlumotni olish</span>
                               </>
                             )}
@@ -9981,9 +9983,8 @@ export default function KpiEnterpriseApp() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1">
-                    <span>📁</span>
-                    <span>1-Qism: Oʻquv-uslubiy Hujjatlar (Majburiy)</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    Oʻquv-uslubiy hujjatlar (Majburiy)
                   </span>
                   <span className="text-xs text-slate-400">
                     Oʻquv yili: {systemSettings?.academic_year || "2025/2026"}
@@ -10015,7 +10016,7 @@ export default function KpiEnterpriseApp() {
                   title="Darslik va oʻquv qoʻllanmalar kengashlar zanjiri (Ixtiyoriy)"
                 >
                   <GraduationCap className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>🎓 Darslik / Grif</span>
+                  <span>Darslik va grif</span>
                 </button>
 
                 <button
@@ -10029,7 +10030,7 @@ export default function KpiEnterpriseApp() {
                   title="HEMIS dagi rasmiy elektron fayllar va oʻquv reja"
                 >
                   <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>🌐 HEMIS bazasi</span>
+                  <span>HEMIS bazasi</span>
                 </button>
 
                 <button
@@ -10250,7 +10251,7 @@ export default function KpiEnterpriseApp() {
                       <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
                         {!teacherTrainingRoles.hasLecture && teacherTrainingRoles.hasPractical && !teacherTrainingRoles.hasLab && (
                           <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-medium">
-                            <span>💡</span>
+                            <Info className="w-4 h-4 flex-shrink-0" />
                             <span>
                               <b>Faqat Amaliyotchi:</b> Siz ushbu fandan faqat amaliy mashgʻulot oʻtuvchi pedagog sifatida belgilangansiz. Sizdan faqat <b>Amaliy mashgʻulotlar uslubiy koʻrsatmasi</b> talab etiladi. Maʼruza matnlari, sillabus va mustaqil taʼlim koʻrsatmasini tuzish maʼruzachi oʻqituvchining zimmasida.
                             </span>
@@ -10258,7 +10259,7 @@ export default function KpiEnterpriseApp() {
                         )}
                         {!teacherTrainingRoles.hasLecture && teacherTrainingRoles.hasLab && (
                           <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-medium">
-                            <span>💡</span>
+                            <Info className="w-4 h-4 flex-shrink-0" />
                             <span>
                               <b>Faqat Laboratoriya:</b> Sizdan faqat <b>Laboratoriya ishlari boʻyicha uslubiy koʻrsatma va xavfsizlik yoʻriqnomasi</b> talab etiladi.
                             </span>
@@ -10266,7 +10267,7 @@ export default function KpiEnterpriseApp() {
                         )}
                         {teacherTrainingRoles.hasLecture && (
                           <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-medium">
-                            <span>📌</span>
+                            <CheckCircle className="w-4 h-4 flex-shrink-0 text-blue-600" />
                             <span>
                               <b>Maʼruza oʻqituvchisi:</b> Fanning asosiy maʼruzachisi sifatida siz: <b>Fan sillabusi</b>, <b>Maʼruza matnlari va taqdimotlari</b>, <b>Mustaqil taʼlim uslubiy koʻrsatmasi</b> hamda <b>Baholash mezonlari</b>ni yuklashingiz shart! {teacherTrainingRoles.hasPractical && "Shuningdek, amaliy mashgʻulot ham sizda boʻlgani sababli Amaliy koʻrsatmani ham biriktirasiz."} {teacherTrainingRoles.hasLab && "Laboratoriya koʻrsatmasi ham talab etiladi."}
                             </span>
@@ -10568,8 +10569,8 @@ export default function KpiEnterpriseApp() {
                                 }}
                                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                               >
-                                <Sparkles className="w-3.5 h-3.5" />
-                                <span>QR Kod / Tekshiruv</span>
+                                <QrCode className="w-3.5 h-3.5" />
+                                <span>QR kod tekshiruvi</span>
                               </button>
                             )}
 
@@ -10685,12 +10686,11 @@ export default function KpiEnterpriseApp() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-100 dark:bg-indigo-950/70 text-indigo-900 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">
-                    <span>🎓</span>
-                    <span>2-Qism: Darslik, Oʻquv qoʻllanma va Monografiya (Ixtiyoriy)</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-100 dark:bg-indigo-950/70 text-indigo-900 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                    Darslik, oʻquv qoʻllanma va monografiya (Ixtiyoriy)
                   </span>
                   <span className="text-xs text-slate-400">
-                    Kengashlar Zanjiri
+                    Kengashlar zanjiri
                   </span>
                 </div>
                 <h2 className="text-lg sm:text-xl font-black mt-1 text-slate-900 dark:text-white flex items-center gap-2">
@@ -10716,7 +10716,7 @@ export default function KpiEnterpriseApp() {
                   title="Fanning majburiy oʻquv-uslubiy hujjatlariga oʻtish"
                 >
                   <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>📁 Oʻquv Hujjatlari</span>
+                  <span>Oʻquv hujjatlari</span>
                 </button>
 
                 <button
@@ -10729,7 +10729,7 @@ export default function KpiEnterpriseApp() {
                   title="HEMIS dagi rasmiy elektron fayllar va oʻquv reja"
                 >
                   <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>🌐 HEMIS bazasi</span>
+                  <span>HEMIS bazasi</span>
                 </button>
 
                 <button
@@ -10887,8 +10887,8 @@ export default function KpiEnterpriseApp() {
                                 }}
                                 className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
                               >
-                                <Sparkles className="w-4 h-4" />
-                                <span>Filial Kengashi Koʻchirmasi (QR)</span>
+                                <QrCode className="w-4 h-4" />
+                                <span>Filial Kengashi koʻchirmasi (QR)</span>
                               </button>
                             )}
 
@@ -11078,12 +11078,11 @@ export default function KpiEnterpriseApp() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                    <span>🌐</span>
-                    <span>3-Qism: HEMIS Elektron Resurslari va Rasmiy Soatlar</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    HEMIS elektron resurslari va rasmiy soatlar
                   </span>
                   <span className="text-xs text-slate-400">
-                    Inspeksiya & KPI Asosi
+                    Inspeksiya & KPI asosi
                   </span>
                 </div>
                 <h2 className="text-lg sm:text-xl font-black mt-1 text-slate-900 dark:text-white flex items-center gap-2">
@@ -11109,7 +11108,7 @@ export default function KpiEnterpriseApp() {
                   title="Fanning majburiy oʻquv-uslubiy hujjatlariga oʻtish"
                 >
                   <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>📁 Oʻquv Hujjatlari</span>
+                  <span>Oʻquv hujjatlari</span>
                 </button>
 
                 <button
@@ -11122,7 +11121,7 @@ export default function KpiEnterpriseApp() {
                   title="Darslik va oʻquv qoʻllanmalar kengashlar zanjiri (Ixtiyoriy)"
                 >
                   <GraduationCap className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>🎓 Darslik / Grif</span>
+                  <span>Darslik va grif</span>
                 </button>
 
                 <button
@@ -11138,7 +11137,7 @@ export default function KpiEnterpriseApp() {
 
             {/* Scrollable Kontent */}
             <div className="flex-1 overflow-y-auto pt-4 pr-1 space-y-4">
-              {/* Creative KPI Synergy Banner */}
+              {/* KPI Synergy Banner */}
               <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
                 activeSubjectHemisResources.length > 0
                   ? theme === "dark" ? "bg-emerald-950/30 border-emerald-800 text-emerald-100" : "bg-emerald-50 border-emerald-200 text-emerald-950"
@@ -11150,7 +11149,7 @@ export default function KpiEnterpriseApp() {
                       ? "bg-emerald-600 text-white shadow-sm"
                       : "bg-slate-200 dark:bg-slate-700 text-slate-500"
                   }`}>
-                    <Sparkles className="w-5 h-5" />
+                    <Database className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -11964,7 +11963,7 @@ export default function KpiEnterpriseApp() {
                 {confirmModal.type === "danger" && <AlertTriangle className="w-5 h-5" />}
                 {confirmModal.type === "warning" && <AlertCircle className="w-5 h-5" />}
                 {confirmModal.type === "success" && <CheckCircle className="w-5 h-5" />}
-                {(!confirmModal.type || confirmModal.type === "info") && <Sparkles className="w-5 h-5" />}
+                {(!confirmModal.type || confirmModal.type === "info") && <HelpCircle className="w-5 h-5" />}
               </div>
               <div className="flex-1">
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">
