@@ -164,18 +164,6 @@ export default function KpiEnterpriseApp() {
   const [newCourseDocFile, setNewCourseDocFile] = useState<File | null>(null);
   const [isAddCourseDocFormOpen, setIsAddCourseDocFormOpen] = useState(false);
 
-  // O'qituvchining ushbu fanni o'tish turlari (Ma'ruza, Amaliy, Laboratoriya, Seminar)
-  const [teacherTrainingRoles, setTeacherTrainingRoles] = useState<{
-    hasLecture: boolean;
-    hasPractical: boolean;
-    hasLab: boolean;
-    hasSeminar: boolean;
-  }>({
-    hasLecture: true,
-    hasPractical: false,
-    hasLab: false,
-    hasSeminar: false
-  });
 
   // Mudir / Dekan ko'rib chiqish modali
   const [courseDocReviewModalOpen, setCourseDocReviewModalOpen] = useState(false);
@@ -989,14 +977,6 @@ export default function KpiEnterpriseApp() {
       total_hours: sub.total_hours
     });
     setWorkflowSubTab("docs");
-    const sName = (sub.subject_name || "").toLowerCase();
-    const isOnlyAmaliy = sName.includes("amaliyot") || (sName.includes("amaliy") && !sName.includes("nazariy"));
-    setTeacherTrainingRoles({
-      hasLecture: !isOnlyAmaliy,
-      hasPractical: true,
-      hasLab: false,
-      hasSeminar: false
-    });
     setIsAddCourseDocFormOpen(false);
     fetchCourseDocs(sub.subject_name, teacherName);
     fetchSubjectHemisDetails(sub.subject_name, teacherName);

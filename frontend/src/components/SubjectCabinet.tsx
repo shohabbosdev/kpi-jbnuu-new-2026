@@ -107,17 +107,7 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
   const [newCourseDocTitle, setNewCourseDocTitle] = useState("");
   const [newCourseDocFile, setNewCourseDocFile] = useState<File | null>(null);
 
-  const [teacherTrainingRoles, setTeacherTrainingRoles] = useState<{
-    hasLecture: boolean;
-    hasPractical: boolean;
-    hasLab: boolean;
-    hasSeminar: boolean;
-  }>({
-    hasLecture: true,
-    hasPractical: false,
-    hasLab: false,
-    hasSeminar: false
-  });
+  const [isDraggingCourseDoc, setIsDraggingCourseDoc] = useState(false);
 
   // Course Doc Review Modal State
   const [courseDocReviewModalOpen, setCourseDocReviewModalOpen] = useState(false);
@@ -827,61 +817,21 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
                   </button>
                 </div>
 
-                {/* Mashg'ulot turlari tezkor tekshiruvi */}
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 mb-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    Sizga biriktirilgan mashgʻulot turlari:
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1.5 cursor-pointer font-medium">
-                      <input
-                        type="checkbox"
-                        checked={teacherTrainingRoles.hasLecture}
-                        onChange={(e) => setTeacherTrainingRoles((p) => ({ ...p, hasLecture: e.target.checked }))}
-                        className="rounded text-blue-900 focus:ring-blue-900"
-                      />
-                      <span>Maʼruza</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer font-medium">
-                      <input
-                        type="checkbox"
-                        checked={teacherTrainingRoles.hasPractical}
-                        onChange={(e) => setTeacherTrainingRoles((p) => ({ ...p, hasPractical: e.target.checked }))}
-                        className="rounded text-blue-900 focus:ring-blue-900"
-                      />
-                      <span>Amaliyot</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer font-medium">
-                      <input
-                        type="checkbox"
-                        checked={teacherTrainingRoles.hasLab}
-                        onChange={(e) => setTeacherTrainingRoles((p) => ({ ...p, hasLab: e.target.checked }))}
-                        className="rounded text-blue-900 focus:ring-blue-900"
-                      />
-                      <span>Laboratoriya</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer font-medium">
-                      <input
-                        type="checkbox"
-                        checked={teacherTrainingRoles.hasSeminar}
-                        onChange={(e) => setTeacherTrainingRoles((p) => ({ ...p, hasSeminar: e.target.checked }))}
-                        className="rounded text-blue-900 focus:ring-blue-900"
-                      />
-                      <span>Seminar</span>
-                    </label>
-                  </div>
-                </div>
-
                 {/* Yangi hujjat yuklash formasi */}
                 {isAddCourseDocFormOpen && (
                   <form
                     onSubmit={handleUploadCourseDocSubmit}
-                    className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 mb-5 space-y-3.5"
+                    className="p-5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 mb-5 space-y-4"
                   >
-                    <h5 className="text-xs font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
-                      <Upload className="w-4 h-4 text-blue-600" />
-                      <span>Yangi oʻquv-uslubiy hujjatni biriktirish</span>
-                    </h5>
+                    <div className="flex items-center justify-between pb-2 border-b border-blue-100 dark:border-blue-900/60">
+                      <h5 className="text-xs font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
+                        <Upload className="w-4 h-4 text-blue-600" />
+                        <span>Yangi oʻquv-uslubiy hujjatni biriktirish</span>
+                      </h5>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        Fan: <b>{selectedSubject.subject_name}</b>
+                      </span>
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       <div>
@@ -920,21 +870,117 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
                       </div>
                     </div>
 
+                    {/* Drag-and-Drop Hujjat Yuklash Maydoni */}
                     <div>
-                      <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1 text-xs">
-                        Faylni tanlang (PDF, DOCX) *
+                      <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5 text-xs">
+                        Hujjat faylini yuklash (PDF, DOC, DOCX — max 10MB) *
                       </label>
-                      <input
-                        type="file"
-                        required
-                        accept=".pdf,.doc,.docx"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            setNewCourseDocFile(e.target.files[0]);
+
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDraggingCourseDoc(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDraggingCourseDoc(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDraggingCourseDoc(false);
+                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            const file = e.dataTransfer.files[0];
+                            const ext = file.name.toLowerCase();
+                            if (ext.endsWith(".pdf") || ext.endsWith(".doc") || ext.endsWith(".docx")) {
+                              setNewCourseDocFile(file);
+                              if (!newCourseDocTitle.trim()) {
+                                const cleanName = file.name.replace(/\.[^/.]+$/, "");
+                                setNewCourseDocTitle(cleanName);
+                              }
+                            } else {
+                              showAlert({
+                                title: "Fayl formati mos emas",
+                                message: "Faqat PDF yoki Word (DOC/DOCX) formatidagi hujjatlar qabul qilinadi.",
+                                type: "warning"
+                              });
+                            }
                           }
                         }}
-                        className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-xs font-medium cursor-pointer"
-                      />
+                        onClick={() => {
+                          const fileInput = document.getElementById("course-doc-file-input") as HTMLInputElement;
+                          if (fileInput) fileInput.click();
+                        }}
+                        className={`p-6 rounded-2xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2 ${
+                          isDraggingCourseDoc
+                            ? "border-blue-500 bg-blue-100/70 dark:bg-blue-950/60 scale-[1.01]"
+                            : newCourseDocFile
+                            ? "border-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30"
+                            : "border-slate-300 dark:border-slate-700 hover:border-blue-400 bg-white dark:bg-slate-800/80 hover:bg-blue-50/30 dark:hover:bg-blue-950/20"
+                        }`}
+                      >
+                        <input
+                          id="course-doc-file-input"
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const file = e.target.files[0];
+                              setNewCourseDocFile(file);
+                              if (!newCourseDocTitle.trim()) {
+                                const cleanName = file.name.replace(/\.[^/.]+$/, "");
+                                setNewCourseDocTitle(cleanName);
+                              }
+                            }
+                          }}
+                        />
+
+                        {newCourseDocFile ? (
+                          <div className="flex items-center justify-between w-full max-w-md px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 shadow-xs">
+                            <div className="flex items-center gap-3 truncate">
+                              <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
+                                <CheckCircle className="w-5 h-5" />
+                              </div>
+                              <div className="text-left truncate">
+                                <div className="font-bold text-slate-900 dark:text-white truncate text-xs">
+                                  {newCourseDocFile.name}
+                                </div>
+                                <div className="text-[10px] text-slate-500 font-mono">
+                                  {(newCourseDocFile.size / 1024).toFixed(1)} KB • Boshqa fayl tanlash uchun bosing
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNewCourseDocFile(null);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors ml-2 cursor-pointer flex-shrink-0"
+                              title="Faylni bekor qilish"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shadow-xs">
+                              <Upload className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                                Faylni bu yerga sudrab tashlang (Drag & Drop) yoki tanlash uchun bosing
+                              </span>
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                                Qabul qilinadigan formatlar: PDF, DOC, DOCX (Maksimal hajm: 10 MB)
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-1">
