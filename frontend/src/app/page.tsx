@@ -6135,9 +6135,11 @@ export default function KpiEnterpriseApp() {
             return (
               <div className="space-y-6">
                 {/* Hero Card */}
-                <div className={`rounded-2xl border shadow-sm p-6 relative overflow-hidden ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                <div className={`rounded-2xl border shadow-sm p-6 relative z-20 ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
                   }`}>
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-emerald-500/10 via-blue-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-emerald-500/10 via-blue-500/5 to-transparent rounded-full blur-3xl" />
+                  </div>
 
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
                     <div className="flex items-start sm:items-center gap-4">

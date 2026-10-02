@@ -154,8 +154,8 @@ export const SearchableTeacherSelect: React.FC<SearchableTeacherSelectProps> = (
       {/* Ochiluvchi zamonaviy qidiruv paneli (Searchable Dropdown Popup) */}
       {isOpen && (
         <div
-          className={`absolute left-0 mt-1.5 w-[320px] sm:w-[380px] rounded-2xl border shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 ${
-            theme === "dark" ? "bg-slate-900 border-slate-700 shadow-slate-950/80" : "bg-white border-slate-200 shadow-slate-900/15"
+          className={`absolute left-0 sm:left-auto sm:right-0 mt-2 w-[320px] sm:w-[380px] rounded-2xl border shadow-2xl z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-150 ${
+            theme === "dark" ? "bg-slate-900 border-slate-700 shadow-slate-950" : "bg-white border-slate-200 shadow-slate-900/25"
           }`}
         >
           {/* Header & Qidiruv maydoni */}
