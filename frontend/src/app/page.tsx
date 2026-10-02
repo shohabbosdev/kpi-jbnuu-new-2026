@@ -63,868 +63,44 @@ import {
   List
 } from "lucide-react";
 
-interface TeacherScoreDetail {
-  oqv: number;
-  ilm: number;
-  xal: number;
-  man: number;
-  jarima: number;
-  flex_applied: number;
-  raw_total: number;
-  fte: number;
-  normalized_score: number;
-  svetafor_zone: string;
-  svetafor_label: string;
-  bonus_label: string;
-}
 
-interface Teacher {
-  id: number;
-  name: string;
-  faculty: string;
-  department: string;
-  position: string;
-  degree: string;
-  fte: number;
-  track: string;
-  is_first_year: boolean;
-  is_head_of_dept: boolean;
-  image?: string;
-  scores: TeacherScoreDetail;
-}
-
-interface Indicator {
-  id: string;
-  block: string;
-  name: string;
-  max_ball: number;
-  validity: string;
-  dept: string;
-  is_active?: boolean;
-  description?: string;
-}
-
-interface Submission {
-  id: number;
-  teacher_id: number;
-  teacher_name: string;
-  indicator_id: string;
-  title: string;
-  doi?: string;
-  authors_count: number;
-  submitted_date: string;
-  status: string;
-  claimed_ball?: number;
-  ball: number;
-  file_name: string;
-  dept: string;
-  description?: string;
-  reviewer_name?: string;
-  reviewed_date?: string;
-  reviewer_comment?: string;
-  rejection_reason?: string;
-}
-
-interface Appeal {
-  id: string;
-  submission_id?: number;
-  teacher_id: number;
-  teacher_name: string;
-  indicator_id: string;
-  title?: string;
-  claimed_ball?: number;
-  reviewed_ball?: number;
-  initial_reviewer?: string;
-  initial_rejection_reason?: string;
-  appeal_reason?: string;
-  reason: string;
-  evidence_file?: string;
-  submitted_date: string;
-  status: string;
-  decision?: string;
-  commission_member?: string;
-  commission_comment?: string;
-  decision_date?: string;
-  awarded_ball?: number;
-  created_at?: string;
-}
-
-interface EvaluatorRecord {
-  id: number;
-  user_id?: number;
-  username: string;
-  name: string;
-  assigned_category: string;
-  role_type: string;
-  deadline_date?: string;
-  is_active: boolean;
-  assigned_by?: string;
-  created_at?: string;
-}
-
-interface EvaluationPeriodInfo {
-  academic_year: string;
-  submissions_open: boolean;
-  submission_deadline: string;
-  review_deadline: string;
-  appeal_deadline: string;
-  current_stage: string;
-  budget_cap_monthly: number;
-}
-
-interface AuthUser {
-  id: number;
-  username: string;
-  name: string;
-  role: "ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE";
-  department?: string;
-  faculty?: string;
-  position?: string;
-  degree?: string;
-  fte: number;
-  employee_id_number?: string;
-  hemis_id?: number | string;
-  image?: string;
-  must_change_password?: boolean;
-}
-
-interface DepartmentHierarchy {
-  id: number;
-  name: string;
-  code: string;
-  head: string;
-  head_fte: number;
-  teachers_count: number;
-  avg_score: number;
-}
-
-interface FacultyHierarchy {
-  id: number;
-  name: string;
-  code: string;
-  dean: string;
-  dean_fte: number;
-  departments: DepartmentHierarchy[];
-}
-
-interface StructureHierarchy {
-  branch_name: string;
-  total_faculties: number;
-  total_departments: number;
-  total_teachers_hemis: number;
-  faculties: FacultyHierarchy[];
-}
-
-interface SystemSettings {
-  academic_year: string;
-  submissions_open: boolean;
-  deadline_date: string;
-  submission_deadline?: string;
-  review_deadline?: string;
-  appeal_deadline?: string;
-  current_stage?: string;
-  budget_cap_monthly: number;
-}
-
-interface AdminUserRecord {
-  username: string;
-  name: string;
-  role: string;
-  department?: string;
-  position?: string;
-  fte: number;
-  must_change_password?: boolean;
-  is_active?: boolean;
-  employee_id_number?: string;
-}
-
-interface AuditLogRecord {
-  id: number;
-  time: string;
-  user: string;
-  action: string;
-}
-
-// HEMIS Data Structures (Shaxsga doir nozik ma'lumotlar saqlanmaydi)
-interface HemisDepartment {
-  id: number;
-  name: string;
-  code: string;
-  structure_type: string;
-  is_department: boolean;
-  active: boolean;
-}
-
-interface HemisEmployee {
-  id: number;
-  full_name: string;
-  short_name: string;
-  employee_id_number: string;
-  image?: string;
-  department: string;
-  department_id?: number;
-  position: string;
-  degree: string;
-  rank: string;
-  fte: number;
-  raw_fte_sum?: number;
-  active_contracts_count?: number;
-  had_fired_contracts?: boolean;
-  additional_positions?: string | null;
-  employment_form: string;
-  employee_type: string;
-  specialty?: string;
-}
-
-interface HemisStats {
-  raw_total_records: number;
-  total_fired_excluded: number;
-  total_unique_active: number;
-  multi_contracts_merged: number;
-}
-
-interface HemisStatusInfo {
-  connected: boolean;
-  base_url: string;
-  total_departments: number;
-  message: string;
-  error?: string;
-}
-
-// HEMIS Teacher Workload Data Structures
-interface TeacherWorkloadItem {
-  id: number;
-  employee_id: number;
-  employee_name: string;
-  department_name: string;
-  subject_name: string;
-  education_type_code: string;
-  education_type_name: string;
-  total_hours: number;
-}
-
-interface TeacherWorkloadSummary {
-  total_items: number;
-  total_teachers: number;
-  total_hours: number;
-  bachelor_hours: number;
-  master_hours: number;
-}
-
-interface ConfirmDialogState {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-  type?: "danger" | "warning" | "info" | "success";
-  onConfirm: () => void | Promise<void>;
-  onCancel?: () => void;
-  isAlertOnly?: boolean;
-}
-
-// Fan oʻquv-uslubiy hujjatlari (Sillabus, Ishchi dastur, Baholash mezonlari)
-interface CourseSyllabusDoc {
-  id: number;
-  teacher_id?: number;
-  teacher_name: string;
-  subject_name: string;
-  department_name?: string;
-  academic_year: string;
-  doc_type: "SYLLABUS" | "WORK_PROGRAM" | "LECTURE_NOTES" | "PRACTICAL_GUIDE" | "LAB_GUIDE" | "SEMINAR_GUIDE" | "INDEPENDENT_STUDY_GUIDE" | "ASSESSMENT_CRITERIA" | "OTHER";
-  title: string;
-  file_url: string;
-  file_name: string;
-  status: "SUBMITTED" | "MUDIR_APPROVED" | "MUDIR_REJECTED" | "APPROVED" | "DEAN_REJECTED";
-  mudir_status: "PENDING" | "APPROVED" | "REJECTED";
-  mudir_comment?: string;
-  mudir_updated_at?: string;
-  dean_status: "PENDING" | "APPROVED" | "REJECTED";
-  dean_comment?: string;
-  dean_updated_at?: string;
-  verification_token?: string;
-  created_at?: string;
-}
-
-// Darslik, Oʻquv qoʻllanma, Monografiya Kengashlar Zanjiri
-interface PublicationRecommendation {
-  id: number;
-  teacher_id?: number;
-  teacher_name: string;
-  subject_name: string;
-  department_name?: string;
-  academic_year: string;
-  pub_type: "DARSLIK" | "OʻQUV QOʻLLANMA" | "USLUBIY QOʻLLANMA" | "MONOGRAFIYA";
-  title: string;
-  authors: string;
-  co_authors?: string;
-  manuscript_file: string;
-  internal_review_file: string;
-  internal_reviewer_name?: string;
-  external_review_file: string;
-  external_reviewer_name?: string;
-  curriculum_file: string;
-  antiplagiarism_file: string;
-  antiplagiarism_score: number;
-  workload_extract_file?: string;
-  kafedra_status: "PENDING" | "APPROVED" | "REJECTED";
-  kafedra_protocol_num?: string;
-  kafedra_protocol_date?: string;
-  kafedra_protocol_file?: string;
-  kafedra_comment?: string;
-  fakultet_status: "PENDING" | "APPROVED" | "REJECTED";
-  fakultet_protocol_num?: string;
-  fakultet_protocol_date?: string;
-  fakultet_protocol_file?: string;
-  fakultet_comment?: string;
-  methodical_status: "PENDING" | "APPROVED" | "REJECTED";
-  methodical_protocol_num?: string;
-  methodical_protocol_date?: string;
-  methodical_protocol_file?: string;
-  methodical_comment?: string;
-  council_status: "PENDING" | "APPROVED" | "REJECTED";
-  council_protocol_num?: string;
-  council_protocol_date?: string;
-  council_protocol_file?: string;
-  council_comment?: string;
-  mygov_app_num?: string;
-  ministry_grif_num?: string;
-  ministry_certificate_file?: string;
-  overall_status: "AT_KAFEDRA" | "AT_FAKULTET" | "AT_METHODICAL" | "AT_COUNCIL" | "COUNCIL_RECOMMENDED" | "SUBMITTED_TO_MYGOV" | "MINISTRY_APPROVED" | "KAFEDRA_REJECTED" | "FAKULTET_REJECTED" | "METHODICAL_REJECTED" | "COUNCIL_REJECTED";
-  verification_token?: string;
-  created_at?: string;
-}
-
-// HEMIS O'quv rejalari va Fan resurslari interfeyslari
-interface HemisCurriculum {
-  id: number;
-  name: string;
-  specialty_code: string;
-  specialty_name: string;
-  department_name: string;
-  department_code: string;
-  education_year: string;
-  education_type: string;
-  education_form: string;
-  marking_system: string;
-  semester_count: number;
-  education_period: number;
-  is_active: number;
-}
-
-interface HemisCurriculumSubject {
-  id: number;
-  curriculum_id: number;
-  subject_id: number;
-  subject_name: string;
-  subject_code: string;
-  subject_type: string;
-  subject_block: string;
-  semester_name: string;
-  semester_code: string;
-  total_acload: number;
-  credit: number;
-  lecture_hours: number;
-  practical_hours: number;
-  seminar_hours: number;
-  lab_hours: number;
-  independent_hours: number;
-  department_name: string;
-  resource_count: number;
-}
-
-interface HemisSubjectResource {
-  id: number;
-  title: string;
-  subject_id: number;
-  subject_name: string;
-  subject_code: string;
-  training_type: string;
-  employee_id: number;
-  employee_name: string;
-  resource_type: string;
-  file_name: string;
-  file_size: number;
-  file_url: string;
-  updated_at_ts: number;
-}
-
-interface HemisSubjectTeacher {
-  id: number;
-  curriculum_id: number;
-  semester_code: string;
-  education_year: string;
-  department_id: number;
-  subject_id: number;
-  subject_name: string;
-  subject_code: string;
-  employee_id: number;
-  employee_name: string;
-  training_type: string;
-  group_id?: number;
-  students_count: number;
-}
-
-interface HemisAcademicStats {
-  curriculums_count: number;
-  curriculum_subjects_count: number;
-  subject_resources_count: number;
-  subject_teachers_count: number;
-  scientific_activities_count?: number;
-  doctorate_students_count?: number;
-}
-
-interface HemisScientificActivity {
-  id: number;
-  employee_id: number;
-  employee_name: string;
-  scientific_platform: string;
-  profile_link: string;
-  h_index: number;
-  publication_work_count: number;
-  citation_count: number;
-  education_year: string;
-  is_checked: number;
-}
-
-interface HemisDoctorateStudent {
-  id: number;
-  full_name: string;
-  short_name: string;
-  student_id_number: string;
-  dissertation_theme: string;
-  department_name: string;
-  specialty_code: string;
-  specialty_name: string;
-  science_branch: string;
-  doctoral_type: string;
-  doctorate_status: string;
-  level: string;
-  image?: string;
-}
-
-interface UniversalPaginationProps {
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
-  itemsPerPage?: number;
-  onPageChange: (page: number) => void;
-  onItemsPerPageChange?: (perPage: number) => void;
-  perPageOptions?: number[];
-  itemLabel?: string;
-  theme: "light" | "dark";
-}
-
-function UniversalPagination({
-  currentPage,
-  totalPages,
-  totalItems,
-  itemsPerPage,
-  onPageChange,
-  onItemsPerPageChange,
-  perPageOptions = [10, 25, 50],
-  itemLabel = "yozuv",
-  theme
-}: UniversalPaginationProps) {
-  if (totalItems === 0) return null;
-
-  const isDark = theme === "dark";
-  const startItem = itemsPerPage ? (currentPage - 1) * itemsPerPage + 1 : 1;
-  const endItem = itemsPerPage ? Math.min(currentPage * itemsPerPage, totalItems) : totalItems;
-
-  const pages: (number | string)[] = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-  } else {
-    pages.push(1);
-    if (currentPage > 3) pages.push("...");
-    const start = Math.max(2, currentPage - 1);
-    const end = Math.min(totalPages - 1, currentPage + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (currentPage < totalPages - 2) pages.push("...");
-    pages.push(totalPages);
-  }
-
-  return (
-    <div className={`px-4 py-3 border-t flex flex-wrap items-center justify-between gap-3 text-xs transition-colors ${
-      isDark 
-        ? "bg-slate-900 border-slate-800 text-slate-300" 
-        : "bg-slate-50 border-slate-200 text-slate-600"
-    }`}>
-      {/* Chap tomon: Qaydlar soni va har sahifadagi miqdor */}
-      <div className="flex items-center gap-2.5 flex-wrap">
-        <span className="font-medium">
-          Jami <b className={isDark ? "text-white" : "text-slate-900"}>{totalItems}</b> ta {itemLabel}dan{" "}
-          <b className={isDark ? "text-blue-400" : "text-blue-700"}>{startItem}–{endItem}</b> koʻrsatilmoqda
-        </span>
-        {onItemsPerPageChange && itemsPerPage && (
-          <>
-            <span className={isDark ? "text-slate-700" : "text-slate-300"}>|</span>
-            <div className="flex items-center gap-1.5">
-              <span className="font-medium">Har sahifada:</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  onItemsPerPageChange(Number(e.target.value));
-                  onPageChange(1);
-                }}
-                className={`border rounded-lg px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors ${
-                  isDark
-                    ? "bg-slate-800 border-slate-700 text-slate-100 hover:border-slate-600"
-                    : "bg-white border-slate-300 text-slate-800 hover:border-slate-400 shadow-xs"
-                }`}
-              >
-                {perPageOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt} tadan
-                  </option>
-                ))}
-              </select>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* O'ng tomon: Sahifalash tugmalari */}
-      {totalPages > 1 && (
-        <div className="flex items-center gap-1">
-          {/* Oldingi tugmasi */}
-          <button
-            type="button"
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage <= 1}
-            className={`px-2.5 py-1.5 rounded-lg border font-semibold flex items-center gap-1 transition-all ${
-              currentPage <= 1
-                ? isDark
-                  ? "bg-slate-800/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50"
-                  : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50"
-                : isDark
-                ? "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white hover:border-slate-600 shadow-xs cursor-pointer"
-                : "bg-white border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-xs cursor-pointer"
-            }`}
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Oldingi</span>
-          </button>
-
-          {/* Sahifa raqamlari */}
-          {pages.map((p, idx) => {
-            if (p === "...") {
-              return (
-                <span
-                  key={`ellipsis-${idx}`}
-                  className={`w-8 h-8 flex items-center justify-center font-bold ${
-                    isDark ? "text-slate-600" : "text-slate-400"
-                  }`}
-                >
-                  ...
-                </span>
-              );
-            }
-            const isCurr = p === currentPage;
-            return (
-              <button
-                key={`page-${p}`}
-                type="button"
-                onClick={() => onPageChange(Number(p))}
-                className={`min-w-8 h-8 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
-                  isCurr
-                    ? isDark
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/40 ring-1 ring-blue-400"
-                      : "bg-blue-900 text-white shadow-md shadow-blue-900/20"
-                    : isDark
-                    ? "bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white hover:border-slate-600"
-                    : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-xs"
-                }`}
-              >
-                {p}
-              </button>
-            );
-          })}
-
-          {/* Keyingi tugmasi */}
-          <button
-            type="button"
-            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
-            className={`px-2.5 py-1.5 rounded-lg border font-semibold flex items-center gap-1 transition-all ${
-              currentPage >= totalPages
-                ? isDark
-                  ? "bg-slate-800/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50"
-                  : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50"
-                : isDark
-                ? "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white hover:border-slate-600 shadow-xs cursor-pointer"
-                : "bg-white border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-xs cursor-pointer"
-            }`}
-          >
-            <span className="hidden sm:inline">Keyingi</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface NavbarCountdownTimerProps {
-  settings: SystemSettings;
-  theme: string;
-  onOpenSettings?: () => void;
-}
-
-function NavbarCountdownTimer({ settings, theme, onOpenSettings }: NavbarCountdownTimerProps) {
-  const [mounted, setMounted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<{
-    days: number;
-    hours: number;
-    minutes: number;
-    seconds: number;
-    isExpired: boolean;
-    stageName: string;
-    targetDateStr: string;
-    isClosed: boolean;
-  }>({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-    isExpired: false,
-    stageName: "Yuklanmoqda...",
-    targetDateStr: "",
-    isClosed: false
-  });
-
-  useEffect(() => {
-    setMounted(true);
-
-    const parseDateSafe = (dateStr?: string): number | null => {
-      if (!dateStr) return null;
-      const trimmed = String(dateStr).trim();
-
-      // YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss
-      if (/^\d{4}-\d{1,2}-\d{1,2}/.test(trimmed)) {
-        const clean = trimmed.includes("T") ? trimmed.split("T")[0] : trimmed;
-        const d = new Date(`${clean}T23:59:59`);
-        if (!isNaN(d.getTime())) return d.getTime();
-      }
-
-      // DD.MM.YYYY (masalan 15.06.2026 yoki 25.10.2026)
-      if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(trimmed)) {
-        const parts = trimmed.split(".");
-        const day = parts[0].padStart(2, "0");
-        const month = parts[1].padStart(2, "0");
-        const year = parts[2];
-        const d = new Date(`${year}-${month}-${day}T23:59:59`);
-        if (!isNaN(d.getTime())) return d.getTime();
-      }
-
-      // DD/MM/YYYY
-      if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(trimmed)) {
-        const parts = trimmed.split("/");
-        const day = parts[0].padStart(2, "0");
-        const month = parts[1].padStart(2, "0");
-        const year = parts[2];
-        const d = new Date(`${year}-${month}-${day}T23:59:59`);
-        if (!isNaN(d.getTime())) return d.getTime();
-      }
-
-      const fallback = new Date(trimmed).getTime();
-      return isNaN(fallback) ? null : fallback;
-    };
-
-    const calculateTime = () => {
-      const stage = settings.current_stage || "ALL_OPEN";
-
-      if (stage === "CLOSED" || (!settings.submissions_open && stage === "SUBMISSION_STAGE")) {
-        return {
-          days: 0,
-          hours: 0,
-          minutes: 0,
-          seconds: 0,
-          isExpired: true,
-          stageName: !settings.submissions_open ? "Qabul toʻxtatilgan" : "Reyting yakunlangan",
-          targetDateStr: "",
-          isClosed: true
-        };
-      }
-
-      const now = Date.now();
-      const subTime = parseDateSafe(settings.submission_deadline || settings.deadline_date);
-      const revTime = parseDateSafe(settings.review_deadline);
-      const appTime = parseDateSafe(settings.appeal_deadline);
-
-      let targetTime: number | null = null;
-      let stageLabel = "Ariza topshirish";
-      let targetDateDisplay = settings.submission_deadline || settings.deadline_date || "";
-
-      if (stage === "ALL_OPEN") {
-        // Intellektual ketma-ketlik: Hali o'tmagan eng birinchi bosqich muddatini ko'rsatadi
-        if (subTime && subTime > now) {
-          stageLabel = "Ariza topshirish";
-          targetTime = subTime;
-          targetDateDisplay = settings.submission_deadline || settings.deadline_date || "";
-        } else if (revTime && revTime > now) {
-          stageLabel = "Ekspertlar baholashi";
-          targetTime = revTime;
-          targetDateDisplay = settings.review_deadline || "";
-        } else if (appTime && appTime > now) {
-          stageLabel = "Apellyatsiya davri";
-          targetTime = appTime;
-          targetDateDisplay = settings.appeal_deadline || "";
-        } else {
-          // Barcha sanalar o'tgan bo'lsa, eng oxirgi belgilangan sanani olamiz
-          targetTime = appTime || revTime || subTime;
-          stageLabel = "Baholash muddati";
-          targetDateDisplay = settings.appeal_deadline || settings.review_deadline || settings.submission_deadline || "";
-        }
-      } else if (stage === "SUBMISSION_STAGE") {
-        stageLabel = "Ariza topshirish";
-        targetTime = subTime;
-        targetDateDisplay = settings.submission_deadline || settings.deadline_date || "";
-      } else if (stage === "REVIEW_STAGE") {
-        stageLabel = "Ekspertlar baholashi";
-        targetTime = revTime;
-        targetDateDisplay = settings.review_deadline || "";
-      } else if (stage === "APPEAL_STAGE") {
-        stageLabel = "Apellyatsiya davri";
-        targetTime = appTime;
-        targetDateDisplay = settings.appeal_deadline || "";
-      }
-
-      if (!targetTime) {
-        return {
-          days: 0,
-          hours: 0,
-          minutes: 0,
-          seconds: 0,
-          isExpired: false,
-          stageName: stageLabel,
-          targetDateStr: "Muddatsiz",
-          isClosed: false
-        };
-      }
-
-      const diff = targetTime - now;
-
-      if (diff <= 0) {
-        return {
-          days: 0,
-          hours: 0,
-          minutes: 0,
-          seconds: 0,
-          isExpired: true,
-          stageName: stageLabel,
-          targetDateStr: targetDateDisplay,
-          isClosed: false
-        };
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      return {
-        days,
-        hours,
-        minutes,
-        seconds,
-        isExpired: false,
-        stageName: stageLabel,
-        targetDateStr: targetDateDisplay,
-        isClosed: false
-      };
-    };
-
-    setTimeLeft(calculateTime());
-    const interval = setInterval(() => {
-      setTimeLeft(calculateTime());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [settings]);
-
-  if (!mounted) {
-    return (
-      <div className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-full text-xs border ${
-        theme === "dark" ? "bg-slate-800/60 border-slate-700 text-slate-400" : "bg-slate-100 border-slate-200 text-slate-500"
-      }`}>
-        <Clock className="w-3.5 h-3.5" />
-        <span>Muddat...</span>
-      </div>
-    );
-  }
-
-  const { days, hours, minutes, seconds, isExpired, stageName, targetDateStr, isClosed } = timeLeft;
-
-  let pulseDotColor = "bg-blue-500";
-  let badgeBorder = theme === "dark" ? "border-blue-800/80 bg-blue-950/40 text-blue-300" : "border-blue-200 bg-blue-50 text-blue-900";
-
-  if (isClosed) {
-    pulseDotColor = "bg-slate-400";
-    badgeBorder = theme === "dark" ? "border-slate-700 bg-slate-800/60 text-slate-400" : "border-slate-200 bg-slate-100 text-slate-600";
-  } else if (isExpired) {
-    pulseDotColor = "bg-rose-500";
-    badgeBorder = theme === "dark" ? "border-rose-900/80 bg-rose-950/50 text-rose-300" : "border-rose-200 bg-rose-50 text-rose-800";
-  } else if (days < 1) {
-    pulseDotColor = "bg-rose-500";
-    badgeBorder = theme === "dark" ? "border-rose-800 bg-rose-950/60 text-rose-300 ring-1 ring-rose-500/50" : "border-rose-300 bg-rose-50 text-rose-900 ring-1 ring-rose-300";
-  } else if (days <= 3) {
-    pulseDotColor = "bg-amber-400";
-    badgeBorder = theme === "dark" ? "border-amber-800/80 bg-amber-950/40 text-amber-300" : "border-amber-200 bg-amber-50 text-amber-900";
-  } else {
-    pulseDotColor = "bg-emerald-500";
-    badgeBorder = theme === "dark" ? "border-emerald-800/80 bg-emerald-950/40 text-emerald-300" : "border-emerald-200 bg-emerald-50 text-emerald-900";
-  }
-
-  const pad = (n: number) => String(n).padStart(2, "0");
-
-  return (
-    <div
-      onClick={onOpenSettings}
-      title={onOpenSettings ? "Baholash reglamenti va muddatlarni sozlash (Administrator)" : `Tizim muddati: ${targetDateStr || "Belgilanmagan"}`}
-      className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-medium border shadow-xs transition-all flex-shrink-0 ${badgeBorder} ${
-        onOpenSettings ? "cursor-pointer hover:scale-102 hover:shadow-md" : ""
-      }`}
-    >
-      <span className="relative flex h-2 w-2 flex-shrink-0">
-        {!isClosed && !isExpired && (
-          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${pulseDotColor}`}></span>
-        )}
-        <span className={`relative inline-flex rounded-full h-2 w-2 ${pulseDotColor}`}></span>
-      </span>
-
-      <span className="font-semibold hidden md:inline opacity-90 truncate max-w-[130px]">
-        {stageName}:
-      </span>
-
-      {isClosed ? (
-        <span className="font-bold">Yopilgan</span>
-      ) : isExpired ? (
-        <span className="font-bold">Tugadi</span>
-      ) : (
-        <div className="flex items-center gap-0.5 sm:gap-1 font-mono font-bold tracking-tight">
-          {days > 0 && (
-            <span>
-              <span className="text-xs sm:text-sm">{days}</span>
-              <span className="text-[10px] sm:text-[11px] font-sans font-normal opacity-80 ml-0.5 mr-0.5">k</span>
-            </span>
-          )}
-          <span className="text-[11px] sm:text-xs">
-            {pad(hours)}:{pad(minutes)}
-            <span className="hidden sm:inline">:{pad(seconds)}</span>
-          </span>
-        </div>
-      )}
-
-      {onOpenSettings && (
-        <span className="text-[10px] opacity-60 ml-0.5 hidden xl:inline underline">
-          (sozlash)
-        </span>
-      )}
-    </div>
-  );
-}
+import {
+  TeacherScoreDetail,
+  Teacher,
+  Indicator,
+  Submission,
+  Appeal,
+  EvaluatorRecord,
+  EvaluationPeriodInfo,
+  AuthUser,
+  DepartmentHierarchy,
+  FacultyHierarchy,
+  StructureHierarchy,
+  SystemSettings,
+  AdminUserRecord,
+  AuditLogRecord,
+  HemisDepartment,
+  HemisEmployee,
+  HemisStats,
+  HemisStatusInfo,
+  TeacherWorkloadItem,
+  TeacherWorkloadSummary,
+  ConfirmDialogState,
+  CourseSyllabusDoc,
+  PublicationRecommendation,
+  HemisCurriculum,
+  HemisCurriculumSubject,
+  HemisSubjectResource,
+  HemisSubjectTeacher,
+  HemisAcademicStats,
+  HemisScientificActivity,
+  HemisDoctorateStudent
+} from "@/types";
+import { UniversalPagination } from "@/components/UniversalPagination";
+import { NavbarCountdownTimer } from "@/components/NavbarCountdownTimer";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { QRVerifyModal } from "@/components/QRVerifyModal";
+import { SubjectCabinet } from "@/components/SubjectCabinet";
 
 export default function KpiEnterpriseApp() {
   // Authentication State
@@ -1505,8 +681,8 @@ export default function KpiEnterpriseApp() {
       if (Array.isArray(tRes)) {
         setCurrentUser(prevUser => {
           if (!prevUser) return null;
-          const matched = tRes.find((t: Teacher) => 
-            t.id === prevUser.id || 
+          const matched = tRes.find((t: Teacher) =>
+            t.id === prevUser.id ||
             (t.name && prevUser.name && t.name.trim().toLowerCase() === prevUser.name.trim().toLowerCase())
           );
           if (matched) {
@@ -1928,8 +1104,8 @@ export default function KpiEnterpriseApp() {
       if (res.ok) {
         showAlert({
           title: "Koʻrib chiqildi",
-          message: courseDocReviewStatus === "APPROVED" 
-            ? `${courseDocReviewRole === "mudir" ? "Kafedra mudiri" : "Dekan"} tomonidan hujjat maʼqullandi!` 
+          message: courseDocReviewStatus === "APPROVED"
+            ? `${courseDocReviewRole === "mudir" ? "Kafedra mudiri" : "Dekan"} tomonidan hujjat maʼqullandi!`
             : "Hujjat qaytarildi!",
           type: "success"
         });
@@ -2081,8 +1257,8 @@ export default function KpiEnterpriseApp() {
       if (res.ok) {
         showAlert({
           title: "Kengash qarori qayd etildi",
-          message: reviewDecision === "APPROVED" 
-            ? "Bosqich muvaffaqiyatli tasdiqlandi va keyingi bosqichga uzatildi!" 
+          message: reviewDecision === "APPROVED"
+            ? "Bosqich muvaffaqiyatli tasdiqlandi va keyingi bosqichga uzatildi!"
             : "Adabiyot qaytarildi!",
           type: "success"
         });
@@ -2391,7 +1567,7 @@ export default function KpiEnterpriseApp() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Baholovchini saqlashda xatolik");
-      
+
       setEvaluators(prev => [...prev, data]);
       setIsAddEvaluatorModalOpen(false);
       setEvalFormName("");
@@ -2604,7 +1780,7 @@ export default function KpiEnterpriseApp() {
       setActiveRole(user.role);
       localStorage.setItem("kpi_session_user", JSON.stringify(user));
       localStorage.setItem("kpi_active_role", user.role);
-      
+
       // Agar oʻqituvchi yoki kafedra mudiri boʻlsa, filtrlarni oʻziga moslab mustahkamlaymiz
       if (user.role === "TEACHER") {
         setSelectedTeacherId(user.id);
@@ -2752,15 +1928,15 @@ export default function KpiEnterpriseApp() {
   const filteredTeachersByDept = teachers.filter(t => {
     if (!selectedDeptFilter || selectedDeptFilter === "ALL") return true;
     return t.department.toLowerCase().includes(selectedDeptFilter.toLowerCase()) ||
-           selectedDeptFilter.toLowerCase().includes(t.department.toLowerCase());
+      selectedDeptFilter.toLowerCase().includes(t.department.toLowerCase());
   });
 
   // Tanlangan yoki joriy oʻqituvchini aniqlash (Rollar boʻyicha qatʼiy chegaralangan)
   const currentTeacher = (() => {
     // 1. Agar TEACHER roli boʻlsa, u FAQAT OʻZINING hisobi boʻlishi shart!
     if (activeRole === "TEACHER" && currentUser) {
-      const match = teachers.find(t => 
-        t.id === currentUser.id || 
+      const match = teachers.find(t =>
+        t.id === currentUser.id ||
         (t.name && currentUser.name && t.name.toLowerCase().trim() === currentUser.name.toLowerCase().trim())
       );
       if (match) return match;
@@ -3172,8 +2348,8 @@ export default function KpiEnterpriseApp() {
   );
 
   // Pagination calculations: My Submissions (O'qituvchining o'z arizalari)
-  const mySubmissionsList = currentTeacher 
-    ? submissions.filter(s => s.teacher_id === currentTeacher.id) 
+  const mySubmissionsList = currentTeacher
+    ? submissions.filter(s => s.teacher_id === currentTeacher.id)
     : [];
   const totalMySubsPages = Math.ceil(mySubmissionsList.length / mySubsPerPage) || 1;
   const currentSafeMySubsPage = Math.max(1, Math.min(mySubsPage, totalMySubsPages));
@@ -3184,9 +2360,9 @@ export default function KpiEnterpriseApp() {
 
   // Pagination calculations: Review Submissions (Mudir/Dekan/Admin verifikatsiyasi)
   const mudirDept = currentUser?.department || "";
-  const reviewSubmissionsList = submissions.filter(s => 
-    s.status === "pending" && 
-    s.teacher_id !== currentUser?.id && 
+  const reviewSubmissionsList = submissions.filter(s =>
+    s.status === "pending" &&
+    s.teacher_id !== currentUser?.id &&
     (!mudirDept || (s.dept && (s.dept.toLowerCase().includes(mudirDept.toLowerCase()) || mudirDept.toLowerCase().includes(s.dept.toLowerCase()))))
   );
   const totalReviewSubsPages = Math.ceil(reviewSubmissionsList.length / reviewSubsPerPage) || 1;
@@ -3428,18 +2604,15 @@ export default function KpiEnterpriseApp() {
   // VIEW 2: AUTHENTICATED USER INTERFACE
   // =========================================================================
   return (
-    <div className={`flex min-h-screen font-sans transition-colors duration-200 ${
-      theme === "dark" ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"
-    }`}>
+    <div className={`flex min-h-screen font-sans transition-colors duration-200 ${theme === "dark" ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"
+      }`}>
       {/* Force Password Change Modal (Cannot be closed until password changed) */}
       {currentUser?.must_change_password && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className={`rounded-2xl border shadow-2xl max-w-md w-full p-6 animate-in fade-in duration-200 ${
-            theme === "dark" ? "bg-slate-900 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-          }`}>
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 border ${
-              theme === "dark" ? "bg-amber-950/60 border-amber-800 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-600"
+          <div className={`rounded-2xl border shadow-2xl max-w-md w-full p-6 animate-in fade-in duration-200 ${theme === "dark" ? "bg-slate-900 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
             }`}>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 border ${theme === "dark" ? "bg-amber-950/60 border-amber-800 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-600"
+              }`}>
               <LockKeyhole className="w-6 h-6" />
             </div>
 
@@ -3453,18 +2626,16 @@ export default function KpiEnterpriseApp() {
             </div>
 
             {changePasswordError && (
-              <div className={`mb-4 p-3 rounded-lg text-xs font-medium flex items-center gap-2 border ${
-                theme === "dark" ? "bg-rose-950/60 border-rose-800 text-rose-300" : "bg-rose-50 border-rose-200 text-rose-700"
-              }`}>
+              <div className={`mb-4 p-3 rounded-lg text-xs font-medium flex items-center gap-2 border ${theme === "dark" ? "bg-rose-950/60 border-rose-800 text-rose-300" : "bg-rose-50 border-rose-200 text-rose-700"
+                }`}>
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{changePasswordError}</span>
               </div>
             )}
 
             {changePasswordSuccess && (
-              <div className={`mb-4 p-3 rounded-lg text-xs font-medium flex items-center gap-2 border ${
-                theme === "dark" ? "bg-emerald-950/60 border-emerald-800 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-800"
-              }`}>
+              <div className={`mb-4 p-3 rounded-lg text-xs font-medium flex items-center gap-2 border ${theme === "dark" ? "bg-emerald-950/60 border-emerald-800 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                }`}>
                 <Check className="w-4 h-4 flex-shrink-0" />
                 <span>{changePasswordSuccess}</span>
               </div>
@@ -3482,9 +2653,8 @@ export default function KpiEnterpriseApp() {
                     value={currentPasswordInput}
                     onChange={(e) => setCurrentPasswordInput(e.target.value)}
                     placeholder="HEMIS ID raqamingiz"
-                    className={`w-full pl-3 pr-9 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                      theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400"
-                    }`}
+                    className={`w-full pl-3 pr-9 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400"
+                      }`}
                   />
                   <button
                     type="button"
@@ -3508,9 +2678,8 @@ export default function KpiEnterpriseApp() {
                     value={newPasswordInput}
                     onChange={(e) => setNewPasswordInput(e.target.value)}
                     placeholder="Yangi mustahkam parol"
-                    className={`w-full pl-3 pr-9 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                      theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
-                    }`}
+                    className={`w-full pl-3 pr-9 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
+                      }`}
                   />
                   <button
                     type="button"
@@ -3534,9 +2703,8 @@ export default function KpiEnterpriseApp() {
                     value={confirmPasswordInput}
                     onChange={(e) => setConfirmPasswordInput(e.target.value)}
                     placeholder="Parolni qayta tering"
-                    className={`w-full pl-3 pr-9 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                      theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
-                    }`}
+                    className={`w-full pl-3 pr-9 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
+                      }`}
                   />
                   <button
                     type="button"
@@ -3568,9 +2736,8 @@ export default function KpiEnterpriseApp() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className={`w-full py-2 rounded-lg text-xs font-medium transition-colors ${
-                    theme === "dark" ? "bg-slate-800 hover:bg-slate-700 text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-                  }`}
+                  className={`w-full py-2 rounded-lg text-xs font-medium transition-colors ${theme === "dark" ? "bg-slate-800 hover:bg-slate-700 text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                    }`}
                 >
                   Bekor qilish va hisobdan chiqish
                 </button>
@@ -3590,17 +2757,13 @@ export default function KpiEnterpriseApp() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 bottom-0 border-r flex flex-col z-40 shadow-xl lg:shadow-sm transition-all duration-300 ${
-        mobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"
-      } ${
-        sidebarCollapsed ? "lg:w-20" : "lg:w-64"
-      } ${
-        theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-      }`}>
+      <aside className={`fixed left-0 top-0 bottom-0 border-r flex flex-col z-40 shadow-xl lg:shadow-sm transition-all duration-300 ${mobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"
+        } ${sidebarCollapsed ? "lg:w-20" : "lg:w-64"
+        } ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+        }`}>
         {/* Brand & Collapse Header */}
-        <div className={`border-b flex items-center ${
-          sidebarCollapsed ? "p-3 lg:flex-col lg:gap-2 lg:justify-center p-4 justify-between" : "p-4 justify-between"
-        } ${theme === "dark" ? "border-slate-800" : "border-slate-100"}`}>
+        <div className={`border-b flex items-center ${sidebarCollapsed ? "p-3 lg:flex-col lg:gap-2 lg:justify-center p-4 justify-between" : "p-4 justify-between"
+          } ${theme === "dark" ? "border-slate-800" : "border-slate-100"}`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-blue-500/30 bg-white dark:bg-slate-800 p-0.5 overflow-hidden transition-transform hover:scale-105">
               <img
@@ -3622,9 +2785,8 @@ export default function KpiEnterpriseApp() {
           <button
             onClick={toggleSidebar}
             title={mobileMenuOpen ? "Menyuni yopish" : sidebarCollapsed ? "Menyuni kengaytirish" : "Menyuni ixchamlash"}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-              theme === "dark" ? "hover:bg-slate-800 text-slate-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"
-            }`}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${theme === "dark" ? "hover:bg-slate-800 text-slate-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"
+              }`}
           >
             <span className="lg:hidden">
               <X className="w-4 h-4" />
@@ -3650,13 +2812,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("dashboard")}
                 title="Admin bosh sahifasi"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "dashboard"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "dashboard"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Admin bosh sahifasi</span>}
@@ -3664,13 +2825,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("structure")}
                 title="Tashkiliy tuzilma (Ierarxiya)"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "structure"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "structure"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <Building className="w-4 h-4 text-amber-500 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Tashkiliy tuzilma</span>}
@@ -3678,13 +2838,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("admin_hemis")}
                 title="HEMIS integratsiyasi"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "admin_hemis"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "admin_hemis"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <Database className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                 {!sidebarCollapsed && <span>HEMIS integratsiyasi</span>}
@@ -3692,13 +2851,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("admin_users")}
                 title="Foydalanuvchilar va rollar"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "admin_users"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "admin_users"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <Users className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Foydalanuvchilar va rollar</span>}
@@ -3706,13 +2864,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("admin_settings")}
                 title="Tizim sozlamalari"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "admin_settings"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "admin_settings"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <Settings className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Tizim sozlamalari</span>}
@@ -3720,13 +2877,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("admin_indicators")}
                 title="Baholash mezonlari (CRUD)"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "admin_indicators"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "admin_indicators"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <Sliders className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Baholash mezonlari (CRUD)</span>}
@@ -3734,13 +2890,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("admin_logs")}
                 title="Xavfsizlik va audit jurnali"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "admin_logs"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "admin_logs"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <ShieldAlert className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Xavfsizlik va audit jurnali</span>}
@@ -3764,13 +2919,12 @@ export default function KpiEnterpriseApp() {
                   setMobileMenuOpen(false);
                 }}
                 title="Kafedra boshqaruvi"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "dashboard"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "dashboard"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Kafedra monitoringi</span>}
@@ -3781,24 +2935,22 @@ export default function KpiEnterpriseApp() {
                   setMobileMenuOpen(false);
                 }}
                 title="Kafedra fanlari va oʻquv yuklamalari"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "subjects"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "subjects"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <BookOpen className="w-4 h-4 flex-shrink-0 text-emerald-400" />
                   {!sidebarCollapsed && <span className="truncate">Fanlar va yuklama</span>}
                 </div>
                 {!sidebarCollapsed && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${
-                    activePage === "subjects"
-                      ? "bg-blue-800 text-emerald-300"
-                      : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                  }`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${activePage === "subjects"
+                    ? "bg-blue-800 text-emerald-300"
+                    : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                    }`}>
                     HEMIS
                   </span>
                 )}
@@ -3806,13 +2958,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("svetafor")}
                 title="Kafedra svetafori"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "svetafor"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "svetafor"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <BarChart3 className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Kafedra svetafori</span>}
@@ -3820,13 +2971,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("indicators")}
                 title="Baholash mezonlari (41 ta)"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "indicators"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "indicators"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <CheckSquare className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Baholash mezonlari</span>}
@@ -3834,13 +2984,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("appeals")}
                 title="Apellyatsiya arizalari"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "appeals"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "appeals"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <FileQuestion className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Apellyatsiyalar</span>}
@@ -3848,13 +2997,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("doc")}
                 title="Rasmiy Nizom"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "doc"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "doc"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <FileText className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Rasmiy Nizom</span>}
@@ -3878,13 +3026,12 @@ export default function KpiEnterpriseApp() {
                   setMobileMenuOpen(false);
                 }}
                 title="Fakultet KPI portali"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "dashboard"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "dashboard"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Fakultet boshqaruvi</span>}
@@ -3895,13 +3042,12 @@ export default function KpiEnterpriseApp() {
                   setMobileMenuOpen(false);
                 }}
                 title="Fakultet oʻqituvchilari oʻquv yuklamalari"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "subjects"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "subjects"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <BookOpen className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Oʻquv yuklamalari</span>}
@@ -3909,13 +3055,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("svetafor")}
                 title="Fakultet svetafori"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "svetafor"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "svetafor"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <BarChart3 className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Fakultet svetafori</span>}
@@ -3923,13 +3068,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("indicators")}
                 title="Baholash mezonlari (41 ta)"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "indicators"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "indicators"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <CheckSquare className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Baholash mezonlari</span>}
@@ -3937,13 +3081,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("appeals")}
                 title="Apellyatsiyalar"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "appeals"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "appeals"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <FileQuestion className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Apellyatsiyalar</span>}
@@ -3951,13 +3094,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("doc")}
                 title="Rasmiy Nizom"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "doc"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "doc"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <FileText className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Rasmiy Nizom</span>}
@@ -3981,13 +3123,12 @@ export default function KpiEnterpriseApp() {
                   setMobileMenuOpen(false);
                 }}
                 title="Integral KPI boshqaruv portali"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "dashboard"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "dashboard"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Integral KPI portali</span>}
@@ -3998,13 +3139,12 @@ export default function KpiEnterpriseApp() {
                   setMobileMenuOpen(false);
                 }}
                 title="Filial oʻqituvchilari oʻquv yuklamalari"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "subjects"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "subjects"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <BookOpen className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Oʻquv yuklamalari</span>}
@@ -4012,13 +3152,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("structure")}
                 title="Filial tashkiliy ierarxiyasi"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "structure"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "structure"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <Building className="w-4 h-4 text-amber-500 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Tashkiliy ierarxiya</span>}
@@ -4026,13 +3165,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("svetafor")}
                 title="Filial svetafor monitoringi"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "svetafor"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "svetafor"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <BarChart3 className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Filial svetafori</span>}
@@ -4040,13 +3178,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("indicators")}
                 title="Baholash mezonlari (41 ta)"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "indicators"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "indicators"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <CheckSquare className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Baholash mezonlari</span>}
@@ -4054,13 +3191,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("appeals")}
                 title="Apellyatsiyalar hisoboti"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "appeals"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "appeals"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <FileQuestion className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Apellyatsiyalar</span>}
@@ -4068,13 +3204,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("doc")}
                 title="Rasmiy Nizom"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "doc"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "doc"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <FileText className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Rasmiy Nizom</span>}
@@ -4098,13 +3233,12 @@ export default function KpiEnterpriseApp() {
                   setMobileMenuOpen(false);
                 }}
                 title="Shaxsiy kabinet"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "dashboard"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "dashboard"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Shaxsiy kabinet</span>}
@@ -4115,24 +3249,22 @@ export default function KpiEnterpriseApp() {
                   setMobileMenuOpen(false);
                 }}
                 title="Mening fanlarim va dars yuklamam"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "subjects"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "subjects"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <BookOpen className="w-4 h-4 flex-shrink-0 text-emerald-400" />
                   {!sidebarCollapsed && <span className="truncate">Fanlarim va yuklama</span>}
                 </div>
                 {!sidebarCollapsed && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${
-                    activePage === "subjects"
-                      ? "bg-blue-800 text-emerald-300"
-                      : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                  }`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${activePage === "subjects"
+                    ? "bg-blue-800 text-emerald-300"
+                    : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                    }`}>
                     {(() => {
                       const wl = currentUser ? getTeacherWorkloadData(currentUser.hemis_id || currentUser.name) : null;
                       return wl?.totalHours ? `${wl.totalHours} s.` : "HEMIS";
@@ -4143,13 +3275,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("indicators")}
                 title="Baholash mezonlari (41 ta)"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "indicators"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "indicators"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <CheckSquare className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Baholash mezonlari (41)</span>}
@@ -4157,13 +3288,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("appeals")}
                 title="Apellyatsiya berish"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "appeals"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "appeals"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <FileQuestion className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Apellyatsiya berish</span>}
@@ -4171,13 +3301,12 @@ export default function KpiEnterpriseApp() {
               <button
                 onClick={() => setActivePage("doc")}
                 title="Rasmiy Nizom"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${
-                  activePage === "doc"
-                    ? "bg-blue-900 text-white shadow-sm"
-                    : theme === "dark"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "doc"
+                  ? "bg-blue-900 text-white shadow-sm"
+                  : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <FileText className="w-4 h-4 flex-shrink-0" />
                 {!sidebarCollapsed && <span>Rasmiy Nizom</span>}
@@ -4187,29 +3316,25 @@ export default function KpiEnterpriseApp() {
         </nav>
 
         {/* Bottom Actions: Dark Mode, Profile & Logout */}
-        <div className={`p-3 border-t flex flex-col gap-2 ${
-          theme === "dark" ? "border-slate-800 bg-slate-900/80" : "border-slate-200 bg-slate-50"
-        }`}>
+        <div className={`p-3 border-t flex flex-col gap-2 ${theme === "dark" ? "border-slate-800 bg-slate-900/80" : "border-slate-200 bg-slate-50"
+          }`}>
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
             title={theme === "dark" ? "Yorugʻ rejimga oʻtish" : "Qorongʻi rejimga oʻtish"}
-            className={`w-full flex items-center ${
-              sidebarCollapsed ? "justify-center px-2 py-2" : "justify-between px-3 py-2"
-            } rounded-lg text-xs font-semibold border transition-colors ${
-              theme === "dark"
+            className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2" : "justify-between px-3 py-2"
+              } rounded-lg text-xs font-semibold border transition-colors ${theme === "dark"
                 ? "bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700"
                 : "bg-white border-slate-200 text-slate-700 hover:bg-slate-100"
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2">
               {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
               {!sidebarCollapsed && <span>{theme === "dark" ? "Yorugʻ rejim" : "Qorongʻi rejim"}</span>}
             </div>
             {!sidebarCollapsed && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                theme === "dark" ? "bg-amber-400/20 text-amber-300" : "bg-slate-200 text-slate-700"
-              }`}>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${theme === "dark" ? "bg-amber-400/20 text-amber-300" : "bg-slate-200 text-slate-700"
+                }`}>
                 {theme === "dark" ? "TUN" : "KUN"}
               </span>
             )}
@@ -4219,15 +3344,13 @@ export default function KpiEnterpriseApp() {
           <button
             onClick={() => setActivePage("profile")}
             title="Mening profilim va hisob xavfsizligi"
-            className={`w-full flex items-center ${
-              sidebarCollapsed ? "justify-center p-2" : "gap-2.5 p-2 text-left"
-            } rounded-lg border transition-all ${
-              activePage === "profile"
+            className={`w-full flex items-center ${sidebarCollapsed ? "justify-center p-2" : "gap-2.5 p-2 text-left"
+              } rounded-lg border transition-all ${activePage === "profile"
                 ? "bg-blue-900 text-white border-blue-800 shadow-md ring-2 ring-blue-500/20"
                 : theme === "dark"
-                ? "bg-slate-800/80 border-slate-700/80 hover:bg-slate-800 text-slate-200"
-                : "bg-white border-slate-200/80 hover:bg-slate-100 text-slate-800 shadow-xs"
-            }`}
+                  ? "bg-slate-800/80 border-slate-700/80 hover:bg-slate-800 text-slate-200"
+                  : "bg-white border-slate-200/80 hover:bg-slate-100 text-slate-800 shadow-xs"
+              }`}
           >
             {currentUser.image ? (
               <img
@@ -4241,17 +3364,15 @@ export default function KpiEnterpriseApp() {
                 }}
               />
             ) : null}
-            <div className={`w-8 h-8 rounded-full items-center justify-center font-bold text-xs flex-shrink-0 ${
-              activePage === "profile" ? "bg-white text-blue-900 shadow-xs" : "bg-blue-900 text-white"
-            } ${currentUser.image ? "hidden" : "flex"}`}>
+            <div className={`w-8 h-8 rounded-full items-center justify-center font-bold text-xs flex-shrink-0 ${activePage === "profile" ? "bg-white text-blue-900 shadow-xs" : "bg-blue-900 text-white"
+              } ${currentUser.image ? "hidden" : "flex"}`}>
               {currentUser.name.charAt(0)}
             </div>
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold truncate leading-tight">{currentUser.name}</div>
-                <div className={`text-[10px] font-medium truncate flex items-center gap-1 mt-0.5 ${
-                  activePage === "profile" ? "text-blue-200" : "text-blue-500"
-                }`}>
+                <div className={`text-[10px] font-medium truncate flex items-center gap-1 mt-0.5 ${activePage === "profile" ? "text-blue-200" : "text-blue-500"
+                  }`}>
                   <UserCog className="w-3 h-3" />
                   <span>Mening profilim</span>
                 </div>
@@ -4272,19 +3393,16 @@ export default function KpiEnterpriseApp() {
       </aside>
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 ${
-        sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
-      }`}>
-        {/* Top Header */}
-        <header className={`sticky top-0 z-20 h-16 border-b px-3 sm:px-6 flex items-center justify-between backdrop-blur-md transition-colors ${
-          theme === "dark" ? "bg-slate-900/95 border-slate-800 text-slate-100" : "bg-white/95 border-slate-200 text-slate-900"
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}>
+        {/* Top Header */}
+        <header className={`sticky top-0 z-20 h-16 border-b px-3 sm:px-6 flex items-center justify-between backdrop-blur-md transition-colors ${theme === "dark" ? "bg-slate-900/95 border-slate-800 text-slate-100" : "bg-white/95 border-slate-200 text-slate-900"
+          }`}>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={toggleSidebar}
-              className={`p-2 rounded-lg transition-colors flex-shrink-0 cursor-pointer ${
-                theme === "dark" ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-100 text-slate-600"
-              }`}
+              className={`p-2 rounded-lg transition-colors flex-shrink-0 cursor-pointer ${theme === "dark" ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-100 text-slate-600"
+                }`}
               title="Menyuni ochish / yopish"
             >
               <Menu className="w-4 h-4" />
@@ -4310,9 +3428,8 @@ export default function KpiEnterpriseApp() {
               {activePage === "subjects" && "HEMIS oʻquv yuklamasi va fanlar reyestri"}
             </h2>
 
-            <span className={`hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${
-              theme === "dark" ? "bg-blue-950 text-blue-300 border border-blue-800" : "bg-blue-100 text-blue-900"
-            }`}>
+            <span className={`hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${theme === "dark" ? "bg-blue-950 text-blue-300 border border-blue-800" : "bg-blue-100 text-blue-900"
+              }`}>
               {systemSettings.academic_year}
             </span>
 
@@ -4329,56 +3446,49 @@ export default function KpiEnterpriseApp() {
             {currentUser.role === "ADMIN" && (
               <>
                 {/* Desktop view switcher */}
-                <div className={`hidden xl:flex items-center gap-1.5 p-1 rounded-lg border ${
-                  theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
-                }`}>
+                <div className={`hidden xl:flex items-center gap-1.5 p-1 rounded-lg border ${theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
+                  }`}>
                   <span className="text-[11px] font-semibold text-slate-400 px-1.5 hidden md:inline">Koʻrinish:</span>
                   <button
                     onClick={() => { setActiveRole("ADMIN"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                      activeRole === "ADMIN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                    }`}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "ADMIN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                      }`}
                   >
                     Admin
                   </button>
                   <button
                     onClick={() => { setActiveRole("DEAN"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                      activeRole === "DEAN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                    }`}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "DEAN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                      }`}
                   >
                     Dekan
                   </button>
                   <button
                     onClick={() => { setActiveRole("HEAD_OF_DEPT"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                      activeRole === "HEAD_OF_DEPT" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                    }`}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "HEAD_OF_DEPT" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                      }`}
                   >
                     Mudir
                   </button>
                   <button
                     onClick={() => { setActiveRole("TEACHER"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                      activeRole === "TEACHER" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                    }`}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "TEACHER" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                      }`}
                   >
                     Oʻqituvchi
                   </button>
                   <button
                     onClick={() => { setActiveRole("RECTORATE"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                      activeRole === "RECTORATE" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                    }`}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "RECTORATE" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                      }`}
                   >
                     Rektorat
                   </button>
                 </div>
 
                 {/* Mobile & Tablet compact role select */}
-                <div className={`xl:hidden flex items-center p-1 rounded-lg border text-xs ${
-                  theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-800"
-                }`}>
+                <div className={`xl:hidden flex items-center p-1 rounded-lg border text-xs ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-800"
+                  }`}>
                   <select
                     value={activeRole}
                     onChange={(e) => {
@@ -4399,18 +3509,17 @@ export default function KpiEnterpriseApp() {
 
             {/* Non-admin user role badge */}
             {currentUser.role !== "ADMIN" && (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${
-                theme === "dark" ? "bg-slate-800/80 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"
-              }`}>
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${theme === "dark" ? "bg-slate-800/80 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"
+                }`}>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>
                   {currentUser.role === "DEAN"
                     ? "Fakultet dekani portali"
                     : currentUser.role === "HEAD_OF_DEPT"
-                    ? "Kafedra mudiri portali"
-                    : currentUser.role === "RECTORATE"
-                    ? "Filial rahbariyati portali"
-                    : "Professor-oʻqituvchi portali"}
+                      ? "Kafedra mudiri portali"
+                      : currentUser.role === "RECTORATE"
+                        ? "Filial rahbariyati portali"
+                        : "Professor-oʻqituvchi portali"}
                 </span>
                 {(currentUser.department || currentUser.faculty) && (
                   <span className="hidden lg:inline text-[11px] text-slate-400 font-normal">
@@ -4469,16 +3578,13 @@ export default function KpiEnterpriseApp() {
           {activePage === "admin_hemis" && (
             <div className="space-y-6">
               {/* HEMIS Status Banner */}
-              <div className={`rounded-xl border shadow-sm p-6 ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
-                <div className={`flex justify-between items-start pb-5 border-b mb-5 ${
-                  theme === "dark" ? "border-slate-800" : "border-slate-100"
+              <div className={`rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                 }`}>
+                <div className={`flex justify-between items-start pb-5 border-b mb-5 ${theme === "dark" ? "border-slate-800" : "border-slate-100"
+                  }`}>
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl border ${
-                      theme === "dark" ? "bg-emerald-950/60 border-emerald-800 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
-                    }`}>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl border ${theme === "dark" ? "bg-emerald-950/60 border-emerald-800 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                      }`}>
                       <Database className="w-6 h-6" />
                     </div>
                     <div>
@@ -4487,16 +3593,14 @@ export default function KpiEnterpriseApp() {
                           HEMIS Axborot Tizimi Integratsiyasi
                         </h3>
                         {hemisStatus?.connected ? (
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
-                            theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                          }`}>
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1.5 ${theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            }`}>
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             Faol ulandi
                           </span>
                         ) : (
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                            theme === "dark" ? "bg-rose-950/60 text-rose-300 border-rose-800" : "bg-rose-50 text-rose-800 border-rose-200"
-                          }`}>
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${theme === "dark" ? "bg-rose-950/60 text-rose-300 border-rose-800" : "bg-rose-50 text-rose-800 border-rose-200"
+                            }`}>
                             Ulanmagan
                           </span>
                         )}
@@ -4518,18 +3622,16 @@ export default function KpiEnterpriseApp() {
                 </div>
 
                 {hemisSyncMessage && (
-                  <div className={`mb-4 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 border ${
-                    theme === "dark" ? "bg-emerald-950/60 border-emerald-800 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-800"
-                  }`}>
+                  <div className={`mb-4 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 border ${theme === "dark" ? "bg-emerald-950/60 border-emerald-800 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    }`}>
                     <Check className="w-4 h-4 text-emerald-500" />
                     <span>{hemisSyncMessage}</span>
                   </div>
                 )}
 
                 {/* Privacy Badge */}
-                <div className={`p-3.5 rounded-xl border flex items-center justify-between text-xs ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600"
-                }`}>
+                <div className={`p-3.5 rounded-xl border flex items-center justify-between text-xs ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600"
+                  }`}>
                   <div className="flex items-center gap-2">
                     <LockKeyhole className="w-4 h-4 text-blue-500 flex-shrink-0" />
                     <span>
@@ -4541,23 +3643,20 @@ export default function KpiEnterpriseApp() {
               </div>
 
               {/* Deduplication & Cleanup Alert */}
-              <div className={`p-4 rounded-xl border flex items-start gap-3.5 shadow-sm transition-colors ${
-                theme === "dark"
-                  ? "bg-slate-900 border-blue-900/60 text-slate-200"
-                  : "bg-blue-50/80 border-blue-200/80 text-slate-700"
-              }`}>
+              <div className={`p-4 rounded-xl border flex items-start gap-3.5 shadow-sm transition-colors ${theme === "dark"
+                ? "bg-slate-900 border-blue-900/60 text-slate-200"
+                : "bg-blue-50/80 border-blue-200/80 text-slate-700"
+                }`}>
                 <div className="w-8 h-8 rounded-lg bg-blue-900 text-white flex items-center justify-center flex-shrink-0 font-bold text-sm shadow-xs">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div className="space-y-1.5 flex-1 min-w-0">
-                  <h5 className={`text-xs font-bold uppercase tracking-wide flex items-center gap-2 ${
-                    theme === "dark" ? "text-blue-300" : "text-blue-950"
-                  }`}>
+                  <h5 className={`text-xs font-bold uppercase tracking-wide flex items-center gap-2 ${theme === "dark" ? "text-blue-300" : "text-blue-950"
+                    }`}>
                     <span>Dublikatlarni tozalash, pedagogik shtat va xavfsiz avtorizatsiya mexanizmi</span>
                   </h5>
-                  <div className={`text-xs leading-relaxed space-y-1 ${
-                    theme === "dark" ? "text-slate-300" : "text-slate-600"
-                  }`}>
+                  <div className={`text-xs leading-relaxed space-y-1 ${theme === "dark" ? "text-slate-300" : "text-slate-600"
+                    }`}>
                     <p>
                       • <b className={theme === "dark" ? "text-white" : "text-slate-900"}>Pedagogik shtat mezoni:</b> Agar xodim maʼmuriy lavozimda (masalan, 1.0 stavka) ishlab, kafedrada 0.5 yoki 0.25 stavka dars bersa, uning KPI dagi hisob-kitob stavkasi (K_shtat koeffitsiyenti) aynan uning <b className={theme === "dark" ? "text-blue-300" : "text-blue-900"}>pedagogik stavkasi (0.5 yoki 0.25)</b> boʻyicha olinadi. Oʻqituvchilik shartnomasi boʻlmagan sof xodimlar KPI dan butunlay chetlatiladi.
                     </p>
@@ -4570,9 +3669,8 @@ export default function KpiEnterpriseApp() {
 
               {/* Statistics Grid */}
               <div className="grid grid-cols-4 gap-4">
-                <div className={`p-4 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                }`}>
+                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                  }`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-[11px] font-bold uppercase text-slate-400">Xom HEMIS yozuvlari</span>
                     <Database className="w-4 h-4 text-slate-400" />
@@ -4583,9 +3681,8 @@ export default function KpiEnterpriseApp() {
                   <div className="text-[11px] text-slate-400 mt-1">HEMIS dagi barcha shartnoma qatorlari</div>
                 </div>
 
-                <div className={`p-4 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-rose-900/40" : "bg-white border-rose-200 bg-rose-50/20"
-                }`}>
+                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-rose-900/40" : "bg-white border-rose-200 bg-rose-50/20"
+                  }`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className={`text-[11px] font-bold uppercase ${theme === "dark" ? "text-rose-400" : "text-rose-700"}`}>Boʻshaganlar (chiqarilgan)</span>
                     <span className="w-2 h-2 rounded-full bg-rose-500" />
@@ -4596,9 +3693,8 @@ export default function KpiEnterpriseApp() {
                   <div className={`text-[11px] mt-1 ${theme === "dark" ? "text-rose-300/80" : "text-rose-600/80"}`}>Universitetda ishlamaydi (KPI ga kirmadi)</div>
                 </div>
 
-                <div className={`p-4 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-amber-900/40" : "bg-white border-amber-200 bg-amber-50/20"
-                }`}>
+                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-amber-900/40" : "bg-white border-amber-200 bg-amber-50/20"
+                  }`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className={`text-[11px] font-bold uppercase ${theme === "dark" ? "text-amber-400" : "text-amber-800"}`}>Birlashtirilgan oʻrindoshlik</span>
                     <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -4609,9 +3705,8 @@ export default function KpiEnterpriseApp() {
                   <div className={`text-[11px] mt-1 ${theme === "dark" ? "text-amber-300/80" : "text-amber-700/80"}`}>Asosiy va oʻrindosh stavkalari jamlandi</div>
                 </div>
 
-                <div className={`p-4 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-emerald-900/40" : "bg-white border-emerald-200 bg-emerald-50/20"
-                }`}>
+                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-emerald-900/40" : "bg-white border-emerald-200 bg-emerald-50/20"
+                  }`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className={`text-[11px] font-bold uppercase ${theme === "dark" ? "text-emerald-400" : "text-emerald-800"}`}>Noyob faol oʻqituvchilar</span>
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -4624,9 +3719,8 @@ export default function KpiEnterpriseApp() {
               </div>
 
               {/* HEMIS Teacher Workload Analytics Card */}
-              <div className={`rounded-xl border shadow-sm p-6 ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
+              <div className={`rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
@@ -4695,9 +3789,8 @@ export default function KpiEnterpriseApp() {
               </div>
 
               {/* HEMIS Academic Curriculums & Resources Card */}
-              <div className={`rounded-xl border shadow-sm p-6 ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
+              <div className={`rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white shadow-sm flex-shrink-0">
@@ -4793,31 +3886,28 @@ export default function KpiEnterpriseApp() {
                     <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg">
                       <button
                         onClick={() => setHemisAcademicActiveTab("curriculums")}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                          hemisAcademicActiveTab === "curriculums"
-                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                        }`}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${hemisAcademicActiveTab === "curriculums"
+                          ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                          }`}
                       >
                         Oʻquv rejalari ({hemisCurriculums.length || 197})
                       </button>
                       <button
                         onClick={() => setHemisAcademicActiveTab("scientific")}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                          hemisAcademicActiveTab === "scientific"
-                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                        }`}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${hemisAcademicActiveTab === "scientific"
+                          ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                          }`}
                       >
                         Ilmiy profillar va H-index ({hemisScientificActivities.length || 271})
                       </button>
                       <button
                         onClick={() => setHemisAcademicActiveTab("doctorates")}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                          hemisAcademicActiveTab === "doctorates"
-                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                        }`}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${hemisAcademicActiveTab === "doctorates"
+                          ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                          }`}
                       >
                         Doktorantlar reyestri ({hemisDoctorateStudents.length || 28})
                       </button>
@@ -4830,9 +3920,8 @@ export default function KpiEnterpriseApp() {
                         value={hemisCurriculumFilter}
                         onChange={(e) => setHemisCurriculumFilter(e.target.value)}
                         placeholder="Katalogdan qidirish..."
-                        className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-600 w-60 ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
-                        }`}
+                        className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-600 w-60 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
+                          }`}
                       />
                     </div>
                   </div>
@@ -4842,9 +3931,8 @@ export default function KpiEnterpriseApp() {
                     hemisCurriculums.length > 0 ? (
                       <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
                         <table className="w-full text-left text-xs">
-                          <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${
-                            theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
-                          }`}>
+                          <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
+                            }`}>
                             <tr>
                               <th className="py-2.5 px-3">Oʻquv reja nomi</th>
                               <th className="py-2.5 px-3">Mutaxassislik</th>
@@ -4898,9 +3986,8 @@ export default function KpiEnterpriseApp() {
                   {hemisAcademicActiveTab === "scientific" && (
                     <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
                       <table className="w-full text-left text-xs">
-                        <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${
-                          theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
-                        }`}>
+                        <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
+                          }`}>
                           <tr>
                             <th className="py-2.5 px-3">Oʻqituvchi / ID</th>
                             <th className="py-2.5 px-3">Ilmiy platforma</th>
@@ -4921,13 +4008,12 @@ export default function KpiEnterpriseApp() {
                                   {s.employee_name || `Xodim #${s.employee_id}`}
                                 </td>
                                 <td className="py-2 px-3">
-                                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                                    s.scientific_platform === "Scopus"
-                                      ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
-                                      : s.scientific_platform === "ResearchGate"
+                                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${s.scientific_platform === "Scopus"
+                                    ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                    : s.scientific_platform === "ResearchGate"
                                       ? "bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800"
                                       : "bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-                                  }`}>
+                                    }`}>
                                     {s.scientific_platform}
                                   </span>
                                 </td>
@@ -4963,9 +4049,8 @@ export default function KpiEnterpriseApp() {
                   {hemisAcademicActiveTab === "doctorates" && (
                     <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
                       <table className="w-full text-left text-xs">
-                        <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${
-                          theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
-                        }`}>
+                        <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
+                          }`}>
                           <tr>
                             <th className="py-2.5 px-3">F.I.SH.</th>
                             <th className="py-2.5 px-3">Dissertatsiya mavzusi</th>
@@ -5008,9 +4093,8 @@ export default function KpiEnterpriseApp() {
               </div>
 
               {/* Employees List from HEMIS */}
-              <div className={`rounded-xl border shadow-sm p-6 ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
+              <div className={`rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
                 <div className="flex justify-between items-center mb-4">
                   <div>
                     <h4 className={`text-base font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
@@ -5032,19 +4116,17 @@ export default function KpiEnterpriseApp() {
                       <span>Excel (.xlsx) yuklash</span>
                     </a>
 
-                    <div className={`flex p-0.5 rounded-lg border text-xs ${
-                      theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
-                    }`}>
+                    <div className={`flex p-0.5 rounded-lg border text-xs ${theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
+                      }`}>
                       <button
                         onClick={() => {
                           setHemisEmployeeType("teacher");
                           setHemisPage(1);
                         }}
-                        className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
-                          hemisEmployeeType === "teacher"
-                            ? theme === "dark" ? "bg-slate-700 text-white shadow-xs" : "bg-white text-blue-950 shadow-sm"
-                            : theme === "dark" ? "text-slate-400 hover:text-slate-200" : "text-slate-600"
-                        }`}
+                        className={`px-3 py-1.5 rounded-md font-semibold transition-all ${hemisEmployeeType === "teacher"
+                          ? theme === "dark" ? "bg-slate-700 text-white shadow-xs" : "bg-white text-blue-950 shadow-sm"
+                          : theme === "dark" ? "text-slate-400 hover:text-slate-200" : "text-slate-600"
+                          }`}
                       >
                         Faqat oʻqituvchilar
                       </button>
@@ -5053,11 +4135,10 @@ export default function KpiEnterpriseApp() {
                           setHemisEmployeeType("all");
                           setHemisPage(1);
                         }}
-                        className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
-                          hemisEmployeeType === "all"
-                            ? theme === "dark" ? "bg-slate-700 text-white shadow-xs" : "bg-white text-blue-950 shadow-sm"
-                            : theme === "dark" ? "text-slate-400 hover:text-slate-200" : "text-slate-600"
-                        }`}
+                        className={`px-3 py-1.5 rounded-md font-semibold transition-all ${hemisEmployeeType === "all"
+                          ? theme === "dark" ? "bg-slate-700 text-white shadow-xs" : "bg-white text-blue-950 shadow-sm"
+                          : theme === "dark" ? "text-slate-400 hover:text-slate-200" : "text-slate-600"
+                          }`}
                       >
                         Barcha xodimlar
                       </button>
@@ -5073,9 +4154,8 @@ export default function KpiEnterpriseApp() {
                           setHemisPage(1);
                         }}
                         placeholder="F.I.Sh., kafedra yoki ID..."
-                        className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 w-64 ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
-                        }`}
+                        className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 w-64 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
+                          }`}
                       />
                     </div>
                   </div>
@@ -5088,9 +4168,8 @@ export default function KpiEnterpriseApp() {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                      <thead className={`border-b text-xs font-bold uppercase ${
-                        theme === "dark" ? "bg-slate-900/90 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
-                      }`}>
+                      <thead className={`border-b text-xs font-bold uppercase ${theme === "dark" ? "bg-slate-900/90 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
+                        }`}>
                         <tr>
                           <th className="py-3 px-4">Xodim</th>
                           <th className="py-3 px-4">Kodi (ID)</th>
@@ -5113,9 +4192,8 @@ export default function KpiEnterpriseApp() {
                                     className={`w-8 h-8 rounded-full object-cover border ${theme === "dark" ? "border-slate-700" : "border-slate-200"}`}
                                   />
                                 ) : (
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
-                                    theme === "dark" ? "bg-slate-800 text-slate-300" : "bg-slate-200 text-slate-600"
-                                  }`}>
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${theme === "dark" ? "bg-slate-800 text-slate-300" : "bg-slate-200 text-slate-600"
+                                    }`}>
                                     {emp.full_name.charAt(0)}
                                   </div>
                                 )}
@@ -5142,9 +4220,8 @@ export default function KpiEnterpriseApp() {
                                   <div className="flex items-center gap-1.5 mt-0.5">
                                     <span className="text-[11px] text-slate-400">{emp.employment_form}</span>
                                     {emp.had_fired_contracts && (
-                                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-medium border ${
-                                        theme === "dark" ? "bg-slate-800 text-slate-400 border-slate-700" : "bg-slate-100 text-slate-500 border-slate-200"
-                                      }`} title="Avvalgi shartnomasi yopilgan, hozirgi shartnomasi amalda">
+                                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-medium border ${theme === "dark" ? "bg-slate-800 text-slate-400 border-slate-700" : "bg-slate-100 text-slate-500 border-slate-200"
+                                        }`} title="Avvalgi shartnomasi yopilgan, hozirgi shartnomasi amalda">
                                         Eski shartnomasi yopilgan
                                       </span>
                                     )}
@@ -5175,17 +4252,15 @@ export default function KpiEnterpriseApp() {
                                 {emp.fte} stavka
                               </div>
                               {emp.active_contracts_count && emp.active_contracts_count > 1 ? (
-                                <span className={`inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
-                                  theme === "dark" ? "bg-amber-950/60 text-amber-300 border-amber-800" : "bg-amber-50 text-amber-800 border-amber-200"
-                                }`}>
+                                <span className={`inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold border ${theme === "dark" ? "bg-amber-950/60 text-amber-300 border-amber-800" : "bg-amber-50 text-amber-800 border-amber-200"
+                                  }`}>
                                   {emp.active_contracts_count} ta stavka jamlandi
                                 </span>
                               ) : null}
                             </td>
                             <td className="py-3 px-4">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                                theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                              }`}>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                }`}>
                                 Faol ishlamoqda
                               </span>
                             </td>
@@ -5211,9 +4286,8 @@ export default function KpiEnterpriseApp() {
               </div>
 
               {/* Departments Catalog */}
-              <div className={`rounded-xl border shadow-sm p-6 ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
+              <div className={`rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
                 <div className="flex justify-between items-center mb-4">
                   <div>
                     <h4 className={`text-base font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
@@ -5227,21 +4301,19 @@ export default function KpiEnterpriseApp() {
                   {hemisDepartments.map((dept) => (
                     <div
                       key={dept.id}
-                      className={`p-3 rounded-lg border flex items-center justify-between text-xs transition-colors ${
-                        theme === "dark"
-                          ? "bg-slate-800/60 border-slate-700 hover:bg-slate-800 text-slate-200"
-                          : "bg-slate-50/50 border-slate-200 hover:bg-slate-50 text-slate-800"
-                      }`}
+                      className={`p-3 rounded-lg border flex items-center justify-between text-xs transition-colors ${theme === "dark"
+                        ? "bg-slate-800/60 border-slate-700 hover:bg-slate-800 text-slate-200"
+                        : "bg-slate-50/50 border-slate-200 hover:bg-slate-50 text-slate-800"
+                        }`}
                     >
                       <div>
                         <div className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{dept.name}</div>
                         <div className="text-slate-400 text-[11px] font-mono mt-0.5">Kodi: {dept.code}</div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                        dept.structure_type === "Kafedra"
-                          ? theme === "dark" ? "bg-blue-950/60 text-blue-300 border-blue-800" : "bg-blue-50 text-blue-800 border-blue-100"
-                          : theme === "dark" ? "bg-slate-700 text-slate-300 border-slate-600" : "bg-slate-100 text-slate-700 border-slate-200"
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${dept.structure_type === "Kafedra"
+                        ? theme === "dark" ? "bg-blue-950/60 text-blue-300 border-blue-800" : "bg-blue-50 text-blue-800 border-blue-100"
+                        : theme === "dark" ? "bg-slate-700 text-slate-300 border-slate-600" : "bg-slate-100 text-slate-700 border-slate-200"
+                        }`}>
                         {dept.structure_type}
                       </span>
                     </div>
@@ -5258,9 +4330,8 @@ export default function KpiEnterpriseApp() {
             <div className="space-y-6">
               {/* Summary Cards */}
               <div className="grid grid-cols-4 gap-5">
-                <div className={`p-5 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
+                <div className={`p-5 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold uppercase text-slate-500">Jami xodimlar</span>
                     <Users className={`w-4 h-4 ${theme === "dark" ? "text-blue-400" : "text-blue-900"}`} />
@@ -5269,9 +4340,8 @@ export default function KpiEnterpriseApp() {
                   <div className="text-xs text-slate-400 mt-1">Pedagogik va maʼmuriy tarkib</div>
                 </div>
 
-                <div className={`p-5 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
+                <div className={`p-5 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold uppercase text-slate-500">Arizalar soni</span>
                     <CheckSquare className="w-4 h-4 text-emerald-500" />
@@ -5282,9 +4352,8 @@ export default function KpiEnterpriseApp() {
                   </div>
                 </div>
 
-                <div className={`p-5 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
+                <div className={`p-5 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold uppercase text-slate-500">Oylik KPI byudjeti</span>
                     <BarChart3 className="w-4 h-4 text-purple-400" />
@@ -5295,9 +4364,8 @@ export default function KpiEnterpriseApp() {
                   <div className="text-xs text-slate-400 mt-1">Nizom asosida limitlangan</div>
                 </div>
 
-                <div className={`p-5 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
+                <div className={`p-5 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold uppercase text-slate-500">Qabul holati</span>
                     <Clock className="w-4 h-4 text-amber-500" />
@@ -5323,15 +4391,13 @@ export default function KpiEnterpriseApp() {
               <div className="grid grid-cols-4 gap-5">
                 <div
                   onClick={() => setActivePage("admin_hemis")}
-                  className={`p-5 rounded-xl border shadow-sm hover:shadow transition-all cursor-pointer group ${
-                    theme === "dark"
-                      ? "bg-slate-900 border-slate-800 hover:border-emerald-600 text-slate-100"
-                      : "bg-white border-slate-200 hover:border-emerald-600 text-slate-900"
-                  }`}
+                  className={`p-5 rounded-xl border shadow-sm hover:shadow transition-all cursor-pointer group ${theme === "dark"
+                    ? "bg-slate-900 border-slate-800 hover:border-emerald-600 text-slate-100"
+                    : "bg-white border-slate-200 hover:border-emerald-600 text-slate-900"
+                    }`}
                 >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${
-                    theme === "dark" ? "bg-emerald-950/60 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white" : "bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white"
-                  }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${theme === "dark" ? "bg-emerald-950/60 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white" : "bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white"
+                    }`}>
                     <Database className="w-5 h-5" />
                   </div>
                   <h4 className={`text-sm font-bold mb-1 ${theme === "dark" ? "text-white" : "text-slate-900"}`}>HEMIS integratsiyasi</h4>
@@ -5342,15 +4408,13 @@ export default function KpiEnterpriseApp() {
 
                 <div
                   onClick={() => setActivePage("admin_settings")}
-                  className={`p-5 rounded-xl border shadow-sm hover:shadow transition-all cursor-pointer group ${
-                    theme === "dark"
-                      ? "bg-slate-900 border-slate-800 hover:border-blue-700 text-slate-100"
-                      : "bg-white border-slate-200 hover:border-blue-900/50 text-slate-900"
-                  }`}
+                  className={`p-5 rounded-xl border shadow-sm hover:shadow transition-all cursor-pointer group ${theme === "dark"
+                    ? "bg-slate-900 border-slate-800 hover:border-blue-700 text-slate-100"
+                    : "bg-white border-slate-200 hover:border-blue-900/50 text-slate-900"
+                    }`}
                 >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${
-                    theme === "dark" ? "bg-blue-950/60 text-blue-400 group-hover:bg-blue-900 group-hover:text-white" : "bg-blue-50 text-blue-900 group-hover:bg-blue-900 group-hover:text-white"
-                  }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${theme === "dark" ? "bg-blue-950/60 text-blue-400 group-hover:bg-blue-900 group-hover:text-white" : "bg-blue-50 text-blue-900 group-hover:bg-blue-900 group-hover:text-white"
+                    }`}>
                     <Settings className="w-5 h-5" />
                   </div>
                   <h4 className={`text-sm font-bold mb-1 ${theme === "dark" ? "text-white" : "text-slate-900"}`}>Tizim konfiguratsiyasi</h4>
@@ -5361,15 +4425,13 @@ export default function KpiEnterpriseApp() {
 
                 <div
                   onClick={() => setActivePage("admin_users")}
-                  className={`p-5 rounded-xl border shadow-sm hover:shadow transition-all cursor-pointer group ${
-                    theme === "dark"
-                      ? "bg-slate-900 border-slate-800 hover:border-purple-700 text-slate-100"
-                      : "bg-white border-slate-200 hover:border-blue-900/50 text-slate-900"
-                  }`}
+                  className={`p-5 rounded-xl border shadow-sm hover:shadow transition-all cursor-pointer group ${theme === "dark"
+                    ? "bg-slate-900 border-slate-800 hover:border-purple-700 text-slate-100"
+                    : "bg-white border-slate-200 hover:border-blue-900/50 text-slate-900"
+                    }`}
                 >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${
-                    theme === "dark" ? "bg-purple-950/60 text-purple-400 group-hover:bg-purple-900 group-hover:text-white" : "bg-purple-50 text-purple-900 group-hover:bg-purple-900 group-hover:text-white"
-                  }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${theme === "dark" ? "bg-purple-950/60 text-purple-400 group-hover:bg-purple-900 group-hover:text-white" : "bg-purple-50 text-purple-900 group-hover:bg-purple-900 group-hover:text-white"
+                    }`}>
                     <Users className="w-5 h-5" />
                   </div>
                   <h4 className={`text-sm font-bold mb-1 ${theme === "dark" ? "text-white" : "text-slate-900"}`}>Foydalanuvchilar va rollar</h4>
@@ -5380,15 +4442,13 @@ export default function KpiEnterpriseApp() {
 
                 <div
                   onClick={() => setActivePage("admin_logs")}
-                  className={`p-5 rounded-xl border shadow-sm hover:shadow transition-all cursor-pointer group ${
-                    theme === "dark"
-                      ? "bg-slate-900 border-slate-800 hover:border-amber-700 text-slate-100"
-                      : "bg-white border-slate-200 hover:border-blue-900/50 text-slate-900"
-                  }`}
+                  className={`p-5 rounded-xl border shadow-sm hover:shadow transition-all cursor-pointer group ${theme === "dark"
+                    ? "bg-slate-900 border-slate-800 hover:border-amber-700 text-slate-100"
+                    : "bg-white border-slate-200 hover:border-blue-900/50 text-slate-900"
+                    }`}
                 >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${
-                    theme === "dark" ? "bg-amber-950/60 text-amber-400 group-hover:bg-amber-900 group-hover:text-white" : "bg-amber-50 text-amber-900 group-hover:bg-amber-900 group-hover:text-white"
-                  }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${theme === "dark" ? "bg-amber-950/60 text-amber-400 group-hover:bg-amber-900 group-hover:text-white" : "bg-amber-50 text-amber-900 group-hover:bg-amber-900 group-hover:text-white"
+                    }`}>
                     <ShieldAlert className="w-5 h-5" />
                   </div>
                   <h4 className={`text-sm font-bold mb-1 ${theme === "dark" ? "text-white" : "text-slate-900"}`}>Audit va xavfsizlik jurnali</h4>
@@ -5399,26 +4459,23 @@ export default function KpiEnterpriseApp() {
               </div>
 
               {/* Submissions Overview Table for Admin */}
-              <div className={`rounded-xl border shadow-sm p-6 ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
+              <div className={`rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
                 <div className="flex justify-between items-center mb-4">
                   <div>
                     <h3 className={`text-base font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>Barcha tushgan arizalar monitoringi</h3>
                     <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>Ekspertlar va kafedra mudirlari tomonidan koʻrib chiqilishi holati</p>
                   </div>
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                    theme === "dark" ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-600"
-                  }`}>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${theme === "dark" ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-600"
+                    }`}>
                     Jami: {submissions.length} ta
                   </span>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className={`border-b text-xs font-bold uppercase ${
-                      theme === "dark" ? "bg-slate-900/90 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
-                    }`}>
+                    <thead className={`border-b text-xs font-bold uppercase ${theme === "dark" ? "bg-slate-900/90 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
+                      }`}>
                       <tr>
                         <th className="py-3 px-4">Ariza ID</th>
                         <th className="py-3 px-4">Oʻqituvchi</th>
@@ -5439,13 +4496,12 @@ export default function KpiEnterpriseApp() {
                           <td className={`py-3 px-4 text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>{sub.submitted_date}</td>
                           <td className={`py-3 px-4 font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{sub.ball} ball</td>
                           <td className="py-3 px-4">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                              sub.status === "approved"
-                                ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                : sub.status === "pending"
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${sub.status === "approved"
+                              ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              : sub.status === "pending"
                                 ? theme === "dark" ? "bg-amber-950/60 text-amber-300 border-amber-800" : "bg-amber-50 text-amber-800 border-amber-200"
                                 : theme === "dark" ? "bg-rose-950/60 text-rose-300 border-rose-800" : "bg-rose-50 text-rose-800 border-rose-200"
-                            }`}>
+                              }`}>
                               {sub.status === "approved" ? "Tasdiqlangan" : sub.status === "pending" ? "Kutilmoqda" : "Rad etilgan"}
                             </span>
                           </td>
@@ -5462,27 +4518,23 @@ export default function KpiEnterpriseApp() {
           {/* ADMIN VIEW: SYSTEM SETTINGS */}
           {/* ========================================================================= */}
           {activePage === "admin_settings" && (
-            <div className={`max-w-3xl rounded-xl border shadow-sm p-6 ${
-              theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-            }`}>
-              <div className={`border-b pb-4 mb-6 flex justify-between items-center ${
-                theme === "dark" ? "border-slate-800" : "border-slate-100"
+            <div className={`max-w-3xl rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
               }`}>
+              <div className={`border-b pb-4 mb-6 flex justify-between items-center ${theme === "dark" ? "border-slate-800" : "border-slate-100"
+                }`}>
                 <div>
                   <h3 className={`text-lg font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>Tizim konfiguratsiyasi</h3>
                   <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>KPI maʼlumotlarini kiritish davri va byudjet chegaralari</p>
                 </div>
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                  theme === "dark" ? "bg-blue-950/60 text-blue-400" : "bg-blue-50 text-blue-900"
-                }`}>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${theme === "dark" ? "bg-blue-950/60 text-blue-400" : "bg-blue-50 text-blue-900"
+                  }`}>
                   <Settings className="w-5 h-5" />
                 </div>
               </div>
 
               {settingsSaveSuccess && (
-                <div className={`mb-6 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 border ${
-                  theme === "dark" ? "bg-emerald-950/60 border-emerald-800 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-800"
-                }`}>
+                <div className={`mb-6 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 border ${theme === "dark" ? "bg-emerald-950/60 border-emerald-800 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  }`}>
                   <Check className="w-4 h-4 text-emerald-500" />
                   <span>Sozlamalar muvaffaqiyatli saqlandi va tizimda qoʻllanildi.</span>
                 </div>
@@ -5490,9 +4542,8 @@ export default function KpiEnterpriseApp() {
 
               <form onSubmit={handleSaveSettings} className="space-y-5">
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                    theme === "dark" ? "text-slate-300" : "text-slate-700"
-                  }`}>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
+                    }`}>
                     Oʻquv yili
                   </label>
                   <input
@@ -5500,16 +4551,14 @@ export default function KpiEnterpriseApp() {
                     required
                     value={systemSettings.academic_year}
                     onChange={(e) => setSystemSettings({ ...systemSettings, academic_year: e.target.value })}
-                    className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                      theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                    }`}
+                    className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                      }`}
                   />
                   <p className="text-[11px] text-slate-400 mt-1">Filial rasmiy meʼyoriy hujjatlarida aks etadigan oʻquv yili</p>
                 </div>
 
-                <div className={`p-4 rounded-xl border flex items-center justify-between ${
-                  theme === "dark" ? "bg-slate-800/60 border-slate-700" : "bg-slate-50 border-slate-200"
-                }`}>
+                <div className={`p-4 rounded-xl border flex items-center justify-between ${theme === "dark" ? "bg-slate-800/60 border-slate-700" : "bg-slate-50 border-slate-200"
+                  }`}>
                   <div>
                     <div className={`text-sm font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>Arizalar va hujjatlar qabuli</div>
                     <div className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
@@ -5523,18 +4572,16 @@ export default function KpiEnterpriseApp() {
                       onChange={(e) => setSystemSettings({ ...systemSettings, submissions_open: e.target.checked })}
                       className="sr-only peer"
                     />
-                    <div className={`w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-900 ${
-                      theme === "dark" ? "bg-slate-700" : "bg-slate-200"
-                    }`}></div>
+                    <div className={`w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-900 ${theme === "dark" ? "bg-slate-700" : "bg-slate-200"
+                      }`}></div>
                   </label>
                 </div>
 
                 {/* 4 Bosqichli Reglament va Muddatlar */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                      theme === "dark" ? "text-slate-300" : "text-slate-700"
-                    }`}>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
+                      }`}>
                       1. Ariza topshirish muddati
                     </label>
                     <input
@@ -5542,17 +4589,15 @@ export default function KpiEnterpriseApp() {
                       required
                       value={systemSettings.submission_deadline || systemSettings.deadline_date}
                       onChange={(e) => setSystemSettings({ ...systemSettings, submission_deadline: e.target.value, deadline_date: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                        }`}
                     />
                     <p className="text-[11px] text-slate-400 mt-1">Oʻqituvchilar natijalarni kiritadi</p>
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                      theme === "dark" ? "text-slate-300" : "text-slate-700"
-                    }`}>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
+                      }`}>
                       2. Baholash / Tekshirish muddati
                     </label>
                     <input
@@ -5560,17 +4605,15 @@ export default function KpiEnterpriseApp() {
                       required
                       value={systemSettings.review_deadline || "2026-11-05"}
                       onChange={(e) => setSystemSettings({ ...systemSettings, review_deadline: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                        }`}
                     />
                     <p className="text-[11px] text-slate-400 mt-1">Ekspertlar va mudirlar tekshiradi</p>
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                      theme === "dark" ? "text-slate-300" : "text-slate-700"
-                    }`}>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
+                      }`}>
                       3. Apellyatsiya topshirish muddati
                     </label>
                     <input
@@ -5578,9 +4621,8 @@ export default function KpiEnterpriseApp() {
                       required
                       value={systemSettings.appeal_deadline || "2026-11-15"}
                       onChange={(e) => setSystemSettings({ ...systemSettings, appeal_deadline: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                        }`}
                     />
                     <p className="text-[11px] text-slate-400 mt-1">Eʼtiroz arizalari qabul qilinadi</p>
                   </div>
@@ -5588,17 +4630,15 @@ export default function KpiEnterpriseApp() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                      theme === "dark" ? "text-slate-300" : "text-slate-700"
-                    }`}>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
+                      }`}>
                       Joriy faol bosqich (Reglament statusi)
                     </label>
                     <select
                       value={systemSettings.current_stage || "ALL_OPEN"}
                       onChange={(e) => setSystemSettings({ ...systemSettings, current_stage: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                        }`}
                     >
                       <option value="ALL_OPEN">Barcha jarayonlar faol (Sinov / Ochiq rejim)</option>
                       <option value="SUBMISSION_STAGE">1-bosqich: Faqat arizalar topshirish davri</option>
@@ -5609,9 +4649,8 @@ export default function KpiEnterpriseApp() {
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                      theme === "dark" ? "text-slate-300" : "text-slate-700"
-                    }`}>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
+                      }`}>
                       Oylik ragʻbatlantirish byudjet limiti (soʻmda)
                     </label>
                     <input
@@ -5620,9 +4659,8 @@ export default function KpiEnterpriseApp() {
                       step="1000000"
                       value={systemSettings.budget_cap_monthly}
                       onChange={(e) => setSystemSettings({ ...systemSettings, budget_cap_monthly: Number(e.target.value) })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                        }`}
                     />
                   </div>
                 </div>
@@ -5723,12 +4761,10 @@ export default function KpiEnterpriseApp() {
           {activePage === "admin_indicators" && (
             <div className="space-y-6">
               {/* Header and Action */}
-              <div className={`rounded-xl border shadow-sm p-6 ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
-                <div className={`flex justify-between items-start pb-4 border-b mb-4 ${
-                  theme === "dark" ? "border-slate-800" : "border-slate-100"
+              <div className={`rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                 }`}>
+                <div className={`flex justify-between items-start pb-4 border-b mb-4 ${theme === "dark" ? "border-slate-800" : "border-slate-100"
+                  }`}>
                   <div>
                     <h3 className={`text-lg font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
                       KPI Baholash Mezonlari Dinamik Boshqaruvi (CRUD)
@@ -5770,13 +4806,12 @@ export default function KpiEnterpriseApp() {
                     <button
                       key={tab.id}
                       onClick={() => setSelectedBlockFilter(tab.id)}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                        selectedBlockFilter === tab.id
-                          ? "bg-blue-900 text-white shadow-sm"
-                          : theme === "dark"
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${selectedBlockFilter === tab.id
+                        ? "bg-blue-900 text-white shadow-sm"
+                        : theme === "dark"
                           ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -5785,14 +4820,12 @@ export default function KpiEnterpriseApp() {
               </div>
 
               {/* Indicators Table */}
-              <div className={`rounded-xl border shadow-sm p-6 ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
+              <div className={`rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className={`border-b text-xs font-bold uppercase ${
-                      theme === "dark" ? "bg-slate-900/90 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
-                    }`}>
+                    <thead className={`border-b text-xs font-bold uppercase ${theme === "dark" ? "bg-slate-900/90 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
+                      }`}>
                       <tr>
                         <th className="py-3 px-4">Kodi</th>
                         <th className="py-3 px-4">Bloki</th>
@@ -5813,15 +4846,14 @@ export default function KpiEnterpriseApp() {
                               {ind.id}
                             </td>
                             <td className="py-3.5 px-4">
-                              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                                ind.block === "ILM"
-                                  ? theme === "dark" ? "bg-purple-950/60 text-purple-300 border-purple-800" : "bg-purple-50 text-purple-800 border-purple-200"
-                                  : ind.block === "OQV"
+                              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${ind.block === "ILM"
+                                ? theme === "dark" ? "bg-purple-950/60 text-purple-300 border-purple-800" : "bg-purple-50 text-purple-800 border-purple-200"
+                                : ind.block === "OQV"
                                   ? theme === "dark" ? "bg-blue-950/60 text-blue-300 border-blue-800" : "bg-blue-50 text-blue-800 border-blue-100"
                                   : ind.block === "XAL"
-                                  ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                  : theme === "dark" ? "bg-amber-950/60 text-amber-300 border-amber-800" : "bg-amber-50 text-amber-800 border-amber-200"
-                              }`}>
+                                    ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                    : theme === "dark" ? "bg-amber-950/60 text-amber-300 border-amber-800" : "bg-amber-50 text-amber-800 border-amber-200"
+                                }`}>
                                 {ind.block}
                               </span>
                             </td>
@@ -5836,11 +4868,10 @@ export default function KpiEnterpriseApp() {
                               {ind.dept}
                             </td>
                             <td className="py-3.5 px-4">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                                ind.is_active !== false
-                                  ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                  : theme === "dark" ? "bg-slate-800 text-slate-400 border-slate-700" : "bg-slate-100 text-slate-500 border-slate-200"
-                              }`}>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${ind.is_active !== false
+                                ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : theme === "dark" ? "bg-slate-800 text-slate-400 border-slate-700" : "bg-slate-100 text-slate-500 border-slate-200"
+                                }`}>
                                 {ind.is_active !== false ? "Faol" : "Arxivlangan"}
                               </span>
                             </td>
@@ -5858,17 +4889,15 @@ export default function KpiEnterpriseApp() {
                                     setIndFormError("");
                                     setIsAddIndicatorModalOpen(true);
                                   }}
-                                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                                    theme === "dark" ? "bg-slate-800 hover:bg-slate-700 text-slate-200" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                                  }`}
+                                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${theme === "dark" ? "bg-slate-800 hover:bg-slate-700 text-slate-200" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                    }`}
                                 >
                                   Tahrirlash
                                 </button>
                                 <button
                                   onClick={() => handleDeleteIndicator(ind.id)}
-                                  className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
-                                    theme === "dark" ? "bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border-rose-800" : "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200"
-                                  }`}
+                                  className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${theme === "dark" ? "bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border-rose-800" : "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200"
+                                    }`}
                                 >
                                   Arxivlash
                                 </button>
@@ -5918,9 +4947,8 @@ export default function KpiEnterpriseApp() {
 
               {/* Statistics Grid */}
               <div className="grid grid-cols-4 gap-4">
-                <div className={`p-4 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
+                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-[11px] font-bold uppercase text-slate-500">Jami hisoblar</span>
                     <Users className="w-4 h-4 text-slate-400" />
@@ -5931,9 +4959,8 @@ export default function KpiEnterpriseApp() {
                   <div className="text-[11px] text-slate-400 mt-1">Barcha faol tizim foydalanuvchilari</div>
                 </div>
 
-                <div className={`p-4 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
+                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className={`text-[11px] font-bold uppercase ${theme === "dark" ? "text-blue-400" : "text-blue-700"}`}>Oʻqituvchilar</span>
                     <GraduationCap className="w-4 h-4 text-blue-500" />
@@ -5944,9 +4971,8 @@ export default function KpiEnterpriseApp() {
                   <div className="text-[11px] text-slate-400 mt-1">TEACHER roli biriktirilgan</div>
                 </div>
 
-                <div className={`p-4 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
+                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className={`text-[11px] font-bold uppercase ${theme === "dark" ? "text-sky-400" : "text-sky-700"}`}>Kafedra mudirlari</span>
                     <Building className="w-4 h-4 text-sky-500" />
@@ -5957,9 +4983,8 @@ export default function KpiEnterpriseApp() {
                   <div className="text-[11px] text-slate-400 mt-1">HEAD_OF_DEPT tasdiqlovchi roli</div>
                 </div>
 
-                <div className={`p-4 rounded-xl border shadow-sm ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
+                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className={`text-[11px] font-bold uppercase ${theme === "dark" ? "text-purple-400" : "text-purple-700"}`}>Rahbariyat & Admin</span>
                     <ShieldCheck className="w-4 h-4 text-purple-500" />
@@ -5972,12 +4997,10 @@ export default function KpiEnterpriseApp() {
               </div>
 
               {/* Users Registry Card */}
-              <div className={`rounded-xl border shadow-sm p-6 ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
-                <div className={`flex justify-between items-center pb-4 border-b mb-5 ${
-                  theme === "dark" ? "border-slate-800" : "border-slate-100"
+              <div className={`rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                 }`}>
+                <div className={`flex justify-between items-center pb-4 border-b mb-5 ${theme === "dark" ? "border-slate-800" : "border-slate-100"
+                  }`}>
                   <div>
                     <h3 className={`text-lg font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>Foydalanuvchilar va rollar boshqaruvi</h3>
                     <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
@@ -5998,9 +5021,8 @@ export default function KpiEnterpriseApp() {
                             .then(d => { if (d.items) setAdminUsers(d.items); });
                         }}
                         placeholder="F.I.Sh., login yoki kafedra..."
-                        className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 w-60 ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
-                        }`}
+                        className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 w-60 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
+                          }`}
                       />
                     </div>
                   </div>
@@ -6024,13 +5046,12 @@ export default function KpiEnterpriseApp() {
                           .then(r => r.json())
                           .then(d => { if (d.items) setAdminUsers(d.items); });
                       }}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                        adminUsersFilterRole === tab.id
-                          ? "bg-blue-900 text-white shadow-sm"
-                          : theme === "dark"
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${adminUsersFilterRole === tab.id
+                        ? "bg-blue-900 text-white shadow-sm"
+                        : theme === "dark"
                           ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -6039,9 +5060,8 @@ export default function KpiEnterpriseApp() {
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className={`border-b text-xs font-bold uppercase ${
-                      theme === "dark" ? "bg-slate-900/90 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
-                    }`}>
+                    <thead className={`border-b text-xs font-bold uppercase ${theme === "dark" ? "bg-slate-900/90 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
+                      }`}>
                       <tr>
                         <th className="py-3 px-4">Login (HEMIS ID)</th>
                         <th className="py-3 px-4">F.I.Sh.</th>
@@ -6061,15 +5081,13 @@ export default function KpiEnterpriseApp() {
                           <td className="py-3 px-4">
                             <div className={`font-semibold text-xs leading-snug ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{u.name}</div>
                             {u.must_change_password ? (
-                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${
-                                theme === "dark" ? "bg-amber-950/60 text-amber-300 border-amber-800" : "bg-amber-50 text-amber-700 border-amber-200"
-                              }`}>
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${theme === "dark" ? "bg-amber-950/60 text-amber-300 border-amber-800" : "bg-amber-50 text-amber-700 border-amber-200"
+                                }`}>
                                 Birlamchi parolda
                               </span>
                             ) : (
-                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${
-                                theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              }`}>
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                }`}>
                                 Paroli yangilangan
                               </span>
                             )}
@@ -6085,9 +5103,8 @@ export default function KpiEnterpriseApp() {
                             <select
                               value={u.role}
                               onChange={(e) => handleUpdateUserRole(u.username, e.target.value)}
-                              className={`px-2.5 py-1 text-xs font-semibold rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer shadow-sm ${
-                                theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-300 text-slate-900"
-                              }`}
+                              className={`px-2.5 py-1 text-xs font-semibold rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer shadow-sm ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-300 text-slate-900"
+                                }`}
                             >
                               <option value="TEACHER">TEACHER (Oʻqituvchi)</option>
                               <option value="HEAD_OF_DEPT">HEAD_OF_DEPT (Kafedra mudiri)</option>
@@ -6096,11 +5113,10 @@ export default function KpiEnterpriseApp() {
                             </select>
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                              u.is_active !== false
-                                ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                : theme === "dark" ? "bg-rose-950/60 text-rose-300 border-rose-800" : "bg-rose-50 text-rose-800 border-rose-200"
-                            }`}>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${u.is_active !== false
+                              ? theme === "dark" ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              : theme === "dark" ? "bg-rose-950/60 text-rose-300 border-rose-800" : "bg-rose-50 text-rose-800 border-rose-200"
+                              }`}>
                               {u.is_active !== false ? "Faol" : "Bloklangan"}
                             </span>
                           </td>
@@ -6109,19 +5125,17 @@ export default function KpiEnterpriseApp() {
                               <button
                                 onClick={() => handleResetUserPassword(u.username)}
                                 title="Parolni birlamchi HEMIS ID raqamiga qaytarish"
-                                className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
-                                  theme === "dark" ? "bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border-amber-800" : "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
-                                }`}
+                                className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${theme === "dark" ? "bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border-amber-800" : "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                                  }`}
                               >
                                 Parolni tiklash
                               </button>
                               <button
                                 onClick={() => handleToggleUserStatus(u.username)}
-                                className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
-                                  u.is_active !== false
-                                    ? theme === "dark" ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700" : "bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200"
-                                    : theme === "dark" ? "bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border-emerald-800" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200"
-                                }`}
+                                className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${u.is_active !== false
+                                  ? theme === "dark" ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700" : "bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200"
+                                  : theme === "dark" ? "bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border-emerald-800" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200"
+                                  }`}
                               >
                                 {u.is_active !== false ? "Bloklash" : "Faollashtirish"}
                               </button>
@@ -6152,12 +5166,10 @@ export default function KpiEnterpriseApp() {
           {/* Indicator Add/Edit Modal */}
           {isAddIndicatorModalOpen && (
             <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className={`rounded-2xl border shadow-2xl max-w-lg w-full p-6 animate-in fade-in duration-150 ${
-                theme === "dark" ? "bg-slate-900 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
-                <div className={`flex justify-between items-center pb-3 border-b mb-4 ${
-                  theme === "dark" ? "border-slate-800" : "border-slate-100"
+              <div className={`rounded-2xl border shadow-2xl max-w-lg w-full p-6 animate-in fade-in duration-150 ${theme === "dark" ? "bg-slate-900 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                 }`}>
+                <div className={`flex justify-between items-center pb-3 border-b mb-4 ${theme === "dark" ? "border-slate-800" : "border-slate-100"
+                  }`}>
                   <h4 className={`text-base font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
                     {editingIndicator ? "Baholash Mezonini Tahrirlash" : "Yangi Baholash Mezoni Kiritish"}
                   </h4>
@@ -6170,9 +5182,8 @@ export default function KpiEnterpriseApp() {
                 </div>
 
                 {indFormError && (
-                  <div className={`mb-4 p-3 rounded-lg text-xs font-medium border ${
-                    theme === "dark" ? "bg-rose-950/60 border-rose-800 text-rose-300" : "bg-rose-50 border-rose-200 text-rose-700"
-                  }`}>
+                  <div className={`mb-4 p-3 rounded-lg text-xs font-medium border ${theme === "dark" ? "bg-rose-950/60 border-rose-800 text-rose-300" : "bg-rose-50 border-rose-200 text-rose-700"
+                    }`}>
                     {indFormError}
                   </div>
                 )}
@@ -6190,9 +5201,8 @@ export default function KpiEnterpriseApp() {
                         value={indFormId}
                         onChange={(e) => setIndFormId(e.target.value)}
                         placeholder="Masalan: 2.7 yoki 1.9"
-                        className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 disabled:opacity-60 ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 disabled:bg-slate-800/40" : "bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400"
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 disabled:opacity-60 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 disabled:bg-slate-800/40" : "bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400"
+                          }`}
                       />
                     </div>
 
@@ -6203,9 +5213,8 @@ export default function KpiEnterpriseApp() {
                       <select
                         value={indFormBlock}
                         onChange={(e) => setIndFormBlock(e.target.value)}
-                        className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-300 text-slate-900"
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-300 text-slate-900"
+                          }`}
                       >
                         <option value="ILM">ILM (Ilmiy-tadqiqot)</option>
                         <option value="OQV">OQV (Oʻquv-uslubiy)</option>
@@ -6225,9 +5234,8 @@ export default function KpiEnterpriseApp() {
                       value={indFormName}
                       onChange={(e) => setIndFormName(e.target.value)}
                       placeholder="Mezonning aniq meʼyoriy matnini kiriting..."
-                      className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
+                        }`}
                     />
                   </div>
 
@@ -6242,9 +5250,8 @@ export default function KpiEnterpriseApp() {
                         required
                         value={indFormMaxBall}
                         onChange={(e) => setIndFormMaxBall(Number(e.target.value))}
-                        className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-300 text-slate-900"
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-300 text-slate-900"
+                          }`}
                       />
                     </div>
 
@@ -6257,9 +5264,8 @@ export default function KpiEnterpriseApp() {
                         value={indFormValidity}
                         onChange={(e) => setIndFormValidity(e.target.value)}
                         placeholder="Masalan: 1 oʻquv yili"
-                        className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
+                          }`}
                       />
                     </div>
                   </div>
@@ -6274,9 +5280,8 @@ export default function KpiEnterpriseApp() {
                       value={indFormDept}
                       onChange={(e) => setIndFormDept(e.target.value)}
                       placeholder="Masalan: Ilmiy-tadqiqotlar boʻlimi"
-                      className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
+                        }`}
                     />
                   </div>
 
@@ -6284,9 +5289,8 @@ export default function KpiEnterpriseApp() {
                     <button
                       type="button"
                       onClick={() => { setIsAddIndicatorModalOpen(false); setEditingIndicator(null); }}
-                      className={`px-4 py-2 border rounded-lg text-xs font-semibold transition-colors ${
-                        theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "border-slate-300 hover:bg-slate-50 text-slate-700"
-                      }`}
+                      className={`px-4 py-2 border rounded-lg text-xs font-semibold transition-colors ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "border-slate-300 hover:bg-slate-50 text-slate-700"
+                        }`}
                     >
                       Bekor qilish
                     </button>
@@ -6337,9 +5341,8 @@ export default function KpiEnterpriseApp() {
                         />
                       ) : null}
                       <div
-                        className={`w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-800 text-white font-black text-3xl items-center justify-center shadow-xl border-4 border-white dark:border-slate-900 ${
-                          currentUser.image ? "hidden" : "flex"
-                        }`}
+                        className={`w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-800 text-white font-black text-3xl items-center justify-center shadow-xl border-4 border-white dark:border-slate-900 ${currentUser.image ? "hidden" : "flex"
+                          }`}
                       >
                         {currentUser.name.charAt(0)}
                       </div>
@@ -6703,11 +5706,10 @@ export default function KpiEnterpriseApp() {
                 <div className="grid grid-cols-3 gap-5 mb-7">
                   <div
                     onClick={() => setActiveSvetaforFilter(activeSvetaforFilter === "green" ? "ALL" : "green")}
-                    className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${
-                      activeSvetaforFilter === "green"
-                        ? "ring-2 ring-emerald-500 border-slate-200 dark:border-slate-700"
-                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                    } border-l-4 border-l-emerald-600`}
+                    className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${activeSvetaforFilter === "green"
+                      ? "ring-2 ring-emerald-500 border-slate-200 dark:border-slate-700"
+                      : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                      } border-l-4 border-l-emerald-600`}
                   >
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">Yashil toifa (71 – 100 ball)</span>
@@ -6721,11 +5723,10 @@ export default function KpiEnterpriseApp() {
 
                   <div
                     onClick={() => setActiveSvetaforFilter(activeSvetaforFilter === "yellow" ? "ALL" : "yellow")}
-                    className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${
-                      activeSvetaforFilter === "yellow"
-                        ? "ring-2 ring-amber-500 border-slate-200 dark:border-slate-700"
-                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                    } border-l-4 border-l-amber-500`}
+                    className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${activeSvetaforFilter === "yellow"
+                      ? "ring-2 ring-amber-500 border-slate-200 dark:border-slate-700"
+                      : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                      } border-l-4 border-l-amber-500`}
                   >
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">Sariq toifa (40 – 70 ball)</span>
@@ -6739,11 +5740,10 @@ export default function KpiEnterpriseApp() {
 
                   <div
                     onClick={() => setActiveSvetaforFilter(activeSvetaforFilter === "red" ? "ALL" : "red")}
-                    className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${
-                      activeSvetaforFilter === "red"
-                        ? "ring-2 ring-rose-500 border-slate-200 dark:border-slate-700"
-                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                    } border-l-4 border-l-rose-500`}
+                    className={`p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all cursor-pointer ${activeSvetaforFilter === "red"
+                      ? "ring-2 ring-rose-500 border-slate-200 dark:border-slate-700"
+                      : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                      } border-l-4 border-l-rose-500`}
                   >
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-400">Qizil toifa (40 balldan past)</span>
@@ -6792,13 +5792,12 @@ export default function KpiEnterpriseApp() {
                           </div>
                           <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-1">100 ball meʼyoridan</div>
                         </div>
-                        <div className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                          currentTeacher.scores.svetafor_zone === "green"
-                            ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                            : currentTeacher.scores.svetafor_zone === "yellow"
+                        <div className={`px-3 py-1.5 rounded-full text-xs font-bold ${currentTeacher.scores.svetafor_zone === "green"
+                          ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                          : currentTeacher.scores.svetafor_zone === "yellow"
                             ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
                             : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
-                        }`}>
+                          }`}>
                           {currentTeacher.scores.svetafor_label}
                         </div>
                       </div>
@@ -6812,9 +5811,8 @@ export default function KpiEnterpriseApp() {
                       </div>
                       <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            currentTeacher.scores.svetafor_zone === "green" ? "bg-emerald-500" : currentTeacher.scores.svetafor_zone === "yellow" ? "bg-amber-500" : "bg-rose-500"
-                          }`}
+                          className={`h-full rounded-full transition-all duration-500 ${currentTeacher.scores.svetafor_zone === "green" ? "bg-emerald-500" : currentTeacher.scores.svetafor_zone === "yellow" ? "bg-amber-500" : "bg-rose-500"
+                            }`}
                           style={{ width: `${Math.min(100, currentTeacher.scores.normalized_score)}%` }}
                         />
                       </div>
@@ -6938,11 +5936,10 @@ export default function KpiEnterpriseApp() {
                                 >
                                   <div>
                                     <div className="flex items-center justify-between gap-2 mb-1.5">
-                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                        subj.education_type_name === "Magistr" || subj.education_type_code === "12"
-                                          ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
-                                          : "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-                                      }`}>
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${subj.education_type_name === "Magistr" || subj.education_type_code === "12"
+                                        ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                        : "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                        }`}>
                                         {subj.education_type_name || "Bakalavr"}
                                       </span>
                                       <span className="text-xs font-black text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
@@ -7002,11 +5999,10 @@ export default function KpiEnterpriseApp() {
                         setModalDescription("");
                         setIsAddModalOpen(true);
                       }}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-2 ${
-                        systemSettings.submissions_open
-                          ? "bg-blue-900 hover:bg-blue-800 text-white cursor-pointer"
-                          : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700"
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-2 ${systemSettings.submissions_open
+                        ? "bg-blue-900 hover:bg-blue-800 text-white cursor-pointer"
+                        : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700"
+                        }`}
                       title={systemSettings.submissions_open ? "Yangi KPI natijasini kiritish" : "Qabul yopilgan"}
                     >
                       <span>+ Yangi natija kiritish</span>
@@ -7076,13 +6072,12 @@ export default function KpiEnterpriseApp() {
                                 )}
                               </td>
                               <td className="py-3.5 px-4 max-w-xs">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                  sub.status === "approved"
-                                    ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                                    : sub.status === "pending"
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${sub.status === "approved"
+                                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                  : sub.status === "pending"
                                     ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
                                     : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
-                                }`}>
+                                  }`}>
                                   {sub.status === "approved" ? "Tasdiqlangan" : sub.status === "pending" ? "Koʻrib chiqilmoqda" : "Rad etilgan"}
                                 </span>
 
@@ -7231,10 +6226,10 @@ export default function KpiEnterpriseApp() {
                                 </td>
                                 <td className="py-3.5 px-4">
                                   {(() => {
-                                    const isSelf = (sub.teacher_id === currentUser?.id) || 
-                                      Boolean(currentUser?.name && sub.teacher_name && 
-                                      sub.teacher_name.toLowerCase().replace(/^(dots\.|prof\.)\s*/, '').trim() === currentUser.name.toLowerCase().replace(/^(dots\.|prof\.)\s*/, '').trim());
-                                    
+                                    const isSelf = (sub.teacher_id === currentUser?.id) ||
+                                      Boolean(currentUser?.name && sub.teacher_name &&
+                                        sub.teacher_name.toLowerCase().replace(/^(dots\.|prof\.)\s*/, '').trim() === currentUser.name.toLowerCase().replace(/^(dots\.|prof\.)\s*/, '').trim());
+
                                     if (isSelf) {
                                       return (
                                         <div className="flex flex-col gap-1 max-w-[210px]">
@@ -7320,61 +6315,59 @@ export default function KpiEnterpriseApp() {
                           {teachers
                             .filter(t => !currentUser?.department || t.department.toLowerCase().includes(currentUser.department.toLowerCase()) || currentUser.department.toLowerCase().includes(t.department.toLowerCase()))
                             .map(t => (
-                            <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                              <td className="py-3.5 px-4">
-                                <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
-                                  <span>{t.name}</span>
-                                  {(() => {
-                                    const wl = getTeacherWorkloadData((t as any).hemis_id || t.name);
-                                    if (wl && wl.totalHours > 0) {
-                                      return (
-                                        <button
-                                          onClick={() => setSelectedWorkloadTeacher({ name: t.name, id: (t as any).hemis_id || t.id, department: t.department })}
-                                          title="HEMIS Oʻquv yuklamasini koʻrish"
-                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors shadow-2xs cursor-pointer"
-                                        >
-                                          <BookOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                          <span>{wl.totalHours} soat ({wl.subjectsCount} fan)</span>
-                                        </button>
-                                      );
-                                    }
-                                    return null;
-                                  })()}
-                                </div>
-                              </td>
-                              <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.position}</td>
-                              <td className="py-3.5 px-4">
-                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                                  t.fte >= 1.5
+                              <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="py-3.5 px-4">
+                                  <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
+                                    <span>{t.name}</span>
+                                    {(() => {
+                                      const wl = getTeacherWorkloadData((t as any).hemis_id || t.name);
+                                      if (wl && wl.totalHours > 0) {
+                                        return (
+                                          <button
+                                            onClick={() => setSelectedWorkloadTeacher({ name: t.name, id: (t as any).hemis_id || t.id, department: t.department })}
+                                            title="HEMIS Oʻquv yuklamasini koʻrish"
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors shadow-2xs cursor-pointer"
+                                          >
+                                            <BookOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                            <span>{wl.totalHours} soat ({wl.subjectsCount} fan)</span>
+                                          </button>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.position}</td>
+                                <td className="py-3.5 px-4">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${t.fte >= 1.5
                                     ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
                                     : t.fte >= 1.0
-                                    ? "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-                                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                                }`}>
-                                  {t.fte} stavka
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.oqv}</td>
-                              <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.ilm}</td>
-                              <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.xal}</td>
-                              <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.man}</td>
-                              <td className="py-3.5 px-4 font-black text-slate-900 dark:text-slate-100">
-                                {t.scores.normalized_score}
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                  t.scores.svetafor_zone === "green"
+                                      ? "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                      : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                    }`}>
+                                    {t.fte} stavka
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.oqv}</td>
+                                <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.ilm}</td>
+                                <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.xal}</td>
+                                <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.man}</td>
+                                <td className="py-3.5 px-4 font-black text-slate-900 dark:text-slate-100">
+                                  {t.scores.normalized_score}
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${t.scores.svetafor_zone === "green"
                                     ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                                     : t.scores.svetafor_zone === "yellow"
-                                    ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
-                                    : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
-                                }`}>
-                                  {t.scores.svetafor_label}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4 font-bold text-blue-900 dark:text-blue-400">{t.scores.bonus_label}</td>
-                            </tr>
-                          ))}
+                                      ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                      : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                                    }`}>
+                                    {t.scores.svetafor_label}
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 font-bold text-blue-900 dark:text-blue-400">{t.scores.bonus_label}</td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>
@@ -7386,9 +6379,8 @@ export default function KpiEnterpriseApp() {
               {activeRole === "DEAN" && (
                 <div className="space-y-6">
                   {/* Faculty Dean Banner */}
-                  <div className={`p-6 rounded-2xl border transition-all ${
-                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
-                  }`}>
+                  <div className={`p-6 rounded-2xl border transition-all ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+                    }`}>
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                       <div>
                         <div className="flex items-center gap-2">
@@ -7463,9 +6455,8 @@ export default function KpiEnterpriseApp() {
                   </div>
 
                   {/* Faculty Teachers Table with FTE Filter */}
-                  <div className={`p-6 rounded-2xl border transition-all ${
-                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
-                  }`}>
+                  <div className={`p-6 rounded-2xl border transition-all ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+                    }`}>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                       <div>
                         <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
@@ -7480,25 +6471,22 @@ export default function KpiEnterpriseApp() {
                       <div className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
                         <button
                           onClick={() => setFteFilter("ALL")}
-                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
-                            fteFilter === "ALL" ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-300 shadow-xs" : "text-slate-500"
-                          }`}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "ALL" ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-300 shadow-xs" : "text-slate-500"
+                            }`}
                         >
                           Barchasi
                         </button>
                         <button
                           onClick={() => setFteFilter("1.5")}
-                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
-                            fteFilter === "1.5" ? "bg-purple-600 text-white shadow-xs" : "text-slate-500"
-                          }`}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "1.5" ? "bg-purple-600 text-white shadow-xs" : "text-slate-500"
+                            }`}
                         >
                           1.50 stavka
                         </button>
                         <button
                           onClick={() => setFteFilter("1.0")}
-                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
-                            fteFilter === "1.0" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500"
-                          }`}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "1.0" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500"
+                            }`}
                         >
                           1.00 stavka
                         </button>
@@ -7527,37 +6515,36 @@ export default function KpiEnterpriseApp() {
                             })
                             .map(t => (
                               <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                              <td className="py-3.5 px-4">
-                                <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
-                                  <span>{t.name}</span>
-                                  {(() => {
-                                    const wl = getTeacherWorkloadData((t as any).hemis_id || t.name);
-                                    if (wl && wl.totalHours > 0) {
-                                      return (
-                                        <button
-                                          onClick={() => setSelectedWorkloadTeacher({ name: t.name, id: (t as any).hemis_id || t.id, department: t.department })}
-                                          title="HEMIS Oʻquv yuklamasini koʻrish"
-                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors shadow-2xs cursor-pointer"
-                                        >
-                                          <BookOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                          <span>{wl.totalHours} soat ({wl.subjectsCount} fan)</span>
-                                        </button>
-                                      );
-                                    }
-                                    return null;
-                                  })()}
-                                </div>
-                              </td>
+                                <td className="py-3.5 px-4">
+                                  <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
+                                    <span>{t.name}</span>
+                                    {(() => {
+                                      const wl = getTeacherWorkloadData((t as any).hemis_id || t.name);
+                                      if (wl && wl.totalHours > 0) {
+                                        return (
+                                          <button
+                                            onClick={() => setSelectedWorkloadTeacher({ name: t.name, id: (t as any).hemis_id || t.id, department: t.department })}
+                                            title="HEMIS Oʻquv yuklamasini koʻrish"
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors shadow-2xs cursor-pointer"
+                                          >
+                                            <BookOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                            <span>{wl.totalHours} soat ({wl.subjectsCount} fan)</span>
+                                          </button>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+                                </td>
                                 <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-xs">{t.department}</td>
                                 <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.position}</td>
                                 <td className="py-3.5 px-4">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                                    t.fte >= 1.5
-                                      ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
-                                      : t.fte >= 1.0
+                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${t.fte >= 1.5
+                                    ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                                    : t.fte >= 1.0
                                       ? "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
                                       : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                                  }`}>
+                                    }`}>
                                     {t.fte} stavka
                                   </span>
                                 </td>
@@ -7565,13 +6552,12 @@ export default function KpiEnterpriseApp() {
                                   {t.scores?.normalized_score || 0}
                                 </td>
                                 <td className="py-3.5 px-4">
-                                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                    t.scores?.svetafor_zone === "green"
-                                      ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                                      : t.scores?.svetafor_zone === "yellow"
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${t.scores?.svetafor_zone === "green"
+                                    ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                    : t.scores?.svetafor_zone === "yellow"
                                       ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
                                       : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
-                                  }`}>
+                                    }`}>
                                     {t.scores?.svetafor_label || "—"}
                                   </span>
                                 </td>
@@ -7673,13 +6659,12 @@ export default function KpiEnterpriseApp() {
                             <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{t.fte}</td>
                             <td className="py-3.5 px-4 font-black text-blue-950 dark:text-blue-300">{t.scores.normalized_score}</td>
                             <td className="py-3.5 px-4">
-                              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                t.scores.svetafor_zone === "green"
-                                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                                  : t.scores.svetafor_zone === "yellow"
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${t.scores.svetafor_zone === "green"
+                                ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                : t.scores.svetafor_zone === "yellow"
                                   ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
                                   : "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
-                              }`}>
+                                }`}>
                                 {t.scores.svetafor_label}
                               </span>
                             </td>
@@ -7722,8 +6707,8 @@ export default function KpiEnterpriseApp() {
               hierarchyData={structureHierarchy}
               onSelectDepartment={(deptName) => {
                 setSelectedDeptFilter(deptName);
-                const match = teachers.find(t => 
-                  t.department.toLowerCase().includes(deptName.toLowerCase()) || 
+                const match = teachers.find(t =>
+                  t.department.toLowerCase().includes(deptName.toLowerCase()) ||
                   deptName.toLowerCase().includes(t.department.toLowerCase())
                 );
                 if (match) setSelectedTeacherId(match.id);
@@ -7740,51 +6725,46 @@ export default function KpiEnterpriseApp() {
               <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
                 <button
                   onClick={() => setSelectedBlockFilter("ALL")}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                    selectedBlockFilter === "ALL"
-                      ? "bg-blue-900 dark:bg-blue-600 text-white"
-                      : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  }`}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${selectedBlockFilter === "ALL"
+                    ? "bg-blue-900 dark:bg-blue-600 text-white"
+                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    }`}
                 >
                   Barcha mezonlar (41 ta)
                 </button>
                 <button
                   onClick={() => setSelectedBlockFilter("oqv")}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                    selectedBlockFilter === "oqv"
-                      ? "bg-blue-900 dark:bg-blue-600 text-white"
-                      : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  }`}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${selectedBlockFilter === "oqv"
+                    ? "bg-blue-900 dark:bg-blue-600 text-white"
+                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    }`}
                 >
                   I. Oʻquv-metodik (30 ball)
                 </button>
                 <button
                   onClick={() => setSelectedBlockFilter("ilm")}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                    selectedBlockFilter === "ilm"
-                      ? "bg-blue-900 dark:bg-blue-600 text-white"
-                      : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  }`}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${selectedBlockFilter === "ilm"
+                    ? "bg-blue-900 dark:bg-blue-600 text-white"
+                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    }`}
                 >
                   II. Ilmiy-innovatsion (40 ball)
                 </button>
                 <button
                   onClick={() => setSelectedBlockFilter("xal")}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                    selectedBlockFilter === "xal"
-                      ? "bg-blue-900 dark:bg-blue-600 text-white"
-                      : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  }`}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${selectedBlockFilter === "xal"
+                    ? "bg-blue-900 dark:bg-blue-600 text-white"
+                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    }`}
                 >
                   III. Xalqaro hamkorlik (20 ball)
                 </button>
                 <button
                   onClick={() => setSelectedBlockFilter("man")}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                    selectedBlockFilter === "man"
-                      ? "bg-blue-900 dark:bg-blue-600 text-white"
-                      : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  }`}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${selectedBlockFilter === "man"
+                    ? "bg-blue-900 dark:bg-blue-600 text-white"
+                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    }`}
                 >
                   IV. Maʼnaviy va bandlik (10 ball)
                 </button>
@@ -7920,9 +6900,8 @@ export default function KpiEnterpriseApp() {
           {/* ========================================================================= */}
           {activePage === "appeals" && (
             <div>
-              <div className={`border rounded-xl p-4 text-xs font-medium mb-6 ${
-                theme === "dark" ? "bg-slate-900 border-blue-900/60 text-blue-200" : "bg-blue-50 border-blue-200 text-blue-900"
-              }`}>
+              <div className={`border rounded-xl p-4 text-xs font-medium mb-6 ${theme === "dark" ? "bg-slate-900 border-blue-900/60 text-blue-200" : "bg-blue-50 border-blue-200 text-blue-900"
+                }`}>
                 <b>Eslatma:</b> Nizomning XI bobi 11.1-bandiga muvofiq, dastlabki reyting natijalari eʼlon qilingan kundan boshlab 3 (uch) ish kuni davomida elektron asoslantirilgan ariza topshirilishi mumkin.
               </div>
 
@@ -7997,8 +6976,8 @@ export default function KpiEnterpriseApp() {
                       {activeRole === "TEACHER"
                         ? `Sizning apellyatsiya arizalaringiz tarixi (${roleFilteredAppeals.length} ta)`
                         : activeRole === "HEAD_OF_DEPT"
-                        ? `Kafedrangiz aʼzolari va shaxsiy apellyatsiyalaringiz (${roleFilteredAppeals.length} ta)`
-                        : `Barcha roʻyxatga olingan apellyatsiyalar reyestri (${roleFilteredAppeals.length} ta)`}
+                          ? `Kafedrangiz aʼzolari va shaxsiy apellyatsiyalaringiz (${roleFilteredAppeals.length} ta)`
+                          : `Barcha roʻyxatga olingan apellyatsiyalar reyestri (${roleFilteredAppeals.length} ta)`}
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {activeRole === "TEACHER"
@@ -8062,15 +7041,14 @@ export default function KpiEnterpriseApp() {
                           <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-xs">{a.submitted_date || "2026-10-01"}</td>
                           <td className="py-3.5 px-4">
                             <div className="flex flex-col gap-1">
-                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                                a.status === "Qanoatlantirildi"
-                                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                                  : a.status === "Qisman qanoatlantirildi"
+                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold border ${a.status === "Qanoatlantirildi"
+                                ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                : a.status === "Qisman qanoatlantirildi"
                                   ? "bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800"
                                   : a.status === "Rad etildi"
-                                  ? "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800"
-                                  : "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-900/50"
-                              }`}>
+                                    ? "bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+                                    : "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-900/50"
+                                }`}>
                                 {a.status} {a.awarded_ball ? `(+${a.awarded_ball} ball)` : ""}
                               </span>
                               {(a.commission_comment || a.decision) && (
@@ -8259,12 +7237,12 @@ export default function KpiEnterpriseApp() {
             // Filter & sort subjects
             const rawSubjects = workloadData?.subjects || [];
             const filteredSubjects = rawSubjects.filter(sub => {
-              const matchEdu = subjectEduTypeFilter === "ALL" 
+              const matchEdu = subjectEduTypeFilter === "ALL"
                 || (subjectEduTypeFilter === "11" && (sub.education_type_code === "11" || sub.education_type_name === "Bakalavr"))
                 || (subjectEduTypeFilter === "12" && (sub.education_type_code === "12" || sub.education_type_name === "Magistr"));
               const q = subjectSearchQuery.trim().toLowerCase();
-              const matchQuery = !q 
-                || sub.subject_name.toLowerCase().includes(q) 
+              const matchQuery = !q
+                || sub.subject_name.toLowerCase().includes(q)
                 || sub.department_name.toLowerCase().includes(q);
               return matchEdu && matchQuery;
             }).sort((a, b) => {
@@ -8274,7 +7252,7 @@ export default function KpiEnterpriseApp() {
             });
 
             // Department colleagues strictly bounded by allowedTeachers
-            const deptColleagues = workloadData?.departmentName 
+            const deptColleagues = workloadData?.departmentName
               ? allowedTeachers.filter(t => t.department.toLowerCase() === workloadData.departmentName.toLowerCase())
               : [];
 
@@ -8285,16 +7263,15 @@ export default function KpiEnterpriseApp() {
             const masterPercent = totalHours > 0 ? Math.round((masterHours / totalHours) * 100) : 0;
 
             const segmentColors = [
-              "bg-emerald-500", "bg-blue-500", "bg-indigo-500", "bg-purple-500", 
+              "bg-emerald-500", "bg-blue-500", "bg-indigo-500", "bg-purple-500",
               "bg-amber-500", "bg-rose-500", "bg-teal-500", "bg-cyan-500"
             ];
 
             return (
               <div className="space-y-6">
                 {/* Hero Card */}
-                <div className={`rounded-2xl border shadow-sm p-6 relative overflow-hidden ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                }`}>
+                <div className={`rounded-2xl border shadow-sm p-6 relative overflow-hidden ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                  }`}>
                   <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-emerald-500/10 via-blue-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
 
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
@@ -8305,7 +7282,7 @@ export default function KpiEnterpriseApp() {
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                            {activeRole === "TEACHER" ? "Mening Fanlarim va Oʻquv Yuklamam" : "Fanlar va Oʻquv Yuklamalari Monitoringi"}
+                            {activeRole === "TEACHER" ? "Mening fanlarim va oʻquv yuklamam" : "Fanlar va oʻquv yuklamalari monitoringi"}
                           </h3>
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -8348,25 +7325,24 @@ export default function KpiEnterpriseApp() {
                             <select
                               value={selectedSubjectTeacherName || workloadData?.teacherName || ""}
                               onChange={(e) => setSelectedSubjectTeacherName(e.target.value)}
-                              className={`text-xs font-semibold py-2 pl-3 pr-8 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[240px] truncate cursor-pointer ${
-                                theme === "dark" 
-                                  ? "bg-slate-800 border-slate-700 text-slate-200" 
-                                  : "bg-slate-50 border-slate-200 text-slate-800"
-                              }`}
+                              className={`text-xs font-semibold py-2 pl-3 pr-8 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[240px] truncate cursor-pointer ${theme === "dark"
+                                ? "bg-slate-800 border-slate-700 text-slate-200"
+                                : "bg-slate-50 border-slate-200 text-slate-800"
+                                }`}
                               title={
                                 activeRole === "HEAD_OF_DEPT"
                                   ? "Kafedrangiz oʻqituvchisini tanlang"
                                   : activeRole === "DEAN"
-                                  ? "Fakultetingiz oʻqituvchisini tanlang"
-                                  : "Filial oʻqituvchisini tanlang"
+                                    ? "Fakultetingiz oʻqituvchisini tanlang"
+                                    : "Filial oʻqituvchisini tanlang"
                               }
                             >
                               <optgroup label={
                                 activeRole === "HEAD_OF_DEPT"
                                   ? `Kafedra oʻqituvchilari (${allowedTeachers.length} nafar)`
                                   : activeRole === "DEAN"
-                                  ? `Fakultet oʻqituvchilari (${allowedTeachers.length} nafar)`
-                                  : `Filial barcha oʻqituvchilari (${allowedTeachers.length} nafar)`
+                                    ? `Fakultet oʻqituvchilari (${allowedTeachers.length} nafar)`
+                                    : `Filial barcha oʻqituvchilari (${allowedTeachers.length} nafar)`
                               }>
                                 {allowedTeachers.map((t) => (
                                   <option key={t.id + t.name} value={t.name}>
@@ -8417,9 +7393,8 @@ export default function KpiEnterpriseApp() {
                 {/* KPI Metrics Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Total Hours */}
-                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${
-                    theme === "dark" ? "bg-slate-900 border-emerald-950/80" : "bg-white border-emerald-100"
-                  }`}>
+                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${theme === "dark" ? "bg-slate-900 border-emerald-950/80" : "bg-white border-emerald-100"
+                    }`}>
                     <div className="flex justify-between items-start">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                         Jami oʻquv yuklamasi
@@ -8437,9 +7412,8 @@ export default function KpiEnterpriseApp() {
                   </div>
 
                   {/* Subjects Count */}
-                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${
-                    theme === "dark" ? "bg-slate-900 border-blue-950/80" : "bg-white border-blue-100"
-                  }`}>
+                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${theme === "dark" ? "bg-slate-900 border-blue-950/80" : "bg-white border-blue-100"
+                    }`}>
                     <div className="flex justify-between items-start">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                         Biriktirilgan fanlar
@@ -8457,9 +7431,8 @@ export default function KpiEnterpriseApp() {
                   </div>
 
                   {/* Bachelor Hours */}
-                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${
-                    theme === "dark" ? "bg-slate-900 border-cyan-950/80" : "bg-white border-cyan-100"
-                  }`}>
+                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${theme === "dark" ? "bg-slate-900 border-cyan-950/80" : "bg-white border-cyan-100"
+                    }`}>
                     <div className="flex justify-between items-start">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
                         Bakalavriat soati
@@ -8477,9 +7450,8 @@ export default function KpiEnterpriseApp() {
                   </div>
 
                   {/* Master Hours */}
-                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${
-                    theme === "dark" ? "bg-slate-900 border-purple-950/80" : "bg-white border-purple-100"
-                  }`}>
+                  <div className={`p-4 rounded-2xl border shadow-sm transition-all relative overflow-hidden ${theme === "dark" ? "bg-slate-900 border-purple-950/80" : "bg-white border-purple-100"
+                    }`}>
                     <div className="flex justify-between items-start">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
                         Magistratura soati
@@ -8499,9 +7471,8 @@ export default function KpiEnterpriseApp() {
 
                 {/* Creative Workload Distribution Progress Bar */}
                 {totalHours > 0 && rawSubjects.length > 0 && (
-                  <div className={`p-5 rounded-2xl border shadow-sm ${
-                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                  }`}>
+                  <div className={`p-5 rounded-2xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                    }`}>
                     <div className="flex justify-between items-center mb-3">
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
@@ -8554,41 +7525,36 @@ export default function KpiEnterpriseApp() {
                 )}
 
                 {/* Filter & Search Bar */}
-                <div className={`p-4 rounded-2xl border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                }`}>
+                <div className={`p-4 rounded-2xl border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                  }`}>
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Education filter pills */}
-                    <div className={`p-1 rounded-xl border flex items-center gap-1 text-xs ${
-                      theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
-                    }`}>
+                    <div className={`p-1 rounded-xl border flex items-center gap-1 text-xs ${theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
+                      }`}>
                       <button
                         onClick={() => setSubjectEduTypeFilter("ALL")}
-                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                          subjectEduTypeFilter === "ALL"
-                            ? "bg-blue-900 text-white shadow-xs"
-                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${subjectEduTypeFilter === "ALL"
+                          ? "bg-blue-900 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                          }`}
                       >
                         Barchasi ({rawSubjects.length})
                       </button>
                       <button
                         onClick={() => setSubjectEduTypeFilter("11")}
-                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                          subjectEduTypeFilter === "11"
-                            ? "bg-blue-900 text-white shadow-xs"
-                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${subjectEduTypeFilter === "11"
+                          ? "bg-blue-900 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                          }`}
                       >
                         Bakalavr ({rawSubjects.filter(s => s.education_type_code === "11" || s.education_type_name === "Bakalavr").length})
                       </button>
                       <button
                         onClick={() => setSubjectEduTypeFilter("12")}
-                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                          subjectEduTypeFilter === "12"
-                            ? "bg-blue-900 text-white shadow-xs"
-                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${subjectEduTypeFilter === "12"
+                          ? "bg-blue-900 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                          }`}
                       >
                         Magistr ({rawSubjects.filter(s => s.education_type_code === "12" || s.education_type_name === "Magistr").length})
                       </button>
@@ -8599,9 +7565,8 @@ export default function KpiEnterpriseApp() {
                       <select
                         value={subjectSortBy}
                         onChange={(e) => setSubjectSortBy(e.target.value as any)}
-                        className={`text-xs font-semibold py-2 pl-3 pr-7 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer ${
-                          theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-white border-slate-200 text-slate-800"
-                        }`}
+                        className={`text-xs font-semibold py-2 pl-3 pr-7 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-white border-slate-200 text-slate-800"
+                          }`}
                       >
                         <option value="hours_desc">Soatlar: Kamayish</option>
                         <option value="hours_asc">Soatlar: Oʻsish</option>
@@ -8619,37 +7584,33 @@ export default function KpiEnterpriseApp() {
                         value={subjectSearchQuery}
                         onChange={(e) => setSubjectSearchQuery(e.target.value)}
                         placeholder="Fan yoki kafedra qidirish..."
-                        className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${
-                          theme === "dark" 
-                            ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" 
-                            : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400"
-                        }`}
+                        className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark"
+                          ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
+                          : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400"
+                          }`}
                       />
                     </div>
 
                     {/* View Mode Toggle */}
-                    <div className={`p-1 rounded-xl border flex items-center ${
-                      theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
-                    }`}>
+                    <div className={`p-1 rounded-xl border flex items-center ${theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
+                      }`}>
                       <button
                         onClick={() => setSubjectViewMode("cards")}
                         title="Kartochkalar koʻrinishi"
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          subjectViewMode === "cards"
-                            ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-white shadow-xs"
-                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                        }`}
+                        className={`p-1.5 rounded-lg transition-colors ${subjectViewMode === "cards"
+                          ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-white shadow-xs"
+                          : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          }`}
                       >
                         <LayoutGrid className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setSubjectViewMode("table")}
                         title="Jadval koʻrinishi"
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          subjectViewMode === "table"
-                            ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-white shadow-xs"
-                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                        }`}
+                        className={`p-1.5 rounded-lg transition-colors ${subjectViewMode === "table"
+                          ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-white shadow-xs"
+                          : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          }`}
                       >
                         <List className="w-4 h-4" />
                       </button>
@@ -8659,9 +7620,8 @@ export default function KpiEnterpriseApp() {
 
                 {/* Subjects Content */}
                 {filteredSubjects.length === 0 ? (
-                  <div className={`p-12 text-center rounded-2xl border ${
-                    theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-400" : "bg-white border-slate-200 text-slate-500"
-                  }`}>
+                  <div className={`p-12 text-center rounded-2xl border ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-400" : "bg-white border-slate-200 text-slate-500"
+                    }`}>
                     <BookOpen className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
                     <h4 className="text-base font-bold text-slate-800 dark:text-slate-200">
                       Hech qanday fan topilmadi
@@ -8689,19 +7649,17 @@ export default function KpiEnterpriseApp() {
                       return (
                         <div
                           key={sub.id || idx}
-                          className={`rounded-2xl border p-5 transition-all hover:shadow-md relative flex flex-col justify-between group ${
-                            theme === "dark" 
-                              ? "bg-slate-900 border-slate-800 hover:border-emerald-800/60" 
-                              : "bg-white border-slate-200 hover:border-emerald-300"
-                          }`}
+                          className={`rounded-2xl border p-5 transition-all hover:shadow-md relative flex flex-col justify-between group ${theme === "dark"
+                            ? "bg-slate-900 border-slate-800 hover:border-emerald-800/60"
+                            : "bg-white border-slate-200 hover:border-emerald-300"
+                            }`}
                         >
                           <div>
                             <div className="flex justify-between items-start gap-2 mb-3">
-                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border flex items-center gap-1 ${
-                                isMaster
-                                  ? "bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
-                                  : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
-                              }`}>
+                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border flex items-center gap-1 ${isMaster
+                                ? "bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                                : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                                }`}>
                                 <GraduationCap className="w-3 h-3" />
                                 {sub.education_type_name || (isMaster ? "Magistr" : "Bakalavr")}
                               </span>
@@ -8738,9 +7696,9 @@ export default function KpiEnterpriseApp() {
                             </div>
 
                             <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-2.5 overflow-hidden">
-                              <div 
-                                className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                                style={{ width: `${Math.min(100, Number(pct))}%` }} 
+                              <div
+                                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                                style={{ width: `${Math.min(100, Number(pct))}%` }}
                               />
                             </div>
 
@@ -8787,15 +7745,13 @@ export default function KpiEnterpriseApp() {
                   </div>
                 ) : (
                   /* Table View */
-                  <div className={`rounded-2xl border shadow-sm overflow-hidden ${
-                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                  }`}>
+                  <div className={`rounded-2xl border shadow-sm overflow-hidden ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                    }`}>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${
-                            theme === "dark" ? "border-slate-800 text-slate-400 bg-slate-800/40" : "border-slate-200 text-slate-500 bg-slate-50"
-                          }`}>
+                          <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${theme === "dark" ? "border-slate-800 text-slate-400 bg-slate-800/40" : "border-slate-200 text-slate-500 bg-slate-50"
+                            }`}>
                             <th className="py-3 px-4 w-12 text-center">№</th>
                             <th className="py-3 px-4">Fan nomi</th>
                             <th className="py-3 px-4">Kafedra</th>
@@ -8823,11 +7779,10 @@ export default function KpiEnterpriseApp() {
                                   {sub.department_name}
                                 </td>
                                 <td className="py-3.5 px-4">
-                                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${
-                                    isMaster
-                                      ? "bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
-                                      : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
-                                  }`}>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${isMaster
+                                    ? "bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                                    : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                                    }`}>
                                     {sub.education_type_name || (isMaster ? "Magistr" : "Bakalavr")}
                                   </span>
                                 </td>
@@ -8887,19 +7842,18 @@ export default function KpiEnterpriseApp() {
 
                 {/* Department Colleagues Workload Summary (Faqat rahbarlar: Mudir, Dekan va Rektorat uchun) */}
                 {activeRole !== "TEACHER" && deptColleagues.length > 1 && (
-                  <div className={`p-5 rounded-2xl border shadow-sm ${
-                    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                  }`}>
+                  <div className={`p-5 rounded-2xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                    }`}>
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                           <Building className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                           <span>
-                            {activeRole === "HEAD_OF_DEPT" 
+                            {activeRole === "HEAD_OF_DEPT"
                               ? `${workloadData?.departmentName || "Kafedra"} Oʻqituvchilari Yuklamasi`
                               : activeRole === "DEAN"
-                              ? `${currentUser?.faculty || "Fakultet"} Kafedralari Oʻqituvchilari Yuklamasi`
-                              : `${workloadData?.departmentName || "Kafedra"} Oʻqituvchilari Yuklamasi`}
+                                ? `${currentUser?.faculty || "Fakultet"} Kafedralari Oʻqituvchilari Yuklamasi`
+                                : `${workloadData?.departmentName || "Kafedra"} Oʻqituvchilari Yuklamasi`}
                           </span>
                         </h4>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -8915,13 +7869,12 @@ export default function KpiEnterpriseApp() {
                           <div
                             key={colleague.id + colleague.name}
                             onClick={() => setSelectedSubjectTeacherName(colleague.name)}
-                            className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                              isSelected
-                                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 ring-2 ring-emerald-500/20"
-                                : theme === "dark"
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${isSelected
+                              ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 ring-2 ring-emerald-500/20"
+                              : theme === "dark"
                                 ? "bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 text-slate-200"
                                 : "bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800"
-                            }`}
+                              }`}
                           >
                             <div className="min-w-0 pr-2">
                               <div className="font-semibold text-xs truncate">
@@ -8955,8 +7908,8 @@ export default function KpiEnterpriseApp() {
       {isAddModalOpen && (() => {
         const currentSelectedInd = indicators.find(i => i.id === modalIndicator) || indicators[0];
         const maxPossibleBall = currentSelectedInd ? currentSelectedInd.max_ball : 10;
-        const recommendedAuthorBall = currentSelectedInd 
-          ? Number((currentSelectedInd.max_ball / Math.max(1, modalAuthors)).toFixed(1)) 
+        const recommendedAuthorBall = currentSelectedInd
+          ? Number((currentSelectedInd.max_ball / Math.max(1, modalAuthors)).toFixed(1))
           : 0;
 
         const filteredModalIndicators = indicators.filter(i => {
@@ -8979,7 +7932,7 @@ export default function KpiEnterpriseApp() {
         return (
           <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 my-4 flex flex-col max-h-[92vh] overflow-hidden">
-              
+
               {/* Modal Header */}
               <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
                 <div className="flex items-center gap-3">
@@ -8989,11 +7942,10 @@ export default function KpiEnterpriseApp() {
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                       <span>{editingSubmission ? "KPI natijasini tahrirlash" : "Yangi KPI natijasi kiritish"}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
-                        editingSubmission
-                          ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-                          : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                      }`}>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${editingSubmission
+                        ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                        : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                        }`}>
                         {editingSubmission ? `Ariza #${editingSubmission.id}` : "2025/2026-oʻquv yili"}
                       </span>
                     </h3>
@@ -9039,11 +7991,10 @@ export default function KpiEnterpriseApp() {
                             setModalClaimedBall(Number((ind.max_ball / Math.max(1, modalAuthors)).toFixed(1)));
                           }
                         }}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                          isSelected
-                            ? "bg-blue-900 text-white shadow-xs font-bold"
-                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-                        }`}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${isSelected
+                          ? "bg-blue-900 text-white shadow-xs font-bold"
+                          : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                          }`}
                       >
                         <span>{pop.label}</span>
                         <span className={`text-[10px] px-1 rounded ${isSelected ? "bg-blue-800 text-blue-100" : "bg-slate-100 dark:bg-slate-700 text-slate-500"}`}>
@@ -9057,11 +8008,10 @@ export default function KpiEnterpriseApp() {
 
               {/* Notification Banner */}
               {modalNotification && (
-                <div className={`mx-6 mt-3 p-3 rounded-xl border text-xs font-semibold flex items-center justify-between animate-in fade-in duration-150 ${
-                  modalNotification.type === "success"
-                    ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
-                    : "bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200"
-                }`}>
+                <div className={`mx-6 mt-3 p-3 rounded-xl border text-xs font-semibold flex items-center justify-between animate-in fade-in duration-150 ${modalNotification.type === "success"
+                  ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
+                  : "bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200"
+                  }`}>
                   <div className="flex items-center gap-2">
                     {modalNotification.type === "success" ? (
                       <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
@@ -9083,7 +8033,7 @@ export default function KpiEnterpriseApp() {
               {/* Form Body - 2 Columns */}
               <form onSubmit={handleFormSubmit} className="flex-1 overflow-hidden flex flex-col">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5 p-6 overflow-y-auto flex-1">
-                  
+
                   {/* CHAP USTUN (5 ustun): Mezonni tanlash */}
                   <div className="md:col-span-5 flex flex-col space-y-3 md:border-r md:border-slate-200 dark:md:border-slate-800 md:pr-4">
                     <div className="flex items-center justify-between">
@@ -9109,11 +8059,10 @@ export default function KpiEnterpriseApp() {
                           key={tab.id}
                           type="button"
                           onClick={() => setModalBlockFilter(tab.id)}
-                          className={`py-1.5 px-1 rounded-lg text-center transition-all ${
-                            modalBlockFilter === tab.id
-                              ? "bg-blue-900 text-white shadow-xs font-bold"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                          }`}
+                          className={`py-1.5 px-1 rounded-lg text-center transition-all ${modalBlockFilter === tab.id
+                            ? "bg-blue-900 text-white shadow-xs font-bold"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            }`}
                         >
                           {tab.label}
                         </button>
@@ -9158,28 +8107,25 @@ export default function KpiEnterpriseApp() {
                                 const defaultShare = Number((ind.max_ball / Math.max(1, modalAuthors)).toFixed(1));
                                 setModalClaimedBall(defaultShare);
                               }}
-                              className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
-                                isSelected
-                                  ? "border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 shadow-xs ring-1 ring-blue-600"
-                                  : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-800/60 text-slate-800 dark:text-slate-200"
-                              }`}
+                              className={`p-2.5 rounded-xl border transition-all cursor-pointer ${isSelected
+                                ? "border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 shadow-xs ring-1 ring-blue-600"
+                                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-800/60 text-slate-800 dark:text-slate-200"
+                                }`}
                             >
                               <div className="flex items-start justify-between gap-1.5">
                                 <div className="font-bold flex items-center gap-1.5 text-xs">
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                    isSelected
-                                      ? "bg-blue-900 text-white"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                                  }`}>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${isSelected
+                                    ? "bg-blue-900 text-white"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                                    }`}>
                                     #{ind.id}
                                   </span>
                                   <span className="line-clamp-1">{ind.name}</span>
                                 </div>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold flex-shrink-0 ${
-                                  isSelected
-                                    ? "bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-100"
-                                    : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                                }`}>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold flex-shrink-0 ${isSelected
+                                  ? "bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-100"
+                                  : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                  }`}>
                                   {ind.max_ball} b.
                                 </span>
                               </div>
@@ -9200,7 +8146,7 @@ export default function KpiEnterpriseApp() {
 
                   {/* O'NG USTUN (7 ustun): Natija tafsilotlari va Hujjat */}
                   <div className="md:col-span-7 space-y-3.5">
-                    
+
                     {/* Tanlangan mezon kartochkasi */}
                     {currentSelectedInd && (
                       <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/60 flex items-center justify-between text-xs">
@@ -9301,11 +8247,10 @@ export default function KpiEnterpriseApp() {
                                   setModalClaimedBall(rec);
                                 }
                               }}
-                              className={`py-1.5 px-2 rounded-lg text-center transition-all ${
-                                isCnt
-                                  ? "bg-blue-900 text-white font-bold shadow-xs"
-                                  : "bg-white dark:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
-                              }`}
+                              className={`py-1.5 px-2 rounded-lg text-center transition-all ${isCnt
+                                ? "bg-blue-900 text-white font-bold shadow-xs"
+                                : "bg-white dark:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                }`}
                             >
                               {cnt === 1 ? "1 kishi (100%)" : `${cnt} kishi`}
                             </button>
@@ -9508,34 +8453,33 @@ export default function KpiEnterpriseApp() {
         // Mantiqiy zanjir xavfsizlik nazorati (Security verification):
         const isAccessAllowed = activeRole === "ADMIN" || activeRole === "RECTORATE"
           || (activeRole === "TEACHER" && currentUser?.name && (
-              selectedWorkloadTeacher.name.toLowerCase().includes(currentUser.name.toLowerCase())
-              || currentUser.name.toLowerCase().includes(selectedWorkloadTeacher.name.toLowerCase())
-            ))
+            selectedWorkloadTeacher.name.toLowerCase().includes(currentUser.name.toLowerCase())
+            || currentUser.name.toLowerCase().includes(selectedWorkloadTeacher.name.toLowerCase())
+          ))
           || (activeRole === "HEAD_OF_DEPT" && (
-              selectedWorkloadTeacher.name.toLowerCase().includes(currentUser?.name?.toLowerCase() || "")
-              || (selectedWorkloadTeacher.department && currentUser?.department && (
-                  selectedWorkloadTeacher.department.toLowerCase().includes(currentUser.department.toLowerCase())
-                  || currentUser.department.toLowerCase().includes(selectedWorkloadTeacher.department.toLowerCase())
-                ))
+            selectedWorkloadTeacher.name.toLowerCase().includes(currentUser?.name?.toLowerCase() || "")
+            || (selectedWorkloadTeacher.department && currentUser?.department && (
+              selectedWorkloadTeacher.department.toLowerCase().includes(currentUser.department.toLowerCase())
+              || currentUser.department.toLowerCase().includes(selectedWorkloadTeacher.department.toLowerCase())
             ))
+          ))
           || (activeRole === "DEAN" && (
-              selectedWorkloadTeacher.name.toLowerCase().includes(currentUser?.name?.toLowerCase() || "")
-              || (() => {
-                  if (!currentUser?.faculty) return false;
-                  const facName = currentUser.faculty.toLowerCase().trim();
-                  const facultyDepts = structureHierarchy?.faculties
-                    ?.find(f => f.name.toLowerCase().includes(facName) || facName.includes(f.name.toLowerCase()))
-                    ?.departments.map(d => d.name.toLowerCase().trim()) || [];
-                  return facultyDepts.some(d => (selectedWorkloadTeacher.department || "").toLowerCase().includes(d) || d.includes((selectedWorkloadTeacher.department || "").toLowerCase()));
-                })()
-            ));
+            selectedWorkloadTeacher.name.toLowerCase().includes(currentUser?.name?.toLowerCase() || "")
+            || (() => {
+              if (!currentUser?.faculty) return false;
+              const facName = currentUser.faculty.toLowerCase().trim();
+              const facultyDepts = structureHierarchy?.faculties
+                ?.find(f => f.name.toLowerCase().includes(facName) || facName.includes(f.name.toLowerCase()))
+                ?.departments.map(d => d.name.toLowerCase().trim()) || [];
+              return facultyDepts.some(d => (selectedWorkloadTeacher.department || "").toLowerCase().includes(d) || d.includes((selectedWorkloadTeacher.department || "").toLowerCase()));
+            })()
+          ));
 
         if (!isAccessAllowed) {
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-in fade-in duration-200">
-              <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 text-center ${
-                theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
+              <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 text-center ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                }`}>
                 <ShieldAlert className="w-12 h-12 text-amber-500 mx-auto mb-3" />
                 <h4 className="text-base font-bold">Ruxsat cheklangan</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
@@ -9556,9 +8500,8 @@ export default function KpiEnterpriseApp() {
         const wData = getTeacherWorkloadData(selectedWorkloadTeacher.id || selectedWorkloadTeacher.name);
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
-            <div className={`relative w-full max-w-2xl rounded-2xl border shadow-2xl p-6 transition-all my-8 ${
-              theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-            }`}>
+            <div className={`relative w-full max-w-2xl rounded-2xl border shadow-2xl p-6 transition-all my-8 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+              }`}>
               {/* Modal Header */}
               <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
                 <div className="flex items-center gap-3">
@@ -9633,11 +8576,10 @@ export default function KpiEnterpriseApp() {
                               <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-200">{s.subject_name}</td>
                               <td className="py-2.5 px-3 text-slate-500">{s.department_name}</td>
                               <td className="py-2.5 px-3">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  s.education_type_name === "Magistr" || s.education_type_code === "12"
-                                    ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300"
-                                    : "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300"
-                                }`}>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.education_type_name === "Magistr" || s.education_type_code === "12"
+                                  ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300"
+                                  : "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300"
+                                  }`}>
                                   {s.education_type_name || "Bakalavr"}
                                 </span>
                               </td>
@@ -9754,11 +8696,10 @@ export default function KpiEnterpriseApp() {
                       setVerifyActionType("approved");
                       setVerifyError("");
                     }}
-                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      verifyActionType === "approved"
-                        ? "bg-emerald-50 dark:bg-emerald-950/70 border-emerald-500 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/30"
-                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
-                    }`}
+                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${verifyActionType === "approved"
+                      ? "bg-emerald-50 dark:bg-emerald-950/70 border-emerald-500 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/30"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                      }`}
                   >
                     <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Tasdiqlash (Qoʻlda baho qoʻyish)</span>
@@ -9770,11 +8711,10 @@ export default function KpiEnterpriseApp() {
                       setVerifyActionType("rejected");
                       setVerifyError("");
                     }}
-                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      verifyActionType === "rejected"
-                        ? "bg-rose-50 dark:bg-rose-950/70 border-rose-500 text-rose-800 dark:text-rose-300 ring-2 ring-rose-500/30"
-                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
-                    }`}
+                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${verifyActionType === "rejected"
+                      ? "bg-rose-50 dark:bg-rose-950/70 border-rose-500 text-rose-800 dark:text-rose-300 ring-2 ring-rose-500/30"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                      }`}
                   >
                     <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                     <span>Rad etish (Sababi shart)</span>
@@ -9867,11 +8807,10 @@ export default function KpiEnterpriseApp() {
                 <button
                   type="submit"
                   disabled={isVerifying}
-                  className={`px-5 py-2 rounded-lg text-xs font-bold text-white shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-60 ${
-                    verifyActionType === "approved"
-                      ? "bg-emerald-600 hover:bg-emerald-700"
-                      : "bg-rose-600 hover:bg-rose-700"
-                  }`}
+                  className={`px-5 py-2 rounded-lg text-xs font-bold text-white shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-60 ${verifyActionType === "approved"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-rose-600 hover:bg-rose-700"
+                    }`}
                 >
                   {isVerifying ? (
                     <span>Saqlanmoqda...</span>
@@ -10152,33 +9091,30 @@ export default function KpiEnterpriseApp() {
                   <button
                     type="button"
                     onClick={() => setAppealReviewStatus("ACCEPTED")}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
-                      appealReviewStatus === "ACCEPTED"
-                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${appealReviewStatus === "ACCEPTED"
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                      : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                      }`}
                   >
                     ✓ Qanoatlantirilsin
                   </button>
                   <button
                     type="button"
                     onClick={() => setAppealReviewStatus("PARTIALLY_ACCEPTED")}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
-                      appealReviewStatus === "PARTIALLY_ACCEPTED"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${appealReviewStatus === "PARTIALLY_ACCEPTED"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                      }`}
                   >
                     ≈ Qisman qabul
                   </button>
                   <button
                     type="button"
                     onClick={() => setAppealReviewStatus("REJECTED")}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
-                      appealReviewStatus === "REJECTED"
-                        ? "bg-rose-600 text-white border-rose-600 shadow-sm"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${appealReviewStatus === "REJECTED"
+                      ? "bg-rose-600 text-white border-rose-600 shadow-sm"
+                      : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                      }`}
                   >
                     ✗ Rad etilsin
                   </button>
@@ -10242,1474 +9178,50 @@ export default function KpiEnterpriseApp() {
       )}
 
       {/* ========================================================================= */}
-      {/* TO'LIQ EKRANLI FAN BOSHQARUV KABINETI (FULL-PAGE SUBJECT FOCUS CABINET) */}
+      {/* TO'LIQ EKRANLI FAN BOSHQARUV KABINETI (MODULAR SUBJECT CABINET) */}
       {/* ========================================================================= */}
-      {(courseDocsModalOpen || workflowModalOpen || publicationModalOpen || hemisSubjectModalOpen) && selectedWorkflowSubject && (
-        <div className="fixed inset-0 z-50 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md overflow-y-auto flex flex-col animate-in fade-in duration-150">
-          
-          {/* Tepa navigatsiya paneli (Sticky Header) */}
-          <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs px-4 sm:px-8 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={handleCloseSubjectCabinet}
-                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
-                title="Fanlar roʻyxatiga qaytish"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Fanlar roʻyxatiga qaytish</span>
-              </button>
-
-              <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>{selectedWorkflowSubject.subject_name}</span>
-                  </h2>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono">
-                    {selectedWorkflowSubject.total_hours} soat
-                  </span>
-                </div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-                  <span>Kafedra: <b>{selectedWorkflowSubject.department_name}</b></span>
-                  <span>•</span>
-                  <span>Oʻqituvchi: <b>{selectedWorkflowSubject.teacher_name}</b></span>
-                  {selectedWorkflowSubject.education_type_name && (
-                    <>
-                      <span>•</span>
-                      <span>Taʼlim shakli: <b>{selectedWorkflowSubject.education_type_name}</b></span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* 3 ta toza tab tugmalari */}
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl self-start md:self-auto overflow-x-auto max-w-full">
-              <button
-                type="button"
-                onClick={() => setWorkflowSubTab("hemis_resources")}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  workflowSubTab === "hemis_resources"
-                    ? "bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-sm"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
-              >
-                <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>1. HEMIS bazasi va soatlar</span>
-                <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold">
-                  {activeSubjectHemisResources.length} ta
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setWorkflowSubTab("docs")}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  workflowSubTab === "docs"
-                    ? "bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-sm"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
-              >
-                <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>2. Oʻquv hujjatlari (Sillabus)</span>
-                <span className="px-1.5 py-0.2 rounded-md bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 text-[10px] font-mono font-bold">
-                  {courseDocsList.length} ta
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setWorkflowSubTab("publications")}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  workflowSubTab === "publications"
-                    ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
-              >
-                <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span>3. Darslik va tavsiyanoma</span>
-                <span className="px-1.5 py-0.2 rounded-md bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 text-[10px] font-mono font-bold">
-                  {publicationsList.length} ta
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Asosiy kontent maydoni */}
-          <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
-
-            {/* ========================================================================= */}
-            {/* TAB 1: HEMIS BAZASI VA SOATLAR */}
-            {/* ========================================================================= */}
-            {workflowSubTab === "hemis_resources" && (
-              <div className="space-y-5">
-                {/* Fanning o'quv rejadagi rasmiy soatlari */}
-                {activeSubjectCurriculumSubject && (
-                  <div className={`p-5 rounded-2xl border shadow-xs ${
-                    theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                  }`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2 mb-4">
-                      <div>
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                          HEMIS Rasmiy Oʻquv Reja Mezonlari
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
-                          {activeSubjectCurriculumSubject.subject_name} ({activeSubjectCurriculumSubject.semester_name})
-                        </h4>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-xs">
-                          {activeSubjectCurriculumSubject.credit} Kredit
-                        </span>
-                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold text-xs">
-                          Jami: {activeSubjectCurriculumSubject.total_acload} soat
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                        <div className="text-[11px] text-slate-500 font-semibold">Maʼruza</div>
-                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
-                          {activeSubjectCurriculumSubject.lecture_hours} soat
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                        <div className="text-[11px] text-slate-500 font-semibold">Amaliy mashgʻulot</div>
-                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
-                          {activeSubjectCurriculumSubject.practical_hours} soat
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                        <div className="text-[11px] text-slate-500 font-semibold">Laboratoriya</div>
-                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
-                          {activeSubjectCurriculumSubject.lab_hours} soat
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                        <div className="text-[11px] text-slate-500 font-semibold">Seminar</div>
-                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
-                          {activeSubjectCurriculumSubject.seminar_hours} soat
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 col-span-2 sm:col-span-1">
-                        <div className="text-[11px] text-slate-500 font-semibold">Mustaqil taʼlim</div>
-                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
-                          {activeSubjectCurriculumSubject.independent_hours} soat
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* HEMIS fayllari ro'yxati */}
-                <div className={`p-5 rounded-2xl border shadow-xs ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span>HEMIS Tizimidagi Rasmiy Fayllar ({activeSubjectHemisResources.length} ta)</span>
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        HEMIS serveriga yuklangan maʼruza, amaliyot va boshqa oʻquv materiallari
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fetchSubjectHemisDetails(selectedWorkflowSubject?.subject_name, selectedWorkflowSubject?.teacher_name, true)}
-                        disabled={isSubjectHemisResourcesLoading}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-                        title="HEMIS API dan jonli qayta yuklash"
-                      >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isSubjectHemisResourcesLoading ? "animate-spin" : ""}`} />
-                        <span>Qayta tekshirish</span>
-                      </button>
-
-                      <div className="relative">
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={hemisResourceSearch}
-                          onChange={(e) => setHemisResourceSearch(e.target.value)}
-                          placeholder="Fayllar ichidan qidirish..."
-                          className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-600 w-56 ${
-                            theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Mashg'ulot turlari filtri */}
-                  <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1">
-                    {[
-                      { id: "ALL", label: "Barchasi" },
-                      { id: "MAʼRUZA", label: "Maʼruza" },
-                      { id: "AMALIY", label: "Amaliy" },
-                      { id: "LABORATORIYA", label: "Laboratoriya" },
-                      { id: "SEMINAR", label: "Seminar" }
-                    ].map(f => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => setHemisResourceFilterType(f.id)}
-                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                          hemisResourceFilterType === f.id
-                            ? "bg-emerald-800 text-white shadow-xs"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {isSubjectHemisResourcesLoading ? (
-                    <div className="py-12 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                      <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
-                      <span>HEMIS tizimidan fanning rasmiy resurslari tekshirilmoqda...</span>
-                    </div>
-                  ) : activeSubjectHemisResources.length === 0 ? (
-                    <div className="py-12 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
-                      Ushbu fan boʻyicha HEMIS tizimida hali yuklangan rasmiy fayllar topilmadi. "Qayta tekshirish" tugmasini bosing.
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      {activeSubjectHemisResources
-                        .filter(res => {
-                          const term = hemisResourceSearch.toLowerCase();
-                          const matchesSearch = !term || res.title.toLowerCase().includes(term) || (res.file_name && res.file_name.toLowerCase().includes(term)) || (res.employee_name && res.employee_name.toLowerCase().includes(term));
-                          const matchesType = hemisResourceFilterType === "ALL" || (res.training_type && res.training_type.toUpperCase().includes(hemisResourceFilterType));
-                          return matchesSearch && matchesType;
-                        })
-                        .map(res => (
-                          <div
-                            key={res.id}
-                            className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
-                              theme === "dark" ? "bg-slate-800/50 border-slate-800 hover:bg-slate-800" : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/60"
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <BookOpen className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <h5 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
-                                  <span>{res.title}</span>
-                                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-300 font-medium">
-                                    {res.training_type || "Oʻquv materiali"}
-                                  </span>
-                                </h5>
-                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                                  <span>Fayl: <b className="font-mono text-slate-700 dark:text-slate-300">{res.file_name}</b></span>
-                                  <span>Hajmi: <b>{res.file_size ? `${(res.file_size / 1024).toFixed(1)} KB` : "Nomaʼlum"}</b></span>
-                                  <span>Yuklagan: <b>{res.employee_name}</b></span>
-                                  {res.updated_at_ts && (
-                                    <span>Sana: <b>{new Date(res.updated_at_ts * 1000).toLocaleDateString()}</b></span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            <a
-                              href={res.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              download
-                              className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors self-start sm:self-center flex-shrink-0 cursor-pointer"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              <span>Koʻrish / Yuklash</span>
-                            </a>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ========================================================================= */}
-            {/* TAB 2: O'QUV-USLUBIY HUJJATLAR (SILLABUS & MAJBURIY QISM) */}
-            {/* ========================================================================= */}
-            {workflowSubTab === "docs" && (
-              <div className="space-y-5">
-                <div className={`p-5 rounded-2xl border shadow-xs ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3 mb-4">
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        <span>Fan Boʻyicha Majburiy Hujjatlar Nazorati</span>
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Oʻquv mashgʻuloti turlariga qarab yuklanishi shart boʻlgan oʻquv-uslubiy materiallar
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsAddCourseDocFormOpen(!isAddCourseDocFormOpen)}
-                      className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>{isAddCourseDocFormOpen ? "Formani yopish" : "+ Yangi hujjat yuklash"}</span>
-                    </button>
-                  </div>
-
-                  {/* Mashg'ulot turlari tezkor tekshiruvi */}
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 mb-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      Sizga biriktirilgan mashgʻulot turlari:
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <label className="flex items-center gap-1.5 cursor-pointer font-medium">
-                        <input
-                          type="checkbox"
-                          checked={teacherTrainingRoles.hasLecture}
-                          onChange={(e) => setTeacherTrainingRoles(p => ({ ...p, hasLecture: e.target.checked }))}
-                          className="rounded text-blue-900 focus:ring-blue-900"
-                        />
-                        <span>Maʼruza</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer font-medium">
-                        <input
-                          type="checkbox"
-                          checked={teacherTrainingRoles.hasPractical}
-                          onChange={(e) => setTeacherTrainingRoles(p => ({ ...p, hasPractical: e.target.checked }))}
-                          className="rounded text-blue-900 focus:ring-blue-900"
-                        />
-                        <span>Amaliyot</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer font-medium">
-                        <input
-                          type="checkbox"
-                          checked={teacherTrainingRoles.hasLab}
-                          onChange={(e) => setTeacherTrainingRoles(p => ({ ...p, hasLab: e.target.checked }))}
-                          className="rounded text-blue-900 focus:ring-blue-900"
-                        />
-                        <span>Laboratoriya</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer font-medium">
-                        <input
-                          type="checkbox"
-                          checked={teacherTrainingRoles.hasSeminar}
-                          onChange={(e) => setTeacherTrainingRoles(p => ({ ...p, hasSeminar: e.target.checked }))}
-                          className="rounded text-blue-900 focus:ring-blue-900"
-                        />
-                        <span>Seminar</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Yangi hujjat yuklash formasi */}
-                  {isAddCourseDocFormOpen && (
-                    <form onSubmit={handleUploadCourseDocSubmit} className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 mb-5 space-y-3.5">
-                      <h5 className="text-xs font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
-                        <Upload className="w-4 h-4 text-blue-600" />
-                        <span>Yangi oʻquv-uslubiy hujjatni biriktirish</span>
-                      </h5>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
-                            Hujjat turi *
-                          </label>
-                          <select
-                            value={newCourseDocType}
-                            onChange={(e: any) => setNewCourseDocType(e.target.value)}
-                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium text-xs focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                          >
-                            <option value="SYLLABUS">Fan sillabusi / Ishchi fan dasturi</option>
-                            <option value="WORK_PROGRAM">Ishchi oʻquv dasturi</option>
-                            <option value="LECTURE_NOTES">Maʼruzalar matni va taqdimotlar</option>
-                            <option value="PRACTICAL_GUIDE">Amaliy mashgʻulotlar uslubiy koʻrsatmasi</option>
-                            <option value="LAB_GUIDE">Laboratoriya ishlari uslubiy koʻrsatmasi</option>
-                            <option value="SEMINAR_GUIDE">Seminar mashgʻulotlari uslubiy koʻrsatmasi</option>
-                            <option value="INDEPENDENT_STUDY_GUIDE">Mustaqil taʼlim uslubiy koʻrsatmasi</option>
-                            <option value="ASSESSMENT_CRITERIA">Baholash mezonlari va nazorat savollari</option>
-                            <option value="OTHER">Boshqa oʻquv-uslubiy material</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
-                            Hujjat sarlavhasi *
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={newCourseDocTitle}
-                            onChange={(e) => setNewCourseDocTitle(e.target.value)}
-                            placeholder="Masalan: 2025/2026 oʻquv yili uchun fan sillabusi"
-                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1 text-xs">
-                          Faylni tanlang (PDF, DOCX) *
-                        </label>
-                        <input
-                          type="file"
-                          required
-                          accept=".pdf,.doc,.docx"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              setNewCourseDocFile(e.target.files[0]);
-                            }
-                          }}
-                          className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-xs font-medium cursor-pointer"
-                        />
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setIsAddCourseDocFormOpen(false)}
-                          className="px-3.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                        >
-                          Bekor qilish
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={isCourseDocUploading}
-                          className="px-4 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        >
-                          {isCourseDocUploading ? (
-                            <>
-                              <RefreshCw className="w-3 h-3 animate-spin" />
-                              <span>Yuklanmoqda...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-3 h-3" />
-                              <span>Hujjatni saqlash</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </form>
-                  )}
-
-                  {/* Yuklangan hujjatlar ro'yxati */}
-                  {isCourseDocsLoading ? (
-                    <div className="py-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                      <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
-                      <span>Oʻquv hujjatlari yuklanmoqda...</span>
-                    </div>
-                  ) : courseDocsList.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4">
-                      Ushbu fan boʻyicha hali oʻquv-uslubiy hujjat yuklanmagan. "+ Yangi hujjat yuklash" tugmasini bosing.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {courseDocsList.map(doc => {
-                        const isApprovedByMudir = doc.mudir_status === "APPROVED";
-                        const isApprovedByDean = doc.dean_status === "APPROVED";
-
-                        return (
-                          <div
-                            key={doc.id}
-                            className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors ${
-                              theme === "dark" ? "bg-slate-800/40 border-slate-800" : "bg-slate-50/70 border-slate-200"
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <BookOpen className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs font-bold text-slate-900 dark:text-white">
-                                    {doc.title}
-                                  </span>
-                                  <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-900">
-                                    {getDocTypeLabel(doc.doc_type)}
-                                  </span>
-                                </div>
-
-                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                                  <span>Yuklangan: <b>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : ""}</b></span>
-                                  <span>•</span>
-                                  <span>Mudir: <b className={isApprovedByMudir ? "text-emerald-600" : doc.mudir_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{doc.mudir_status || "PENDING"}</b></span>
-                                  <span>•</span>
-                                  <span>Dekan: <b className={isApprovedByDean ? "text-emerald-600" : doc.dean_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{doc.dean_status || "PENDING"}</b></span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 self-start md:self-center flex-shrink-0">
-                              {(currentUser?.role === "HEAD_OF_DEPT" || currentUser?.role === "ADMIN") && doc.mudir_status !== "APPROVED" && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveDocForReview(doc);
-                                    setCourseDocReviewRole("mudir");
-                                    setCourseDocReviewStatus("APPROVED");
-                                    setCourseDocReviewComment("");
-                                    setCourseDocReviewModalOpen(true);
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold transition-colors cursor-pointer"
-                                >
-                                  Mudir xulosasi
-                                </button>
-                              )}
-
-                              {(currentUser?.role === "DEAN" || currentUser?.role === "ADMIN") && doc.mudir_status === "APPROVED" && doc.dean_status !== "APPROVED" && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveDocForReview(doc);
-                                    setCourseDocReviewRole("dean");
-                                    setCourseDocReviewStatus("APPROVED");
-                                    setCourseDocReviewComment("");
-                                    setCourseDocReviewModalOpen(true);
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold transition-colors cursor-pointer"
-                                >
-                                  Dekan tasdigʻi
-                                </button>
-                              )}
-
-                              {doc.file_url && (
-                                <a
-                                  href={doc.file_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  download
-                                  className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-                                >
-                                  <Download className="w-3.5 h-3.5" />
-                                  <span>Koʻrish</span>
-                                </a>
-                              )}
-
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteCourseDocConfirm(doc)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                                title="Oʻchirish"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ========================================================================= */}
-            {/* TAB 3: DARSLIK, O'QUV QO'LLANMA VA GRIF TAVSIYANOMASI */}
-            {/* ========================================================================= */}
-            {workflowSubTab === "publications" && (
-              <div className="space-y-5">
-                <div className={`p-5 rounded-2xl border shadow-xs ${
-                  theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                }`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3 mb-4">
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                        <span>Fan Boʻyicha Darslik va Oʻquv Qoʻllanmalar Zanjiri</span>
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Kafedra muhokamasi, fakultet va universitet ilmiy kengashidan tavsiyanoma olish
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setPubModalFormOpen(true)}
-                      className="px-3.5 py-2 bg-purple-800 hover:bg-purple-900 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Yangi darslik / qoʻllanma qoʻshish</span>
-                    </button>
-                  </div>
-
-                  {/* Mavjud nashrlar ro'yxati */}
-                  {isPubsLoading ? (
-                    <div className="py-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                      <RefreshCw className="w-5 h-5 animate-spin text-purple-600" />
-                      <span>Nashrlar maʼlumotlari yuklanmoqda...</span>
-                    </div>
-                  ) : publicationsList.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4">
-                      Ushbu fan boʻyicha hali darslik yoki oʻquv qoʻllanma kiritilmagan. "+ Yangi darslik / qoʻllanma qoʻshish" tugmasini bosing.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {publicationsList.map(pub => (
-                        <div
-                          key={pub.id}
-                          className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors ${
-                            theme === "dark" ? "bg-slate-800/40 border-slate-800" : "bg-slate-50/70 border-slate-200"
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <GraduationCap className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-bold text-slate-900 dark:text-white">
-                                  {pub.title}
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 text-[10px] font-bold border border-purple-200 dark:border-purple-900">
-                                  {pub.pub_type}
-                                </span>
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 font-mono font-bold">
-                                  Originallik: {pub.antiplagiarism_score}%
-                                </span>
-                              </div>
-
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                                <span>Mualliflar: <b>{pub.authors}</b></span>
-                                <span>•</span>
-                                <span>Kafedra: <b className={pub.kafedra_status === "APPROVED" ? "text-emerald-600" : pub.kafedra_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{pub.kafedra_status}</b></span>
-                                <span>•</span>
-                                <span>Fakultet: <b className={pub.fakultet_status === "APPROVED" ? "text-emerald-600" : pub.fakultet_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{pub.fakultet_status}</b></span>
-                                <span>•</span>
-                                <span>OʻUK: <b className={pub.methodical_status === "APPROVED" ? "text-emerald-600" : pub.methodical_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{pub.methodical_status}</b></span>
-                                <span>•</span>
-                                <span>Filial Kengashi: <b className={pub.council_status === "APPROVED" ? "text-emerald-600" : pub.council_status === "REJECTED" ? "text-rose-600" : "text-amber-600"}>{pub.council_status}</b></span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 self-start md:self-center flex-shrink-0 flex-wrap">
-                            {/* Kafedra mudiri bosqichi */}
-                            {(currentUser?.role === "HEAD_OF_DEPT" || currentUser?.role === "ADMIN") && pub.kafedra_status === "PENDING" && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActivePubForReview(pub);
-                                  setReviewStageName("kafedra");
-                                  setReviewDecision("APPROVED");
-                                  setReviewProtocolNum("");
-                                  setReviewProtocolDate(new Date().toISOString().split("T")[0]);
-                                  setReviewProtocolFile(null);
-                                  setReviewComment("");
-                                  setReviewStageModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold transition-colors cursor-pointer"
-                              >
-                                Kafedra xulosasi
-                              </button>
-                            )}
-
-                            {/* Dekan bosqichi */}
-                            {(currentUser?.role === "DEAN" || currentUser?.role === "ADMIN") && pub.kafedra_status === "APPROVED" && pub.fakultet_status === "PENDING" && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActivePubForReview(pub);
-                                  setReviewStageName("fakultet");
-                                  setReviewDecision("APPROVED");
-                                  setReviewProtocolNum("");
-                                  setReviewProtocolDate(new Date().toISOString().split("T")[0]);
-                                  setReviewProtocolFile(null);
-                                  setReviewComment("");
-                                  setReviewStageModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold transition-colors cursor-pointer"
-                              >
-                                Fakultet kengashi
-                              </button>
-                            )}
-
-                            {/* O'quv-uslubiy boshqarma bosqichi */}
-                            {(currentUser?.role === "ADMIN" || currentUser?.role === "RECTORATE") && pub.fakultet_status === "APPROVED" && pub.methodical_status === "PENDING" && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActivePubForReview(pub);
-                                  setReviewStageName("methodical");
-                                  setReviewDecision("APPROVED");
-                                  setReviewProtocolNum("");
-                                  setReviewProtocolDate(new Date().toISOString().split("T")[0]);
-                                  setReviewProtocolFile(null);
-                                  setReviewComment("");
-                                  setReviewStageModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-900 text-white text-xs font-semibold transition-colors cursor-pointer"
-                              >
-                                OʻUK xulosasi
-                              </button>
-                            )}
-
-                            {/* Filial kengashi bosqichi */}
-                            {(currentUser?.role === "ADMIN" || currentUser?.role === "RECTORATE") && pub.methodical_status === "APPROVED" && pub.council_status === "PENDING" && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActivePubForReview(pub);
-                                  setReviewStageName("council");
-                                  setReviewDecision("APPROVED");
-                                  setReviewProtocolNum("");
-                                  setReviewProtocolDate(new Date().toISOString().split("T")[0]);
-                                  setReviewProtocolFile(null);
-                                  setReviewComment("");
-                                  setReviewStageModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 rounded-lg bg-amber-800 hover:bg-amber-900 text-white text-xs font-semibold transition-colors cursor-pointer"
-                              >
-                                Filial Kengashi
-                              </button>
-                            )}
-
-                            {/* my.gov.uz va Grif */}
-                            {pub.council_status === "APPROVED" && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActivePubForMyGov(pub);
-                                  setMyGovAppNum(pub.mygov_app_num || "");
-                                  setMinistryGrifNum(pub.ministry_grif_num || "");
-                                  setMinistryCertFile(null);
-                                  setMyGovModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold transition-colors cursor-pointer"
-                              >
-                                my.gov.uz & Grif
-                              </button>
-                            )}
-
-                            {pub.manuscript_file && (
-                              <a
-                                href={pub.manuscript_file}
-                                target="_blank"
-                                rel="noreferrer"
-                                download
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                                <span>Qoʻlyozma</span>
-                              </a>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePublicationConfirm(pub)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                              title="Oʻchirish"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: FAN HUJJATINI KO'RIB CHIQISH (MUDIR / DEKAN) */}
-      {/* ========================================================================= */}
-      {courseDocReviewModalOpen && activeDocForReview && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-blue-900 dark:text-blue-400" />
-                  <span>{courseDocReviewRole === "mudir" ? "Kafedra mudiri xulosasi" : "Fakultet dekani tasdigʻi"}</span>
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Fan: {activeDocForReview.subject_name}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCourseDocReviewModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs mb-4 space-y-1">
-              <div><b>Hujjat sarlavhasi:</b> {activeDocForReview.title}</div>
-              <div><b>Turi:</b> {activeDocForReview.doc_type}</div>
-              <div><b>Muallif:</b> {activeDocForReview.teacher_name}</div>
-              <div className="pt-1">
-                <a
-                  href={activeDocForReview.file_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline font-bold inline-flex items-center gap-1"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Faylni ochish va koʻrib chiqish</span>
-                </a>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold mb-1.5">Qaror *</label>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setCourseDocReviewStatus("APPROVED")}
-                    className={`p-2.5 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      courseDocReviewStatus === "APPROVED"
-                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Maʼqullash (Tasdiqlash)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCourseDocReviewStatus("REJECTED")}
-                    className={`p-2.5 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      courseDocReviewStatus === "REJECTED"
-                        ? "bg-rose-600 text-white border-rose-600 shadow-sm"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    <XCircle className="w-4 h-4" />
-                    <span>Qaytarish (Rad etish)</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold mb-1">Xulosa / Tavsiya yoki kamchiliklar izohi</label>
-                <textarea
-                  rows={3}
-                  value={courseDocReviewComment}
-                  onChange={(e) => setCourseDocReviewComment(e.target.value)}
-                  placeholder="Hujjat boʻyicha fikr va koʻrsatmalar..."
-                  className="w-full p-2.5 border rounded-xl text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setCourseDocReviewModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold cursor-pointer"
-                >
-                  Bekor qilish
-                </button>
-                <button
-                  type="button"
-                  disabled={isCourseDocReviewing}
-                  onClick={handleReviewCourseDocSubmit}
-                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer"
-                >
-                  {isCourseDocReviewing ? "Saqlanmoqda..." : "Qarorni saqlash"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: YANGI ADABIYOT TAVSIYANOMASI FORMASI */}
-      {/* ========================================================================= */}
-      {pubModalFormOpen && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5 text-blue-900 dark:text-blue-400" />
-                  <span>Darslik, Oʻquv qoʻllanma yoki Monografiyani kengashlarga tavsiya etish</span>
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Fanga oid: {selectedWorkflowSubject?.subject_name}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPubModalFormOpen(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreatePublicationSubmit} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold mb-1">Nashr turi *</label>
-                  <select
-                    value={newPubType}
-                    onChange={(e) => setNewPubType(e.target.value as any)}
-                    className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-semibold"
-                  >
-                    <option value="DARSLIK">Darslik</option>
-                    <option value="OʻQUV QOʻLLANMA">Oʻquv qoʻllanma</option>
-                    <option value="USLUBIY QOʻLLANMA">Uslubiy qoʻllanma</option>
-                    <option value="MONOGRAFIYA">Monografiya</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold mb-1">Antiplagiat originallik koʻrsatkichi (%) *</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    required
-                    value={newPubAntiplagiatScore}
-                    onChange={(e) => setNewPubAntiplagiatScore(parseFloat(e.target.value) || 0)}
-                    placeholder="Masalan: 86.4"
-                    className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-bold text-emerald-600"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold mb-1">Adabiyotning toʻliq nomi *</label>
-                <input
-                  type="text"
-                  required
-                  value={newPubTitle}
-                  onChange={(e) => setNewPubTitle(e.target.value)}
-                  placeholder="Masalan: Psixologiya fanidan amaliy mashgʻulotlar uchun oʻquv qoʻllanma"
-                  className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold mb-1">Asosiy muallif(lar) F.I.SH. *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newPubAuthors}
-                    onChange={(e) => setNewPubAuthors(e.target.value)}
-                    placeholder="Masalan: Abdiyeva Dilsoʻz Nasritdin qizi"
-                    className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold mb-1">Hammualliflar (agar mavjud boʻlsa)</label>
-                  <input
-                    type="text"
-                    value={newPubCoAuthors}
-                    onChange={(e) => setNewPubCoAuthors(e.target.value)}
-                    placeholder="F.I.SH., ilmiy darajasi"
-                    className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold mb-1">Ichki taqrizchi F.I.SH. va unvoni</label>
-                  <input
-                    type="text"
-                    value={newPubInternalReviewer}
-                    onChange={(e) => setNewPubInternalReviewer(e.target.value)}
-                    placeholder="Masalan: dots. X.Xalilov"
-                    className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold mb-1">Tashqi taqrizchi F.I.SH. va tashkiloti</label>
-                  <input
-                    type="text"
-                    value={newPubExternalReviewer}
-                    onChange={(e) => setNewPubExternalReviewer(e.target.value)}
-                    placeholder="Masalan: prof. A.Rustamov (OʻzMU)"
-                    className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-              </div>
-
-              {/* Fayllar yuklash bloki (Majburiy 5 ta PDF, har biri <=10MB) */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-                <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                  <span>Majburiy ilova qilinadigan PDF hujjatlar toʻplami:</span>
-                  <span className="text-[10px] text-amber-600 font-semibold">Har bir fayl hajmi max 10 MB</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
-                  <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <label className="block font-bold mb-1">1. Qoʻlyozmaning toʻliq fayli (PDF) *</label>
-                    <input
-                      type="file"
-                      required
-                      accept=".pdf"
-                      onChange={(e) => setFileManuscript(e.target.files?.[0] || null)}
-                      className="w-full text-[10px] cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <label className="block font-bold mb-1">2. Ichki taqriz fayli (PDF) *</label>
-                    <input
-                      type="file"
-                      required
-                      accept=".pdf"
-                      onChange={(e) => setFileInternalReview(e.target.files?.[0] || null)}
-                      className="w-full text-[10px] cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <label className="block font-bold mb-1">3. Tashqi taqriz fayli (PDF) *</label>
-                    <input
-                      type="file"
-                      required
-                      accept=".pdf"
-                      onChange={(e) => setFileExternalReview(e.target.files?.[0] || null)}
-                      className="w-full text-[10px] cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <label className="block font-bold mb-1">4. Fanning (ishchi) oʻquv dasturi (PDF) *</label>
-                    <input
-                      type="file"
-                      required
-                      accept=".pdf"
-                      onChange={(e) => setFileCurriculum(e.target.files?.[0] || null)}
-                      className="w-full text-[10px] cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="p-2.5 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30 sm:col-span-2">
-                    <label className="block font-bold mb-1 text-emerald-900 dark:text-emerald-300">
-                      5. Antiplagiat tizimidan oʻtkazilganlik hisoboti va sertifikati (PDF) *
-                    </label>
-                    <input
-                      type="file"
-                      required
-                      accept=".pdf"
-                      onChange={(e) => setFileAntiplagiat(e.target.files?.[0] || null)}
-                      className="w-full text-[10px] cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setPubModalFormOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold cursor-pointer"
-                >
-                  Bekor qilish
-                </button>
-                <button
-                  type="submit"
-                  disabled={isPubSubmitting}
-                  className="px-5 py-2 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 text-white rounded-xl font-bold shadow-sm cursor-pointer"
-                >
-                  {isPubSubmitting ? "Yuklanmoqda (bir necha soniya)..." : "Tavsiyanomani roʻyxatdan oʻtkazish"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: KENGASH BAYONNOMASI BIRIKTIRISH VA TASDIQLASH */}
-      {/* ========================================================================= */}
-      {reviewStageModalOpen && activePubForReview && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-indigo-600" />
-                  <span>
-                    {reviewStageName === "kafedra" && "1-Bosqich: Kafedra yigʻilishi bayonnomasi"}
-                    {reviewStageName === "fakultet" && "2-Bosqich: Fakultet Kengashi bayonnomasi"}
-                    {reviewStageName === "methodical" && "3-Bosqich: Filial Oʻquv-uslubiy Kengashi"}
-                    {reviewStageName === "council" && "4-Bosqich: Filial Ilmiy Kengashi qarori"}
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Nashr: {activePubForReview.title}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setReviewStageModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setReviewDecision("APPROVED")}
-                  className={`p-2.5 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    reviewDecision === "APPROVED"
-                      ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                      : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                  }`}
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Maʼqullash (Keyingi bosqichga)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReviewDecision("REJECTED")}
-                  className={`p-2.5 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    reviewDecision === "REJECTED"
-                      ? "bg-rose-600 text-white border-rose-600 shadow-sm"
-                      : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                  }`}
-                >
-                  <XCircle className="w-4 h-4" />
-                  <span>Qaytarish (Rad etish)</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold mb-1">Bayonnoma raqami *</label>
-                  <input
-                    type="text"
-                    value={reviewProtocolNum}
-                    onChange={(e) => setReviewProtocolNum(e.target.value)}
-                    placeholder="Masalan: 4-son"
-                    className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold mb-1">Bayonnoma sanasi *</label>
-                  <input
-                    type="date"
-                    value={reviewProtocolDate}
-                    onChange={(e) => setReviewProtocolDate(e.target.value)}
-                    className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold mb-1">Bayonnoma skaner nusxasi (PDF, max 10 MB)</label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => setReviewProtocolFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:text-white cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold mb-1">Kengash xulosasi / Izoh</label>
-                <textarea
-                  rows={2}
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder="Kengash aʼzolarining taklif va mulohazalari..."
-                  className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setReviewStageModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold cursor-pointer"
-                >
-                  Bekor qilish
-                </button>
-                <button
-                  type="button"
-                  disabled={isStageReviewing}
-                  onClick={handleReviewStageSubmit}
-                  className="px-5 py-2 bg-indigo-900 hover:bg-indigo-800 text-white rounded-xl font-bold shadow-sm cursor-pointer"
-                >
-                  {isStageReviewing ? "Saqlanmoqda..." : "Bayonnomani tasdiqlash"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: MY.GOV.UZ VA VAZIRLIK GRIFI MA'LUMOTLARI */}
-      {/* ========================================================================= */}
-      {myGovModalOpen && activePubForMyGov && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <ExternalLink className="w-5 h-5 text-blue-900 dark:text-blue-400" />
-                  <span>my.gov.uz va Vazirlik Grifi arizasi</span>
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Filial koʻchirmasi asosida yuborilgan ariza</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMyGovModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold mb-1">my.gov.uz ariza roʻyxat raqami *</label>
-                <input
-                  type="text"
-                  required
-                  value={myGovAppNum}
-                  onChange={(e) => setMyGovAppNum(e.target.value)}
-                  placeholder="Masalan: APP-2026-98124"
-                  className="w-full p-2.5 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold mb-1">Vazirlik tomonidan berilgan Grif raqami (agar chiqqan boʻlsa)</label>
-                <input
-                  type="text"
-                  value={ministryGrifNum}
-                  onChange={(e) => setMinistryGrifNum(e.target.value)}
-                  placeholder="Masalan: № 412-089 (2026-yil 12-fevral)"
-                  className="w-full p-2.5 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono font-bold text-purple-700 dark:text-purple-300"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold mb-1">Vazirlik guvohnomasi / Grif sertifikati (PDF)</label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => setMinistryCertFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:text-white cursor-pointer"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setMyGovModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold cursor-pointer"
-                >
-                  Bekor qilish
-                </button>
-                <button
-                  type="button"
-                  disabled={isMyGovSaving}
-                  onClick={handleSaveMyGovSubmit}
-                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl font-bold shadow-sm cursor-pointer"
-                >
-                  {isMyGovSaving ? "Saqlanmoqda..." : "Saqlash"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <SubjectCabinet
+        isOpen={Boolean((courseDocsModalOpen || workflowModalOpen || publicationModalOpen || hemisSubjectModalOpen) && selectedWorkflowSubject)}
+        selectedSubject={selectedWorkflowSubject}
+        onClose={handleCloseSubjectCabinet}
+        workflowSubTab={workflowSubTab}
+        setWorkflowSubTab={setWorkflowSubTab}
+        currentUser={currentUser}
+        theme={theme}
+        systemSettings={systemSettings}
+        API_BASE={API_BASE}
+        showAlert={showAlert}
+        showConfirm={showConfirm}
+        uploadSingleFile={uploadSingleFile}
+        activeSubjectHemisResources={activeSubjectHemisResources}
+        isSubjectHemisResourcesLoading={isSubjectHemisResourcesLoading}
+        activeSubjectCurriculumSubject={activeSubjectCurriculumSubject}
+        fetchSubjectHemisDetails={fetchSubjectHemisDetails}
+        courseDocsList={courseDocsList}
+        isCourseDocsLoading={isCourseDocsLoading}
+        fetchCourseDocs={fetchCourseDocs}
+        publicationsList={publicationsList}
+        isPubsLoading={isPubsLoading}
+        fetchPublications={fetchPublications}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL: RASMIY QR-KOD VA KO'CHIRMA BLANKI (PRINT & VERIFY) */}
       {/* ========================================================================= */}
-      {qrVerifyModalOpen && verifyItemData && (
-        <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 text-slate-900 animate-in zoom-in-95 duration-150">
-            {/* Blank header */}
-            <div className="text-center pb-4 border-b-2 border-slate-900 space-y-1">
-              <div className="text-[11px] font-black uppercase tracking-widest text-slate-500">
-                Oʻzbekiston Respublikasi Oliy Taʼlim, Fan va Innovatsiyalar Vazirligi
-              </div>
-              <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-950">
-                MIRZO ULUGʻBEK NOMIDAGI OʻZBEKISTON MILLIY UNIVERSITETI JIZZAX FILIALI
-              </h2>
-              <div className="text-xs font-bold text-blue-950">
-                {verifyItemData.type === "pub"
-                  ? "ILMIY KENGASH BAYONNOMASIDAN KOʻCHIRMA"
-                  : "FAN OʻQUV-USLUBIY MAJMUASI TASDIQNOMASI"}
-              </div>
-            </div>
-
-            {/* Blank Body */}
-            <div className="py-5 space-y-3.5 text-xs leading-relaxed">
-              {verifyItemData.type === "pub" ? (
-                <>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-[11px]">
-                    <div className="flex justify-between">
-                      <span>Filial Kengashi bayonnomasi:</span>
-                      <b>№ {verifyItemData.data.council_protocol_num || "___"}</b>
-                    </div>
-                    <div className="flex justify-between mt-1">
-                      <span>Sana:</span>
-                      <b>{verifyItemData.data.council_protocol_date || "2026-yil"}</b>
-                    </div>
-                  </div>
-
-                  <p>
-                    Mirzo Ulugʻbek nomidagi Oʻzbekiston Milliy universiteti Jizzax filiali Ilmiy Kengashi fanning <b>"{verifyItemData.data.subject_name}"</b> kafedrasi boʻyicha professor-oʻqituvchi <b>{verifyItemData.data.authors}</b> tomonidan tayyorlangan quyidagi adabiyotni koʻrib chiqdi va vazirlik grifiga tavsiya etdi:
-                  </p>
-
-                  <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-1">
-                    <div><b>Adabiyot turi:</b> {verifyItemData.data.pub_type}</div>
-                    <div><b>Nomi:</b> <span className="font-bold text-blue-950">{verifyItemData.data.title}</span></div>
-                    <div><b>Antiplagiat tizimidan oʻtkazilganlik natijasi:</b> <span className="font-black text-emerald-700">{verifyItemData.data.antiplagiarism_score}% originallik</span></div>
-                  </div>
-
-                  <p className="text-[11px] text-slate-600">
-                    Mazkur koʻchirma adabiyotni <b>my.gov.uz</b> portali orqali Oliy taʼlim, fan va innovatsiyalar vazirligi Kengashiga davlat grifi olish uchun topshirish huquqini beradi.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p>
-                    Ushbu elektron hujjat orqali OʻzMU Jizzax filiali <b>"{verifyItemData.data.department_name || "Tegishli"}"</b> kafedrasi oʻqituvchisi <b>{verifyItemData.data.teacher_name}</b> tomonidan taqdim etilgan quyidagi oʻquv-uslubiy hujjat toʻliq tasdiqlanganligi qayd etiladi:
-                  </p>
-
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                    <div><b>Fan nomi:</b> <span className="font-bold">{verifyItemData.data.subject_name}</span></div>
-                    <div><b>Hujjat turi:</b> {verifyItemData.data.doc_type}</div>
-                    <div><b>Hujjat sarlavhasi:</b> {verifyItemData.data.title}</div>
-                    <div><b>Kafedra mudiri:</b> <span className="font-semibold text-emerald-700">Maʼqullangan ✓</span></div>
-                    <div><b>Fakultet dekani:</b> <span className="font-semibold text-emerald-700">Tasdiqlangan ✓</span></div>
-                  </div>
-                </>
-              )}
-
-              {/* QR-Kod & Verification stamp */}
-              <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-4">
-                <div className="flex-1 space-y-1 text-[10px] text-slate-500 font-mono">
-                  <div><b>Verifikatsiya kodi:</b> {verifyItemData.data.verification_token?.slice(0, 18)}...</div>
-                  <div><b>Holat:</b> RASMAN TASDIQLANGAN</div>
-                  <div><b>Tizim:</b> KPI JBNUU Elektron Hujjat Aylanish Tizimi</div>
-                </div>
-
-                {/* Simulated SVG QR-code badge */}
-                <div className="w-24 h-24 p-1.5 bg-white border-2 border-slate-900 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 shadow-sm text-center">
-                  <div className="w-16 h-16 bg-slate-900 rounded-lg p-1 flex items-center justify-center">
-                    <div className="grid grid-cols-3 gap-1 w-full h-full p-0.5">
-                      <div className="bg-white rounded-xs" />
-                      <div className="bg-slate-900" />
-                      <div className="bg-white rounded-xs" />
-                      <div className="bg-slate-900" />
-                      <div className="bg-white rounded-xs" />
-                      <div className="bg-slate-900" />
-                      <div className="bg-white rounded-xs" />
-                      <div className="bg-slate-900" />
-                      <div className="bg-white rounded-xs" />
-                    </div>
-                  </div>
-                  <span className="text-[8px] font-black tracking-tight text-slate-900 mt-0.5">QR VERIFIED</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Print & Close actions */}
-            <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Chop etish (PDF)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setQrVerifyModalOpen(false)}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-sm cursor-pointer"
-              >
-                Yopish
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <QRVerifyModal
+        isOpen={Boolean(qrVerifyModalOpen && verifyItemData)}
+        verifyItemData={verifyItemData}
+        onClose={() => setQrVerifyModalOpen(false)}
+      />
 
       {/* ========================================================================= */}
       {/* GLOBAL CONFIRMATION & ALERT MODAL */}
       {/* ========================================================================= */}
-      {confirmModal && confirmModal.isOpen && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100">
-            <div className="flex items-start gap-3.5 mb-4">
-              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
-                confirmModal.type === "danger"
-                  ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900"
-                  : confirmModal.type === "warning"
-                  ? "bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900"
-                  : confirmModal.type === "success"
-                  ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900"
-                  : "bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900"
-              }`}>
-                {confirmModal.type === "danger" && <AlertTriangle className="w-5 h-5" />}
-                {confirmModal.type === "warning" && <AlertCircle className="w-5 h-5" />}
-                {confirmModal.type === "success" && <CheckCircle className="w-5 h-5" />}
-                {(!confirmModal.type || confirmModal.type === "info") && <HelpCircle className="w-5 h-5" />}
-              </div>
-              <div className="flex-1">
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">
-                  {confirmModal.title}
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                  {confirmModal.message}
-                </p>
-              </div>
-            </div>
+      <ConfirmModal
+        confirmModal={confirmModal}
+        onClose={() => setConfirmModal(null)}
+      />
 
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
-              {!confirmModal.isAlertOnly && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirmModal.onCancel) confirmModal.onCancel();
-                    setConfirmModal(null);
-                  }}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
-                >
-                  {confirmModal.cancelText || "Bekor qilish"}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={async () => {
-                  const onConf = confirmModal.onConfirm;
-                  setConfirmModal(null);
-                  if (onConf) await onConf();
-                }}
-                className={`px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm transition-all cursor-pointer ${
-                  confirmModal.type === "danger"
-                    ? "bg-rose-600 hover:bg-rose-700"
-                    : confirmModal.type === "success"
-                    ? "bg-emerald-600 hover:bg-emerald-700"
-                    : "bg-blue-900 hover:bg-blue-800"
-                }`}
-              >
-                {confirmModal.confirmText || (confirmModal.isAlertOnly ? "Tushunarli" : "Tasdiqlash")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
