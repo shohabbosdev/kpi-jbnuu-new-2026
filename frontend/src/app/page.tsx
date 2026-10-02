@@ -102,6 +102,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { QRVerifyModal } from "@/components/QRVerifyModal";
 import { SubjectCabinet } from "@/components/SubjectCabinet";
 import { SubjectWorkloadDistribution } from "@/components/SubjectWorkloadDistribution";
+import { AdminSettingsPanel } from "@/components/AdminSettingsPanel";
 
 export default function KpiEnterpriseApp() {
   // Authentication State
@@ -3423,69 +3424,35 @@ export default function KpiEnterpriseApp() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            {/* Admin inspector view switcher (only visible to system admin) */}
+            {/* Admin inspector view switcher (compact unified role switcher) */}
             {currentUser.role === "ADMIN" && (
-              <>
-                {/* Desktop view switcher */}
-                <div className={`hidden xl:flex items-center gap-1.5 p-1 rounded-lg border ${theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
-                  }`}>
-                  <span className="text-[11px] font-semibold text-slate-400 px-1.5 hidden md:inline">Koʻrinish:</span>
-                  <button
-                    onClick={() => { setActiveRole("ADMIN"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "ADMIN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                      }`}
-                  >
-                    Admin
-                  </button>
-                  <button
-                    onClick={() => { setActiveRole("DEAN"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "DEAN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                      }`}
-                  >
-                    Dekan
-                  </button>
-                  <button
-                    onClick={() => { setActiveRole("HEAD_OF_DEPT"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "HEAD_OF_DEPT" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                      }`}
-                  >
-                    Mudir
-                  </button>
-                  <button
-                    onClick={() => { setActiveRole("TEACHER"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "TEACHER" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                      }`}
-                  >
-                    Oʻqituvchi
-                  </button>
-                  <button
-                    onClick={() => { setActiveRole("RECTORATE"); setActivePage("dashboard"); }}
-                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${activeRole === "RECTORATE" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                      }`}
-                  >
-                    Rektorat
-                  </button>
-                </div>
-
-                {/* Mobile & Tablet compact role select */}
-                <div className={`xl:hidden flex items-center p-1 rounded-lg border text-xs ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-800"
-                  }`}>
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border text-xs shadow-xs transition-all ${
+                theme === "dark"
+                  ? "bg-slate-800/90 border-slate-700 hover:border-slate-600 text-slate-100"
+                  : "bg-white border-slate-200 hover:border-blue-400 text-slate-800"
+              }`}>
+                <UserCog className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <div className="flex flex-col text-left">
+                  <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-450 tracking-wider leading-none hidden sm:inline">
+                    Rol koʻrinishi:
+                  </span>
                   <select
                     value={activeRole}
                     onChange={(e) => {
                       setActiveRole(e.target.value as any);
                       setActivePage("dashboard");
                     }}
-                    className="bg-transparent font-bold text-xs focus:outline-none cursor-pointer pr-1"
+                    className="bg-transparent font-bold text-xs focus:outline-none cursor-pointer pr-1 text-slate-900 dark:text-slate-100"
+                    title="Rol koʻrinishini almashtirish (Administrator inspektori)"
                   >
-                    <option value="ADMIN">Admin</option>
-                    <option value="DEAN">Dekan</option>
-                    <option value="HEAD_OF_DEPT">Mudir</option>
-                    <option value="TEACHER">Oʻqituvchi</option>
-                    <option value="RECTORATE">Rektorat</option>
+                    <option value="ADMIN" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">🛡️ Admin (Tizim boshqaruvi)</option>
+                    <option value="DEAN" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">🏛️ Dekan (Fakultet KPI)</option>
+                    <option value="HEAD_OF_DEPT" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">👥 Mudir (Kafedra monitoringi)</option>
+                    <option value="TEACHER" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">👨‍🏫 Oʻqituvchi (Shaxsiy faoliyat)</option>
+                    <option value="RECTORATE" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">🎓 Rektorat (Integral KPI)</option>
                   </select>
                 </div>
-              </>
+              </div>
             )}
 
             {/* Non-admin user role badge */}
@@ -4496,244 +4463,20 @@ export default function KpiEnterpriseApp() {
           )}
 
           {/* ========================================================================= */}
-          {/* ADMIN VIEW: SYSTEM SETTINGS */}
+          {/* ADMIN VIEW: SYSTEM SETTINGS & REGULATION */}
           {/* ========================================================================= */}
           {activePage === "admin_settings" && (
-            <div className={`max-w-3xl rounded-xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-              }`}>
-              <div className={`border-b pb-4 mb-6 flex justify-between items-center ${theme === "dark" ? "border-slate-800" : "border-slate-100"
-                }`}>
-                <div>
-                  <h3 className={`text-lg font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>Tizim konfiguratsiyasi</h3>
-                  <p className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>KPI maʼlumotlarini kiritish davri va byudjet chegaralari</p>
-                </div>
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${theme === "dark" ? "bg-blue-950/60 text-blue-400" : "bg-blue-50 text-blue-900"
-                  }`}>
-                  <Settings className="w-5 h-5" />
-                </div>
-              </div>
-
-              {settingsSaveSuccess && (
-                <div className={`mb-6 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 border ${theme === "dark" ? "bg-emerald-950/60 border-emerald-800 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-800"
-                  }`}>
-                  <Check className="w-4 h-4 text-emerald-500" />
-                  <span>Sozlamalar muvaffaqiyatli saqlandi va tizimda qoʻllanildi.</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSaveSettings} className="space-y-5">
-                <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
-                    }`}>
-                    Oʻquv yili
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={systemSettings.academic_year}
-                    onChange={(e) => setSystemSettings({ ...systemSettings, academic_year: e.target.value })}
-                    className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                      }`}
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">Filial rasmiy meʼyoriy hujjatlarida aks etadigan oʻquv yili</p>
-                </div>
-
-                <div className={`p-4 rounded-xl border flex items-center justify-between ${theme === "dark" ? "bg-slate-800/60 border-slate-700" : "bg-slate-50 border-slate-200"
-                  }`}>
-                  <div>
-                    <div className={`text-sm font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>Arizalar va hujjatlar qabuli</div>
-                    <div className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
-                      Oʻchirilganda professor-oʻqituvchilar yangi faoliyat natijalarini kiritishi toʻxtatiladi
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={systemSettings.submissions_open}
-                      onChange={(e) => setSystemSettings({ ...systemSettings, submissions_open: e.target.checked })}
-                      className="sr-only peer"
-                    />
-                    <div className={`w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-900 ${theme === "dark" ? "bg-slate-700" : "bg-slate-200"
-                      }`}></div>
-                  </label>
-                </div>
-
-                {/* 4 Bosqichli Reglament va Muddatlar */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
-                      }`}>
-                      1. Ariza topshirish muddati
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={systemSettings.submission_deadline || systemSettings.deadline_date}
-                      onChange={(e) => setSystemSettings({ ...systemSettings, submission_deadline: e.target.value, deadline_date: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                        }`}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1">Oʻqituvchilar natijalarni kiritadi</p>
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
-                      }`}>
-                      2. Baholash / Tekshirish muddati
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={systemSettings.review_deadline || "2026-11-05"}
-                      onChange={(e) => setSystemSettings({ ...systemSettings, review_deadline: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                        }`}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1">Ekspertlar va mudirlar tekshiradi</p>
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
-                      }`}>
-                      3. Apellyatsiya topshirish muddati
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={systemSettings.appeal_deadline || "2026-11-15"}
-                      onChange={(e) => setSystemSettings({ ...systemSettings, appeal_deadline: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                        }`}
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1">Eʼtiroz arizalari qabul qilinadi</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
-                      }`}>
-                      Joriy faol bosqich (Reglament statusi)
-                    </label>
-                    <select
-                      value={systemSettings.current_stage || "ALL_OPEN"}
-                      onChange={(e) => setSystemSettings({ ...systemSettings, current_stage: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                        }`}
-                    >
-                      <option value="ALL_OPEN">Barcha jarayonlar faol (Sinov / Ochiq rejim)</option>
-                      <option value="SUBMISSION_STAGE">1-bosqich: Faqat arizalar topshirish davri</option>
-                      <option value="REVIEW_STAGE">2-bosqich: Ekspertlar tekshiruvi davri</option>
-                      <option value="APPEAL_STAGE">3-bosqich: Apellyatsiya koʻrib chiqish davri</option>
-                      <option value="CLOSED">4-bosqich: Yakuniy tasdiqlangan (Reyting yopiq)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${theme === "dark" ? "text-slate-300" : "text-slate-700"
-                      }`}>
-                      Oylik ragʻbatlantirish byudjet limiti (soʻmda)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      step="1000000"
-                      value={systemSettings.budget_cap_monthly}
-                      onChange={(e) => setSystemSettings({ ...systemSettings, budget_cap_monthly: Number(e.target.value) })}
-                      className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                        }`}
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-2 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleSaveEvaluationPeriod}
-                    disabled={isSavingSettings}
-                    className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center gap-2"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>{isSavingSettings ? "Saqlanmoqda..." : "Reglament va sozlamalarni saqlash"}</span>
-                  </button>
-                </div>
-              </form>
-
-              {/* BAHOLOVCHILAR VA EKSPERTLAR KOMISSIYASI REYESTRI */}
-              <div className="mt-10 pt-8 border-t border-slate-200 dark:border-slate-800">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                  <div>
-                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                      <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      <span>Tayinlangan baholovchilar va ekspertlar komissiyasi</span>
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Mezonlar yoʻnalishlari va kafedralar boʻyicha arizalarni tekshiruvchi masʼullar
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddEvaluatorModalOpen(true)}
-                    className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
-                  >
-                    <span>+ Yangi baholovchi tayinlash</span>
-                  </button>
-                </div>
-
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">
-                      <tr>
-                        <th className="py-3 px-4">Baholovchi F.I.Sh.</th>
-                        <th className="py-3 px-4">Masʼul yoʻnalishi / Mezon bloki</th>
-                        <th className="py-3 px-4">Roli</th>
-                        <th className="py-3 px-4">Baholash muddati</th>
-                        <th className="py-3 px-4 text-center">Amallar</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {evaluators.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                            Hozircha qoʻshimcha ekspertlar biriktirilmagan. "+ Yangi baholovchi tayinlash" orqali qoʻshing.
-                          </td>
-                        </tr>
-                      ) : (
-                        evaluators.map(ev => (
-                          <tr key={ev.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                            <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">
-                              <div>{ev.name}</div>
-                              <div className="text-[11px] text-slate-400 font-mono">@{ev.username}</div>
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50">
-                                {ev.assigned_category}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 font-mono text-xs text-slate-600 dark:text-slate-300">
-                              {ev.role_type === "EXPERT" ? "Ilmiy/Oʻquv Eksperti" : ev.role_type === "COMMISSION" ? "Apellyatsiya Komissiyasi" : ev.role_type}
-                            </td>
-                            <td className="py-3.5 px-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                              {ev.deadline_date || "2026-06-25"}
-                            </td>
-                            <td className="py-3.5 px-4 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteEvaluator(ev.id, ev.name)}
-                                className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-md transition-colors"
-                                title="Baholovchini roʻyxatdan chiqarish"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+            <AdminSettingsPanel
+              systemSettings={systemSettings}
+              setSystemSettings={setSystemSettings}
+              handleSaveEvaluationPeriod={handleSaveEvaluationPeriod}
+              isSavingSettings={isSavingSettings}
+              settingsSaveSuccess={settingsSaveSuccess}
+              evaluators={evaluators}
+              setIsAddEvaluatorModalOpen={setIsAddEvaluatorModalOpen}
+              handleDeleteEvaluator={handleDeleteEvaluator}
+              theme={theme}
+            />
           )}
 
           {/* ========================================================================= */}
