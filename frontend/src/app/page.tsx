@@ -459,6 +459,208 @@ function UniversalPagination({
   );
 }
 
+interface NavbarCountdownTimerProps {
+  settings: SystemSettings;
+  theme: string;
+  onOpenSettings?: () => void;
+}
+
+function NavbarCountdownTimer({ settings, theme, onOpenSettings }: NavbarCountdownTimerProps) {
+  const [mounted, setMounted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    isExpired: boolean;
+    stageName: string;
+    targetDateStr: string;
+    isClosed: boolean;
+  }>({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    isExpired: false,
+    stageName: "Yuklanmoqda...",
+    targetDateStr: "",
+    isClosed: false
+  });
+
+  useEffect(() => {
+    setMounted(true);
+
+    const calculateTime = () => {
+      const stage = settings.current_stage || "ALL_OPEN";
+
+      if (stage === "CLOSED" || (!settings.submissions_open && stage === "SUBMISSION_STAGE")) {
+        return {
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          isExpired: true,
+          stageName: "Reyting yakunlangan",
+          targetDateStr: "",
+          isClosed: true
+        };
+      }
+
+      let stageLabel = "Qabul davri";
+      let dateStr = settings.submission_deadline || settings.deadline_date || "";
+
+      if (stage === "SUBMISSION_STAGE") {
+        stageLabel = "Ariza topshirish";
+        dateStr = settings.submission_deadline || settings.deadline_date || "";
+      } else if (stage === "REVIEW_STAGE") {
+        stageLabel = "Ekspertlar baholashi";
+        dateStr = settings.review_deadline || "";
+      } else if (stage === "APPEAL_STAGE") {
+        stageLabel = "Apellyatsiya davri";
+        dateStr = settings.appeal_deadline || "";
+      } else if (stage === "ALL_OPEN") {
+        stageLabel = "Baholash muddati";
+        dateStr = settings.submission_deadline || settings.deadline_date || "";
+      }
+
+      if (!dateStr) {
+        return {
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          isExpired: false,
+          stageName: stageLabel,
+          targetDateStr: "Muddatsiz",
+          isClosed: false
+        };
+      }
+
+      // Deadline ni ko'rsatilgan kunning oxiri (23:59:59) deb hisoblaymiz
+      const cleanDate = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+      const targetTime = new Date(`${cleanDate}T23:59:59`).getTime();
+      const now = Date.now();
+      const diff = targetTime - now;
+
+      if (isNaN(targetTime) || diff <= 0) {
+        return {
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          isExpired: true,
+          stageName: stageLabel,
+          targetDateStr: cleanDate,
+          isClosed: false
+        };
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      return {
+        days,
+        hours,
+        minutes,
+        seconds,
+        isExpired: false,
+        stageName: stageLabel,
+        targetDateStr: cleanDate,
+        isClosed: false
+      };
+    };
+
+    setTimeLeft(calculateTime());
+    const interval = setInterval(() => {
+      setTimeLeft(calculateTime());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [settings]);
+
+  if (!mounted) {
+    return (
+      <div className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-full text-xs border ${
+        theme === "dark" ? "bg-slate-800/60 border-slate-700 text-slate-400" : "bg-slate-100 border-slate-200 text-slate-500"
+      }`}>
+        <Clock className="w-3.5 h-3.5" />
+        <span>Muddat...</span>
+      </div>
+    );
+  }
+
+  const { days, hours, minutes, seconds, isExpired, stageName, targetDateStr, isClosed } = timeLeft;
+
+  let pulseDotColor = "bg-blue-500";
+  let badgeBorder = theme === "dark" ? "border-blue-800/80 bg-blue-950/40 text-blue-300" : "border-blue-200 bg-blue-50 text-blue-900";
+
+  if (isClosed) {
+    pulseDotColor = "bg-slate-400";
+    badgeBorder = theme === "dark" ? "border-slate-700 bg-slate-800/60 text-slate-400" : "border-slate-200 bg-slate-100 text-slate-600";
+  } else if (isExpired) {
+    pulseDotColor = "bg-rose-500";
+    badgeBorder = theme === "dark" ? "border-rose-900/80 bg-rose-950/50 text-rose-300" : "border-rose-200 bg-rose-50 text-rose-800";
+  } else if (days < 1) {
+    pulseDotColor = "bg-rose-500";
+    badgeBorder = theme === "dark" ? "border-rose-800 bg-rose-950/60 text-rose-300 ring-1 ring-rose-500/50" : "border-rose-300 bg-rose-50 text-rose-900 ring-1 ring-rose-300";
+  } else if (days <= 3) {
+    pulseDotColor = "bg-amber-400";
+    badgeBorder = theme === "dark" ? "border-amber-800/80 bg-amber-950/40 text-amber-300" : "border-amber-200 bg-amber-50 text-amber-900";
+  } else {
+    pulseDotColor = "bg-emerald-500";
+    badgeBorder = theme === "dark" ? "border-emerald-800/80 bg-emerald-950/40 text-emerald-300" : "border-emerald-200 bg-emerald-50 text-emerald-900";
+  }
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    <div
+      onClick={onOpenSettings}
+      title={onOpenSettings ? "Baholash reglamenti va muddatlarni sozlash (Administrator)" : `Tizim muddati: ${targetDateStr || "Belgilanmagan"}`}
+      className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border shadow-xs transition-all ${badgeBorder} ${
+        onOpenSettings ? "cursor-pointer hover:scale-102 hover:shadow-md" : ""
+      }`}
+    >
+      <span className="relative flex h-2 w-2">
+        {!isClosed && !isExpired && (
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${pulseDotColor}`}></span>
+        )}
+        <span className={`relative inline-flex rounded-full h-2 w-2 ${pulseDotColor}`}></span>
+      </span>
+
+      <span className="font-semibold hidden sm:inline opacity-90">
+        {stageName}:
+      </span>
+
+      {isClosed ? (
+        <span className="font-bold">Yopilgan</span>
+      ) : isExpired ? (
+        <span className="font-bold">Muddat yakunlandi</span>
+      ) : (
+        <div className="flex items-center gap-1 font-mono font-bold tracking-tight">
+          {days > 0 && (
+            <span>
+              <span className="text-sm">{days}</span>
+              <span className="text-[11px] font-sans font-normal opacity-80 ml-0.5 mr-1">kun</span>
+            </span>
+          )}
+          <span className="text-xs">
+            {pad(hours)}:{pad(minutes)}:{pad(seconds)}
+          </span>
+        </div>
+      )}
+
+      {onOpenSettings && (
+        <span className="text-[10px] opacity-60 ml-0.5 hidden xl:inline underline">
+          (sozlash)
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function KpiEnterpriseApp() {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -2968,6 +3170,13 @@ export default function KpiEnterpriseApp() {
             }`}>
               {systemSettings.academic_year}
             </span>
+
+            {/* Jonli Muddat Taymeri (Navbar Real-time Countdown Timer) */}
+            <NavbarCountdownTimer
+              settings={systemSettings}
+              theme={theme}
+              onOpenSettings={currentUser?.role === "ADMIN" ? () => setActivePage("admin_settings") : undefined}
+            />
           </div>
 
           <div className="flex items-center gap-3">
