@@ -676,35 +676,36 @@ function NavbarCountdownTimer({ settings, theme, onOpenSettings }: NavbarCountdo
     <div
       onClick={onOpenSettings}
       title={onOpenSettings ? "Baholash reglamenti va muddatlarni sozlash (Administrator)" : `Tizim muddati: ${targetDateStr || "Belgilanmagan"}`}
-      className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border shadow-xs transition-all ${badgeBorder} ${
+      className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-medium border shadow-xs transition-all flex-shrink-0 ${badgeBorder} ${
         onOpenSettings ? "cursor-pointer hover:scale-102 hover:shadow-md" : ""
       }`}
     >
-      <span className="relative flex h-2 w-2">
+      <span className="relative flex h-2 w-2 flex-shrink-0">
         {!isClosed && !isExpired && (
           <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${pulseDotColor}`}></span>
         )}
         <span className={`relative inline-flex rounded-full h-2 w-2 ${pulseDotColor}`}></span>
       </span>
 
-      <span className="font-semibold hidden sm:inline opacity-90">
+      <span className="font-semibold hidden md:inline opacity-90 truncate max-w-[130px]">
         {stageName}:
       </span>
 
       {isClosed ? (
         <span className="font-bold">Yopilgan</span>
       ) : isExpired ? (
-        <span className="font-bold">Muddat yakunlandi</span>
+        <span className="font-bold">Tugadi</span>
       ) : (
-        <div className="flex items-center gap-1 font-mono font-bold tracking-tight">
+        <div className="flex items-center gap-0.5 sm:gap-1 font-mono font-bold tracking-tight">
           {days > 0 && (
             <span>
-              <span className="text-sm">{days}</span>
-              <span className="text-[11px] font-sans font-normal opacity-80 ml-0.5 mr-1">kun</span>
+              <span className="text-xs sm:text-sm">{days}</span>
+              <span className="text-[10px] sm:text-[11px] font-sans font-normal opacity-80 ml-0.5 mr-0.5">k</span>
             </span>
           )}
-          <span className="text-xs">
-            {pad(hours)}:{pad(minutes)}:{pad(seconds)}
+          <span className="text-[11px] sm:text-xs">
+            {pad(hours)}:{pad(minutes)}
+            <span className="hidden sm:inline">:{pad(seconds)}</span>
           </span>
         </div>
       )}
@@ -961,8 +962,9 @@ export default function KpiEnterpriseApp() {
   // Theme State (Dark / Light)
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  // Sidebar Collapse State
+  // Sidebar Collapse & Mobile Menu State
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   // Inactivity Auto-Logout Timeout Notice
   const [sessionTimeoutNotice, setSessionTimeoutNotice] = useState<string>("");
@@ -1040,6 +1042,10 @@ export default function KpiEnterpriseApp() {
   }, [activePage, isMounted]);
 
   useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [activePage, activeRole]);
+
+  useEffect(() => {
     // Xavfsizlik nazorati: Agar foydalanuvchi ADMIN boʻlmasa, uning roli qatʼiy oʻziniki boʻlishi shart!
     if (currentUser && currentUser.role !== "ADMIN" && activeRole !== currentUser.role) {
       setActiveRole(currentUser.role);
@@ -1059,11 +1065,15 @@ export default function KpiEnterpriseApp() {
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
   };
 
-  // Toggle Sidebar Collapse
+  // Toggle Sidebar Collapse (Mobile drawer or Desktop collapse)
   const toggleSidebar = () => {
-    const next = !sidebarCollapsed;
-    setSidebarCollapsed(next);
-    localStorage.setItem("kpi_sidebar_collapsed", next ? "true" : "false");
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setMobileMenuOpen(prev => !prev);
+    } else {
+      const next = !sidebarCollapsed;
+      setSidebarCollapsed(next);
+      localStorage.setItem("kpi_sidebar_collapsed", next ? "true" : "false");
+    }
   };
 
   // 30-minute Inactivity Auto-Logout watcher
@@ -2614,15 +2624,26 @@ export default function KpiEnterpriseApp() {
         </div>
       )}
 
+      {/* Mobile Drawer Backdrop */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-30 lg:hidden transition-opacity"
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 bottom-0 border-r flex flex-col z-30 shadow-sm transition-all duration-300 ${
-        sidebarCollapsed ? "w-20" : "w-64"
+      <aside className={`fixed left-0 top-0 bottom-0 border-r flex flex-col z-40 shadow-xl lg:shadow-sm transition-all duration-300 ${
+        mobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"
+      } ${
+        sidebarCollapsed ? "lg:w-20" : "lg:w-64"
       } ${
         theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
       }`}>
         {/* Brand & Collapse Header */}
         <div className={`border-b flex items-center ${
-          sidebarCollapsed ? "p-3 flex-col gap-2 justify-center" : "p-4 justify-between"
+          sidebarCollapsed ? "p-3 lg:flex-col lg:gap-2 lg:justify-center p-4 justify-between" : "p-4 justify-between"
         } ${theme === "dark" ? "border-slate-800" : "border-slate-100"}`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-blue-500/30 bg-white dark:bg-slate-800 p-0.5 overflow-hidden transition-transform hover:scale-105">
@@ -2632,7 +2653,7 @@ export default function KpiEnterpriseApp() {
                 className="w-full h-full object-contain"
               />
             </div>
-            {!sidebarCollapsed && (
+            {(!sidebarCollapsed || mobileMenuOpen) && (
               <div className="min-w-0">
                 <h1 className={`text-sm font-bold leading-tight truncate ${theme === "dark" ? "text-white" : "text-blue-950"}`}>
                   OʻzMU JBNUU
@@ -2644,12 +2665,17 @@ export default function KpiEnterpriseApp() {
 
           <button
             onClick={toggleSidebar}
-            title={sidebarCollapsed ? "Menyuni kengaytirish" : "Menyuni ixchamlash"}
-            className={`p-1.5 rounded-lg transition-colors ${
+            title={mobileMenuOpen ? "Menyuni yopish" : sidebarCollapsed ? "Menyuni kengaytirish" : "Menyuni ixchamlash"}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
               theme === "dark" ? "hover:bg-slate-800 text-slate-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"
             }`}
           >
-            {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            <span className="lg:hidden">
+              <X className="w-4 h-4" />
+            </span>
+            <span className="hidden lg:inline">
+              {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </span>
           </button>
         </div>
 
@@ -3185,25 +3211,25 @@ export default function KpiEnterpriseApp() {
       </aside>
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
-        sidebarCollapsed ? "ml-20" : "ml-64"
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 ${
+        sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
       }`}>
         {/* Top Header */}
-        <header className={`sticky top-0 z-20 h-16 border-b px-6 flex items-center justify-between backdrop-blur-md transition-colors ${
+        <header className={`sticky top-0 z-20 h-16 border-b px-3 sm:px-6 flex items-center justify-between backdrop-blur-md transition-colors ${
           theme === "dark" ? "bg-slate-900/95 border-slate-800 text-slate-100" : "bg-white/95 border-slate-200 text-slate-900"
         }`}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={toggleSidebar}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-colors flex-shrink-0 cursor-pointer ${
                 theme === "dark" ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-100 text-slate-600"
               }`}
-              title="Sidebarni yigʻish / kengaytirish"
+              title="Menyuni ochish / yopish"
             >
               <Menu className="w-4 h-4" />
             </button>
 
-            <h2 className="text-sm font-bold truncate">
+            <h2 className="text-xs sm:text-sm font-bold truncate max-w-[100px] sm:max-w-[180px] md:max-w-xs lg:max-w-md">
               {activePage === "dashboard" && activeRole === "ADMIN" && "Tizim administratori boshqaruv portali"}
               {activePage === "dashboard" && activeRole === "DEAN" && "Fakultet dekanati KPI monitoring va kafedralar tahlili"}
               {activePage === "dashboard" && activeRole === "HEAD_OF_DEPT" && "Kafedra boshqaruvi va oʻqituvchilar monitoringi"}
@@ -3222,7 +3248,7 @@ export default function KpiEnterpriseApp() {
               {activePage === "profile" && "Mening profilim va hisob xavfsizligi"}
             </h2>
 
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+            <span className={`hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${
               theme === "dark" ? "bg-blue-950 text-blue-300 border border-blue-800" : "bg-blue-100 text-blue-900"
             }`}>
               {systemSettings.academic_year}
@@ -3236,54 +3262,77 @@ export default function KpiEnterpriseApp() {
             />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             {/* Admin inspector view switcher (only visible to system admin) */}
             {currentUser.role === "ADMIN" && (
-              <div className={`flex items-center gap-1.5 p-1 rounded-lg border ${
-                theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
-              }`}>
-                <span className="text-[11px] font-semibold text-slate-400 px-1.5 hidden md:inline">Koʻrinish:</span>
-                <button
-                  onClick={() => { setActiveRole("ADMIN"); setActivePage("dashboard"); }}
-                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                    activeRole === "ADMIN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Admin
-                </button>
-                <button
-                  onClick={() => { setActiveRole("DEAN"); setActivePage("dashboard"); }}
-                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                    activeRole === "DEAN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Dekan
-                </button>
-                <button
-                  onClick={() => { setActiveRole("HEAD_OF_DEPT"); setActivePage("dashboard"); }}
-                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                    activeRole === "HEAD_OF_DEPT" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Mudir
-                </button>
-                <button
-                  onClick={() => { setActiveRole("TEACHER"); setActivePage("dashboard"); }}
-                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                    activeRole === "TEACHER" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Oʻqituvchi
-                </button>
-                <button
-                  onClick={() => { setActiveRole("RECTORATE"); setActivePage("dashboard"); }}
-                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
-                    activeRole === "RECTORATE" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Rektorat
-                </button>
-              </div>
+              <>
+                {/* Desktop view switcher */}
+                <div className={`hidden xl:flex items-center gap-1.5 p-1 rounded-lg border ${
+                  theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"
+                }`}>
+                  <span className="text-[11px] font-semibold text-slate-400 px-1.5 hidden md:inline">Koʻrinish:</span>
+                  <button
+                    onClick={() => { setActiveRole("ADMIN"); setActivePage("dashboard"); }}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
+                      activeRole === "ADMIN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Admin
+                  </button>
+                  <button
+                    onClick={() => { setActiveRole("DEAN"); setActivePage("dashboard"); }}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
+                      activeRole === "DEAN" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Dekan
+                  </button>
+                  <button
+                    onClick={() => { setActiveRole("HEAD_OF_DEPT"); setActivePage("dashboard"); }}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
+                      activeRole === "HEAD_OF_DEPT" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Mudir
+                  </button>
+                  <button
+                    onClick={() => { setActiveRole("TEACHER"); setActivePage("dashboard"); }}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
+                      activeRole === "TEACHER" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Oʻqituvchi
+                  </button>
+                  <button
+                    onClick={() => { setActiveRole("RECTORATE"); setActivePage("dashboard"); }}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
+                      activeRole === "RECTORATE" ? "bg-blue-900 text-white shadow-xs" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Rektorat
+                  </button>
+                </div>
+
+                {/* Mobile & Tablet compact role select */}
+                <div className={`xl:hidden flex items-center p-1 rounded-lg border text-xs ${
+                  theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-800"
+                }`}>
+                  <select
+                    value={activeRole}
+                    onChange={(e) => {
+                      setActiveRole(e.target.value as any);
+                      setActivePage("dashboard");
+                    }}
+                    className="bg-transparent font-bold text-xs focus:outline-none cursor-pointer pr-1"
+                  >
+                    <option value="ADMIN">Admin</option>
+                    <option value="DEAN">Dekan</option>
+                    <option value="HEAD_OF_DEPT">Mudir</option>
+                    <option value="TEACHER">Oʻqituvchi</option>
+                    <option value="RECTORATE">Rektorat</option>
+                  </select>
+                </div>
+              </>
             )}
 
             {/* Non-admin user role badge */}
@@ -3351,7 +3400,7 @@ export default function KpiEnterpriseApp() {
         </header>
 
         {/* Content Container */}
-        <main className={`p-8 flex-1 transition-colors ${theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
+        <main className={`p-3 sm:p-5 lg:p-8 flex-1 transition-colors ${theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
           {/* ========================================================================= */}
           {/* ADMIN VIEW: HEMIS INTEGRATION */}
           {/* ========================================================================= */}
