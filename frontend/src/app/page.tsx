@@ -328,7 +328,7 @@ interface CourseSyllabusDoc {
   subject_name: string;
   department_name?: string;
   academic_year: string;
-  doc_type: "SYLLABUS" | "WORK_PROGRAM" | "ASSESSMENT_CRITERIA" | "LECTURE_NOTES" | "OTHER";
+  doc_type: "SYLLABUS" | "WORK_PROGRAM" | "LECTURE_NOTES" | "PRACTICAL_GUIDE" | "LAB_GUIDE" | "SEMINAR_GUIDE" | "INDEPENDENT_STUDY_GUIDE" | "ASSESSMENT_CRITERIA" | "OTHER";
   title: string;
   file_url: string;
   file_name: string;
@@ -940,10 +940,23 @@ export default function KpiEnterpriseApp() {
   const [courseDocsList, setCourseDocsList] = useState<CourseSyllabusDoc[]>([]);
   const [isCourseDocsLoading, setIsCourseDocsLoading] = useState(false);
   const [isCourseDocUploading, setIsCourseDocUploading] = useState(false);
-  const [newCourseDocType, setNewCourseDocType] = useState<"SYLLABUS" | "WORK_PROGRAM" | "ASSESSMENT_CRITERIA" | "LECTURE_NOTES" | "OTHER">("SYLLABUS");
+  const [newCourseDocType, setNewCourseDocType] = useState<"SYLLABUS" | "WORK_PROGRAM" | "LECTURE_NOTES" | "PRACTICAL_GUIDE" | "LAB_GUIDE" | "SEMINAR_GUIDE" | "INDEPENDENT_STUDY_GUIDE" | "ASSESSMENT_CRITERIA" | "OTHER">("SYLLABUS");
   const [newCourseDocTitle, setNewCourseDocTitle] = useState("");
   const [newCourseDocFile, setNewCourseDocFile] = useState<File | null>(null);
   const [isAddCourseDocFormOpen, setIsAddCourseDocFormOpen] = useState(false);
+
+  // O'qituvchining ushbu fanni o'tish turlari (Ma'ruza, Amaliy, Laboratoriya, Seminar)
+  const [teacherTrainingRoles, setTeacherTrainingRoles] = useState<{
+    hasLecture: boolean;
+    hasPractical: boolean;
+    hasLab: boolean;
+    hasSeminar: boolean;
+  }>({
+    hasLecture: true,
+    hasPractical: false,
+    hasLab: false,
+    hasSeminar: false
+  });
 
   // Mudir / Dekan ko'rib chiqish modali
   const [courseDocReviewModalOpen, setCourseDocReviewModalOpen] = useState(false);
@@ -1682,6 +1695,20 @@ export default function KpiEnterpriseApp() {
     }
   };
 
+  const getDocTypeLabel = (type: string) => {
+    switch (type) {
+      case "SYLLABUS": return "Fan sillabusi / Ishchi fan dasturi";
+      case "WORK_PROGRAM": return "Ishchi oʻquv dasturi";
+      case "LECTURE_NOTES": return "Maʼruzalar matni va taqdimotlar";
+      case "PRACTICAL_GUIDE": return "Amaliy mashgʻulotlar uslubiy koʻrsatmasi";
+      case "LAB_GUIDE": return "Laboratoriya ishlari uslubiy koʻrsatmasi";
+      case "SEMINAR_GUIDE": return "Seminar mashgʻulotlari uslubiy koʻrsatmasi";
+      case "INDEPENDENT_STUDY_GUIDE": return "Mustaqil taʼlim uslubiy koʻrsatmasi";
+      case "ASSESSMENT_CRITERIA": return "Baholash mezonlari va nazorat savollari";
+      default: return "Boshqa oʻquv-uslubiy material";
+    }
+  };
+
   const handleOpenSubjectWorkflow = (sub: any, teacherName: string) => {
     setSelectedWorkflowSubject({
       subject_name: sub.subject_name,
@@ -1694,6 +1721,17 @@ export default function KpiEnterpriseApp() {
     setWorkflowSubTab("docs");
     setIsAddCourseDocFormOpen(false);
     setPubModalFormOpen(false);
+
+    // Boshlang'ich dars mashg'ulotlari turlarini o'rnatish
+    const sName = (sub.subject_name || "").toLowerCase();
+    const isOnlyAmaliy = sName.includes("amaliyot") || (sName.includes("amaliy") && !sName.includes("nazariy"));
+    setTeacherTrainingRoles({
+      hasLecture: !isOnlyAmaliy,
+      hasPractical: true,
+      hasLab: false,
+      hasSeminar: false
+    });
+
     fetchCourseDocs(sub.subject_name, teacherName);
     fetchPublications(sub.subject_name, teacherName);
     fetchSubjectHemisDetails(sub.subject_name, teacherName);
@@ -9977,11 +10015,308 @@ export default function KpiEnterpriseApp() {
               {/* TAB 1: FAN O'QUV-USLUBIY HUJJATLARI */}
               {workflowSubTab === "docs" && (
                 <div className="space-y-4">
+                  {/* Dinamik talab qilinadigan hujjatlar matritsasi va Mashg'ulot turlari */}
+                  {(() => {
+                    const requiredItemsList: Array<{
+                      type: CourseSyllabusDoc["doc_type"];
+                      name: string;
+                      desc: string;
+                      assignedTo: string;
+                    }> = [];
+
+                    if (teacherTrainingRoles.hasLecture) {
+                      requiredItemsList.push(
+                        {
+                          type: "SYLLABUS",
+                          name: "Fan sillabusi / Ishchi fan dasturi",
+                          desc: "Oʻquv yili uchun fanning toʻliq mavzular, haftalar va soatlar taqsimoti rejasi",
+                          assignedTo: "Maʼruzachi oʻqituvchi"
+                        },
+                        {
+                          type: "LECTURE_NOTES",
+                          name: "Maʼruzalar matni va taqdimotlar toʻplami",
+                          desc: "Barcha maʼruza mavzulari boʻyicha toʻliq nazariy matnlar va taqdimot slaydlar",
+                          assignedTo: "Maʼruzachi oʻqituvchi"
+                        },
+                        {
+                          type: "INDEPENDENT_STUDY_GUIDE",
+                          name: "Mustaqil taʼlim boʻyicha uslubiy koʻrsatma va topshiriqlar",
+                          desc: "Talabalar mustaqil bajarishi shart boʻlgan vazifalar, adabiyotlar va nazorat shakllari (Maʼruzachi tuzadi)",
+                          assignedTo: "Maʼruzachi oʻqituvchi"
+                        },
+                        {
+                          type: "ASSESSMENT_CRITERIA",
+                          name: "Baholash mezonlari va nazorat savollari",
+                          desc: "JN, ON va YaN nazorati uchun baholash mezonlari hamda bilet/test savollari toʻplami",
+                          assignedTo: "Maʼruzachi oʻqituvchi"
+                        }
+                      );
+                    }
+
+                    if (teacherTrainingRoles.hasPractical) {
+                      requiredItemsList.push({
+                        type: "PRACTICAL_GUIDE",
+                        name: "Amaliy mashgʻulotlar uslubiy koʻrsatmasi va topshiriqlari",
+                        desc: "Mavzular boʻyicha amaliy masalalar, keyslar, mashqlar va ularni bajarish uslubiy koʻrsatmasi",
+                        assignedTo: "Amaliyotchi oʻqituvchi"
+                      });
+                    }
+
+                    if (teacherTrainingRoles.hasLab) {
+                      requiredItemsList.push({
+                        type: "LAB_GUIDE",
+                        name: "Laboratoriya ishlari boʻyicha uslubiy koʻrsatma va xavfsizlik yoʻriqnomasi",
+                        desc: "Laboratoriya eksperimentlari, asbob-uskunalar bilan ishlash va xavfsizlik texnikasi qoidalari",
+                        assignedTo: "Laboratoriya oʻqituvchisi"
+                      });
+                    }
+
+                    if (teacherTrainingRoles.hasSeminar) {
+                      requiredItemsList.push({
+                        type: "SEMINAR_GUIDE",
+                        name: "Seminar mashgʻulotlari uslubiy koʻrsatmasi",
+                        desc: "Seminar muhokama savollari, munozarali mavzular va taqdimot tayyorlash boʻyicha yoʻriqnoma",
+                        assignedTo: "Seminar oʻqituvchisi"
+                      });
+                    }
+
+                    const completedRequiredCount = requiredItemsList.filter(req =>
+                      courseDocsList.some(d => d.doc_type === req.type)
+                    ).length;
+
+                    return (
+                      <div className="space-y-4">
+                        {/* Mashg'ulot turlari selektori */}
+                        <div className={`p-4 rounded-2xl border ${
+                          theme === "dark" ? "bg-slate-800/40 border-slate-700/80" : "bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 border-blue-100"
+                        }`}>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                            <div>
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-950 dark:text-blue-200 flex items-center gap-2">
+                                <Sliders className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                <span>Sizga ushbu fandan qaysi dars mashgʻulotlari yuklatilgan?</span>
+                              </h4>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                Mashgʻulot turiga qarab sizdan talab etiladigan majburiy hujjatlar roʻyxati avtomatik shakllanadi
+                              </p>
+                            </div>
+
+                            {/* Tezkor andozalar (Presets) */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => setTeacherTrainingRoles({ hasLecture: true, hasPractical: true, hasLab: false, hasSeminar: false })}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-colors cursor-pointer"
+                              >
+                                Barcha qismlari (Maʼruza+Amaliy)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTeacherTrainingRoles({ hasLecture: true, hasPractical: false, hasLab: false, hasSeminar: false })}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-colors cursor-pointer"
+                              >
+                                Faqat Maʼruza
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTeacherTrainingRoles({ hasLecture: false, hasPractical: true, hasLab: false, hasSeminar: false })}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-colors cursor-pointer"
+                              >
+                                Faqat Amaliy
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTeacherTrainingRoles({ hasLecture: false, hasPractical: false, hasLab: true, hasSeminar: false })}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-colors cursor-pointer"
+                              >
+                                Faqat Laboratoriya
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                            <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                              teacherTrainingRoles.hasLecture 
+                                ? "bg-blue-600 text-white border-blue-600 shadow-xs" 
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={teacherTrainingRoles.hasLecture}
+                                onChange={(e) => setTeacherTrainingRoles(prev => ({ ...prev, hasLecture: e.target.checked }))}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-0"
+                              />
+                              <div className="text-xs font-bold">Maʼruza mashgʻuloti</div>
+                            </label>
+
+                            <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                              teacherTrainingRoles.hasPractical 
+                                ? "bg-blue-600 text-white border-blue-600 shadow-xs" 
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={teacherTrainingRoles.hasPractical}
+                                onChange={(e) => setTeacherTrainingRoles(prev => ({ ...prev, hasPractical: e.target.checked }))}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-0"
+                              />
+                              <div className="text-xs font-bold">Amaliy mashgʻulot</div>
+                            </label>
+
+                            <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                              teacherTrainingRoles.hasLab 
+                                ? "bg-blue-600 text-white border-blue-600 shadow-xs" 
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={teacherTrainingRoles.hasLab}
+                                onChange={(e) => setTeacherTrainingRoles(prev => ({ ...prev, hasLab: e.target.checked }))}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-0"
+                              />
+                              <div className="text-xs font-bold">Laboratoriya mashgʻuloti</div>
+                            </label>
+
+                            <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                              teacherTrainingRoles.hasSeminar 
+                                ? "bg-blue-600 text-white border-blue-600 shadow-xs" 
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={teacherTrainingRoles.hasSeminar}
+                                onChange={(e) => setTeacherTrainingRoles(prev => ({ ...prev, hasSeminar: e.target.checked }))}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-0"
+                              />
+                              <div className="text-xs font-bold">Seminar mashgʻuloti</div>
+                            </label>
+                          </div>
+
+                          {/* Dynamic Role Guidance Note */}
+                          <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
+                            {!teacherTrainingRoles.hasLecture && teacherTrainingRoles.hasPractical && !teacherTrainingRoles.hasLab && (
+                              <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-medium">
+                                <span>💡</span>
+                                <span>
+                                  <b>Faqat Amaliyotchi:</b> Siz ushbu fandan faqat amaliy mashgʻulot oʻtuvchi pedagog sifatida belgilangansiz. Sizdan faqat <b>Amaliy mashgʻulotlar uslubiy koʻrsatmasi</b> talab etiladi. Maʼruza matnlari, sillabus va mustaqil taʼlim koʻrsatmasini tuzish maʼruzachi oʻqituvchining zimmasida.
+                                </span>
+                              </div>
+                            )}
+                            {!teacherTrainingRoles.hasLecture && teacherTrainingRoles.hasLab && (
+                              <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-medium">
+                                <span>💡</span>
+                                <span>
+                                  <b>Faqat Laboratoriya:</b> Sizdan faqat <b>Laboratoriya ishlari boʻyicha uslubiy koʻrsatma va xavfsizlik yoʻriqnomasi</b> talab etiladi.
+                                </span>
+                              </div>
+                            )}
+                            {teacherTrainingRoles.hasLecture && (
+                              <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-medium">
+                                <span>📌</span>
+                                <span>
+                                  <b>Maʼruza oʻqituvchisi:</b> Fanning asosiy maʼruzachisi sifatida siz: <b>Fan sillabusi</b>, <b>Maʼruza matnlari va taqdimotlari</b>, <b>Mustaqil taʼlim uslubiy koʻrsatmasi</b> hamda <b>Baholash mezonlari</b>ni yuklashingiz shart! {teacherTrainingRoles.hasPractical && "Shuningdek, amaliy mashgʻulot ham sizda boʻlgani sababli Amaliy koʻrsatmani ham biriktirasiz."} {teacherTrainingRoles.hasLab && "Laboratoriya koʻrsatmasi ham talab etiladi."}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Majburiy Hujjatlar Nazorat Kartasi */}
+                        <div className={`p-4 rounded-2xl border ${
+                          theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+                        }`}>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                                Sizdan Talab Etiladigan Majburiy Hujjatlar Nazorati
+                              </h4>
+                            </div>
+                            <div className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                              Topshirildi: <span className="text-emerald-600 dark:text-emerald-400 font-black">{completedRequiredCount}</span> / {requiredItemsList.length} ta ({requiredItemsList.length > 0 ? Math.round((completedRequiredCount / requiredItemsList.length) * 100) : 100}%)
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            {requiredItemsList.map((req) => {
+                              const uploaded = courseDocsList.find(d => d.doc_type === req.type);
+                              return (
+                                <div
+                                  key={req.type}
+                                  className={`p-3 rounded-xl border flex flex-col justify-between transition-all ${
+                                    uploaded
+                                      ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60"
+                                      : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/80"
+                                  }`}
+                                >
+                                  <div>
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                        <span>{req.name}</span>
+                                      </div>
+                                      {uploaded ? (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 flex-shrink-0">
+                                          ✓ Yuklangan
+                                        </span>
+                                      ) : (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 flex-shrink-0">
+                                          Kutilmoqda
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                                      {req.desc}
+                                    </p>
+                                  </div>
+
+                                  <div className="mt-3 pt-2 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between text-[11px]">
+                                    {uploaded ? (
+                                      <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 truncate max-w-[220px]">
+                                        <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+                                        <span className="truncate font-medium">{uploaded.title}</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-400 italic">Hali fayl yuklanmadi</span>
+                                    )}
+
+                                    {!uploaded ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setNewCourseDocType(req.type);
+                                          setNewCourseDocTitle(`${selectedWorkflowSubject?.subject_name || "Fan"} boʻyicha ${req.name}`);
+                                          setIsAddCourseDocFormOpen(true);
+                                        }}
+                                        className="px-2.5 py-1 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                      >
+                                        <Plus className="w-3 h-3" />
+                                        <span>Yuklash</span>
+                                      </button>
+                                    ) : (
+                                      <a
+                                        href={uploaded.file_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-blue-600 dark:text-blue-400 hover:underline font-bold text-xs"
+                                      >
+                                        Koʻrish
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Yuklash formasi tugmasi / ochilishi */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                        Sillabus, Ishchi fan dasturi, Baholash mezonlari va Maʼruzalar
+                        Hujjatlar reyestri va yangi fayl qoʻshish
                       </h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         Oʻqituvchi tomonidan biriktiriladi, kafedra mudiri va dekan tasdiqlaganidan soʻng unikal QR-kodli elektron blank hosil boʻladi.
@@ -10017,10 +10352,13 @@ export default function KpiEnterpriseApp() {
                             onChange={(e) => setNewCourseDocType(e.target.value as any)}
                             className="w-full p-2 border rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
                           >
-                            <option value="SYLLABUS">Fan sillabusi (Syllabus)</option>
-                            <option value="WORK_PROGRAM">Ishchi oʻquv dasturi (Sillabus asosida)</option>
-                            <option value="ASSESSMENT_CRITERIA">Baholash mezonlari va nazorat savollari</option>
+                            <option value="SYLLABUS">Fan sillabusi / Ishchi fan dasturi</option>
                             <option value="LECTURE_NOTES">Maʼruzalar matni / Taqdimotlar toʻplami</option>
+                            <option value="PRACTICAL_GUIDE">Amaliy mashgʻulotlar uslubiy koʻrsatmasi va topshiriqlari</option>
+                            <option value="LAB_GUIDE">Laboratoriya ishlari uslubiy koʻrsatmasi va xavfsizlik yoʻriqnomasi</option>
+                            <option value="SEMINAR_GUIDE">Seminar mashgʻulotlari uslubiy koʻrsatmasi</option>
+                            <option value="INDEPENDENT_STUDY_GUIDE">Mustaqil taʼlim boʻyicha uslubiy koʻrsatma va topshiriqlar</option>
+                            <option value="ASSESSMENT_CRITERIA">Baholash mezonlari va nazorat savollari (JN, ON, YaN)</option>
                             <option value="OTHER">Boshqa oʻquv-uslubiy material</option>
                           </select>
                         </div>
@@ -10122,7 +10460,7 @@ export default function KpiEnterpriseApp() {
                               <div className="space-y-1">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950/70 text-blue-900 dark:text-blue-300">
-                                    {doc.doc_type}
+                                    {getDocTypeLabel(doc.doc_type)}
                                   </span>
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                     isApproved
@@ -10282,15 +10620,14 @@ export default function KpiEnterpriseApp() {
               {/* TAB 2: DARSLIK, O'QUV QO'LLANMA VA MONOGRAFIYA (KENGASHLAR ZANJIRI) */}
               {workflowSubTab === "publications" && (
                 <div className="space-y-4">
-                  {/* Muhim rasmiy eslatma */}
-                  <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300 space-y-1">
+                  {/* Muhim rasmiy eslatma: Nashrlar har bir fan uchun majburiy emas */}
+                  <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300 space-y-1.5">
                     <div className="flex items-center gap-1.5 font-bold">
                       <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                      <span>Filial tartibi va my.gov.uz orqali vazirlik grifi olish tartibi:</span>
+                      <span>Eslatma: Darslik, oʻquv qoʻllanma yoki monografiya chiqarish har bir fan uchun majburiy EMAS!</span>
                     </div>
                     <p className="leading-relaxed">
-                      Oʻzbekiston Milliy universiteti Jizzax filiali filial maqomida boʻlgani sababli, Filial Kengashi darslik va oʻquv qoʻllanmalarga bevosita davlat grifini bera olmaydi. 
-                      Filial Ilmiy Kengashi rasmiy <b>"Bayonnomadan koʻchirma"</b> beradi. Ushbu koʻchirma bilan muallif <b>my.gov.uz</b> adabiyotlar xizmati orqali Oliy taʼlim, fan va innovatsiyalar vazirligiga grif olish uchun ariza topshiradi.
+                      Fan boʻyicha oʻquv-uslubiy hujjatlar (1-tabdagi sillabus, maʼruzalar, amaliy/laboratoriya va mustaqil taʼlim koʻrsatmalari) oʻqituvchining dars turiga qarab yuklanishi shart. Agar siz ushbu fan boʻyicha yangi darslik, oʻquv qoʻllanma yoki monografiya tayyorlagan boʻlsangiz, unga <b>Filial Kengashi bayonnomasidan koʻchirma</b> olish va keyinchalik <b>my.gov.uz</b> orqali vazirlik grifiga ariza yuborish uchun arizangizni ushbu ixtiyoriy boʻlimdan topshirasiz.
                     </p>
                   </div>
 
