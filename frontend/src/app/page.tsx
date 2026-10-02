@@ -7226,15 +7226,18 @@ export default function KpiEnterpriseApp() {
                         </div>
                       ) : null}
 
-                      <button
-                        onClick={handleSyncWorkloads}
-                        disabled={isWorkloadsLoading}
-                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                        title="HEMIS axborot tizimidan yuklamalarni qayta sinxronlash"
-                      >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isWorkloadsLoading ? "animate-spin" : ""}`} />
-                        <span className="hidden sm:inline">{isWorkloadsLoading ? "Yangilanmoqda..." : "Sinxronlash"}</span>
-                      </button>
+                      {/* Faqat ADMIN uchun HEMIS sinxronlash ruxsati */}
+                      {activeRole === "ADMIN" && (
+                        <button
+                          onClick={handleSyncWorkloads}
+                          disabled={isWorkloadsLoading}
+                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                          title="Administrator: HEMIS axborot tizimidan barcha yuklamalarni yangilash"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isWorkloadsLoading ? "animate-spin" : ""}`} />
+                          <span className="hidden sm:inline">{isWorkloadsLoading ? "Yangilanmoqda..." : "HEMIS sinxronlash"}</span>
+                        </button>
+                      )}
 
                       <button
                         onClick={() => window.print()}

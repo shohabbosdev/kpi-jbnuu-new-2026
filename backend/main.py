@@ -2418,11 +2418,27 @@ def get_hemis_workloads(employee_id: Optional[int] = None, employee_name: Option
         "items": workloads
     }
 
+_last_workload_sync_timestamp = 0
+
 @app.post("/api/hemis/sync-workloads")
 def sync_hemis_workloads():
-    """HEMIS dan o'quv yuklamalarini majburiy qayta sinxronlashtirish"""
+    """HEMIS dan o'quv yuklamalarini majburiy qayta sinxronlashtirish (Anti-spam himoyasi bilan)"""
+    global _last_workload_sync_timestamp
+    import time
+    now = time.time()
+    
+    # 30 soniyalik anti-flood / server himoyasi
+    if now - _last_workload_sync_timestamp < 30:
+        summary = db_get_workloads_summary()
+        return {
+            "success": True,
+            "message": f"HEMIS yuklamalari yaqinda sinxronlangan ({summary['total_items']} ta fan/yuklama mavjud).",
+            "summary": summary
+        }
+
     try:
         items = fetch_all_hemis_workloads()
+        _last_workload_sync_timestamp = time.time()
         summary = db_get_workloads_summary()
         
         # Audit jurnali
