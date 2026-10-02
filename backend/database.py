@@ -179,6 +179,107 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_workload_emp_id ON teacher_workloads(employee_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_workload_emp_name ON teacher_workloads(employee_name);")
     
+    # 9. Course Syllabus & Teaching Materials table (Fan hujjatlari: Sillabus, Ishchi dastur, Baholash mezonlari)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS course_syllabus_docs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            teacher_id INTEGER,
+            teacher_name TEXT NOT NULL,
+            subject_name TEXT NOT NULL,
+            department_name TEXT,
+            academic_year TEXT DEFAULT '2024-2025',
+            doc_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            file_url TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            status TEXT DEFAULT 'SUBMITTED',
+            mudir_status TEXT DEFAULT 'PENDING',
+            mudir_comment TEXT,
+            mudir_updated_at TEXT,
+            dean_status TEXT DEFAULT 'PENDING',
+            dean_comment TEXT,
+            dean_updated_at TEXT,
+            verification_token TEXT UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_course_doc_teacher ON course_syllabus_docs(teacher_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_course_doc_subject ON course_syllabus_docs(subject_name);")
+
+    # 10. Publication Recommendations & 4-Stage Council Workflow (Darslik, O'quv qo'llanma, Monografiya Kengashlar Zanjiri)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS publication_recommendations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            teacher_id INTEGER,
+            teacher_name TEXT NOT NULL,
+            subject_name TEXT NOT NULL,
+            department_name TEXT,
+            academic_year TEXT DEFAULT '2024-2025',
+            pub_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            authors TEXT NOT NULL,
+            co_authors TEXT,
+            
+            -- Asosiy yuklangan fayllar to'plami
+            manuscript_file TEXT NOT NULL,
+            internal_review_file TEXT NOT NULL,
+            internal_reviewer_name TEXT,
+            external_review_file TEXT NOT NULL,
+            external_reviewer_name TEXT,
+            curriculum_file TEXT NOT NULL,
+            antiplagiarism_file TEXT NOT NULL,
+            antiplagiarism_score REAL NOT NULL,
+            workload_extract_file TEXT,
+            
+            -- 1-Bosqich: Kafedra yig'ilishi
+            kafedra_status TEXT DEFAULT 'PENDING',
+            kafedra_protocol_num TEXT,
+            kafedra_protocol_date TEXT,
+            kafedra_protocol_file TEXT,
+            kafedra_comment TEXT,
+            kafedra_updated_at TEXT,
+            
+            -- 2-Bosqich: Fakultet Kengashi
+            fakultet_status TEXT DEFAULT 'PENDING',
+            fakultet_protocol_num TEXT,
+            fakultet_protocol_date TEXT,
+            fakultet_protocol_file TEXT,
+            fakultet_comment TEXT,
+            fakultet_updated_at TEXT,
+            
+            -- 3-Bosqich: Filial O'quv-uslubiy Kengashi (O'UK)
+            methodical_status TEXT DEFAULT 'PENDING',
+            methodical_protocol_num TEXT,
+            methodical_protocol_date TEXT,
+            methodical_protocol_file TEXT,
+            methodical_comment TEXT,
+            methodical_updated_at TEXT,
+            
+            -- 4-Bosqich: Filial Ilmiy Kengashi (Yakuniy filial tavsiyasi)
+            council_status TEXT DEFAULT 'PENDING',
+            council_protocol_num TEXT,
+            council_protocol_date TEXT,
+            council_protocol_file TEXT,
+            council_comment TEXT,
+            council_updated_at TEXT,
+            
+            -- 5-Bosqich: my.gov.uz & Vazirlik Grifi
+            mygov_app_num TEXT,
+            ministry_grif_num TEXT,
+            ministry_certificate_file TEXT,
+            
+            -- Umumiy holat va QR-kod
+            overall_status TEXT DEFAULT 'AT_KAFEDRA',
+            verification_token TEXT UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pub_teacher ON publication_recommendations(teacher_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pub_subject ON publication_recommendations(subject_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pub_token ON publication_recommendations(verification_token);")
+    
     conn.commit()
     conn.close()
 
@@ -683,6 +784,300 @@ def db_get_workloads_summary() -> Dict[str, Any]:
         "bachelor_hours": 0,
         "master_hours": 0
     }
+
+# -------------------------------------------------------------
+# Fan hujjatlari (Course Syllabus & Teaching Materials)
+# -------------------------------------------------------------
+def db_save_course_doc(data: Dict[str, Any]) -> Dict[str, Any]:
+    import uuid
+    conn = get_connection()
+    cursor = conn.cursor()
+    token = data.get("verification_token") or str(uuid.uuid4())
+    cursor.execute("""
+        INSERT INTO course_syllabus_docs (
+            teacher_id, teacher_name, subject_name, department_name, academic_year,
+            doc_type, title, file_url, file_name, status,
+            mudir_status, mudir_comment, mudir_updated_at,
+            dean_status, dean_comment, dean_updated_at,
+            verification_token
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        data.get("teacher_id"),
+        data.get("teacher_name", "").strip(),
+        data.get("subject_name", "").strip(),
+        data.get("department_name", "").strip(),
+        data.get("academic_year", "2024-2025"),
+        data.get("doc_type", "SYLLABUS"),
+        data.get("title", "").strip(),
+        data.get("file_url", ""),
+        data.get("file_name", ""),
+        data.get("status", "SUBMITTED"),
+        data.get("mudir_status", "PENDING"),
+        data.get("mudir_comment"),
+        data.get("mudir_updated_at"),
+        data.get("dean_status", "PENDING"),
+        data.get("dean_comment"),
+        data.get("dean_updated_at"),
+        token
+    ))
+    doc_id = cursor.lastrowid
+    conn.commit()
+    cursor.execute("SELECT * FROM course_syllabus_docs WHERE id = ?", (doc_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else data
+
+def db_get_course_docs(
+    teacher_id: Optional[int] = None,
+    teacher_name: Optional[str] = None,
+    department_name: Optional[str] = None,
+    subject_name: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM course_syllabus_docs WHERE 1=1"
+    params = []
+    
+    if teacher_name:
+        query += " AND teacher_name LIKE ?"
+        params.append(f"%{teacher_name.strip()}%")
+    if department_name:
+        query += " AND department_name LIKE ?"
+        params.append(f"%{department_name.strip()}%")
+    if subject_name:
+        query += " AND subject_name LIKE ?"
+        params.append(f"%{subject_name.strip()}%")
+        
+    query += " ORDER BY id DESC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def db_update_course_doc_review(doc_id: int, role: str, status: str, comment: str) -> Optional[Dict[str, Any]]:
+    from datetime import datetime
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if role.lower() == "mudir":
+        new_overall = "MUDIR_APPROVED" if status == "APPROVED" else "MUDIR_REJECTED"
+        cursor.execute("""
+            UPDATE course_syllabus_docs
+            SET mudir_status = ?, mudir_comment = ?, mudir_updated_at = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (status, comment, now_str, new_overall, doc_id))
+    elif role.lower() == "dean":
+        new_overall = "APPROVED" if status == "APPROVED" else "DEAN_REJECTED"
+        cursor.execute("""
+            UPDATE course_syllabus_docs
+            SET dean_status = ?, dean_comment = ?, dean_updated_at = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (status, comment, now_str, new_overall, doc_id))
+    else:
+        conn.close()
+        return None
+        
+    conn.commit()
+    cursor.execute("SELECT * FROM course_syllabus_docs WHERE id = ?", (doc_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def db_get_course_doc_by_token(token: str) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM course_syllabus_docs WHERE verification_token = ?", (token,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def db_delete_course_doc(doc_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM course_syllabus_docs WHERE id = ?", (doc_id,))
+    conn.commit()
+    conn.close()
+
+# -------------------------------------------------------------
+# Darslik, O'quv qo'llanma, Monografiya Kengashlar Zanjiri
+# -------------------------------------------------------------
+def db_save_publication(data: Dict[str, Any]) -> Dict[str, Any]:
+    import uuid
+    conn = get_connection()
+    cursor = conn.cursor()
+    token = data.get("verification_token") or str(uuid.uuid4())
+    cursor.execute("""
+        INSERT INTO publication_recommendations (
+            teacher_id, teacher_name, subject_name, department_name, academic_year,
+            pub_type, title, authors, co_authors,
+            manuscript_file, internal_review_file, internal_reviewer_name,
+            external_review_file, external_reviewer_name,
+            curriculum_file, antiplagiarism_file, antiplagiarism_score,
+            workload_extract_file,
+            kafedra_status, fakultet_status, methodical_status, council_status,
+            overall_status, verification_token
+        ) VALUES (
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?,
+            ?, ?, ?,
+            ?, ?,
+            ?, ?, ?,
+            ?,
+            'PENDING', 'PENDING', 'PENDING', 'PENDING',
+            'AT_KAFEDRA', ?
+        )
+    """, (
+        data.get("teacher_id"),
+        data.get("teacher_name", "").strip(),
+        data.get("subject_name", "").strip(),
+        data.get("department_name", "").strip(),
+        data.get("academic_year", "2024-2025"),
+        data.get("pub_type", "O'QUV QO'LLANMA"),
+        data.get("title", "").strip(),
+        data.get("authors", "").strip(),
+        data.get("co_authors", "").strip(),
+        data.get("manuscript_file", ""),
+        data.get("internal_review_file", ""),
+        data.get("internal_reviewer_name", "").strip(),
+        data.get("external_review_file", ""),
+        data.get("external_reviewer_name", "").strip(),
+        data.get("curriculum_file", ""),
+        data.get("antiplagiarism_file", ""),
+        float(data.get("antiplagiarism_score") or 0.0),
+        data.get("workload_extract_file", ""),
+        token
+    ))
+    pub_id = cursor.lastrowid
+    conn.commit()
+    cursor.execute("SELECT * FROM publication_recommendations WHERE id = ?", (pub_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else data
+
+def db_get_publications(
+    teacher_id: Optional[int] = None,
+    teacher_name: Optional[str] = None,
+    department_name: Optional[str] = None,
+    subject_name: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM publication_recommendations WHERE 1=1"
+    params = []
+    
+    if teacher_name:
+        query += " AND teacher_name LIKE ?"
+        params.append(f"%{teacher_name.strip()}%")
+    if department_name:
+        query += " AND department_name LIKE ?"
+        params.append(f"%{department_name.strip()}%")
+    if subject_name:
+        query += " AND subject_name LIKE ?"
+        params.append(f"%{subject_name.strip()}%")
+        
+    query += " ORDER BY id DESC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def db_update_publication_stage(
+    pub_id: int,
+    stage: str,
+    status: str,
+    protocol_num: str = "",
+    protocol_date: str = "",
+    protocol_file: str = "",
+    comment: str = ""
+) -> Optional[Dict[str, Any]]:
+    from datetime import datetime
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    stage = stage.lower()
+    if stage == "kafedra":
+        new_overall = "AT_FAKULTET" if status == "APPROVED" else "KAFEDRA_REJECTED"
+        cursor.execute("""
+            UPDATE publication_recommendations
+            SET kafedra_status = ?, kafedra_protocol_num = ?, kafedra_protocol_date = ?,
+                kafedra_protocol_file = ?, kafedra_comment = ?, kafedra_updated_at = ?,
+                overall_status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (status, protocol_num, protocol_date, protocol_file, comment, now_str, new_overall, pub_id))
+    elif stage == "fakultet":
+        new_overall = "AT_METHODICAL" if status == "APPROVED" else "FAKULTET_REJECTED"
+        cursor.execute("""
+            UPDATE publication_recommendations
+            SET fakultet_status = ?, fakultet_protocol_num = ?, fakultet_protocol_date = ?,
+                fakultet_protocol_file = ?, fakultet_comment = ?, fakultet_updated_at = ?,
+                overall_status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (status, protocol_num, protocol_date, protocol_file, comment, now_str, new_overall, pub_id))
+    elif stage == "methodical":
+        new_overall = "AT_COUNCIL" if status == "APPROVED" else "METHODICAL_REJECTED"
+        cursor.execute("""
+            UPDATE publication_recommendations
+            SET methodical_status = ?, methodical_protocol_num = ?, methodical_protocol_date = ?,
+                methodical_protocol_file = ?, methodical_comment = ?, methodical_updated_at = ?,
+                overall_status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (status, protocol_num, protocol_date, protocol_file, comment, now_str, new_overall, pub_id))
+    elif stage == "council":
+        new_overall = "COUNCIL_RECOMMENDED" if status == "APPROVED" else "COUNCIL_REJECTED"
+        cursor.execute("""
+            UPDATE publication_recommendations
+            SET council_status = ?, council_protocol_num = ?, council_protocol_date = ?,
+                council_protocol_file = ?, council_comment = ?, council_updated_at = ?,
+                overall_status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (status, protocol_num, protocol_date, protocol_file, comment, now_str, new_overall, pub_id))
+    else:
+        conn.close()
+        return None
+
+    conn.commit()
+    cursor.execute("SELECT * FROM publication_recommendations WHERE id = ?", (pub_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def db_update_publication_mygov(
+    pub_id: int,
+    mygov_app_num: str,
+    ministry_grif_num: str = "",
+    ministry_certificate_file: str = ""
+) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    overall = "MINISTRY_APPROVED" if ministry_grif_num else "SUBMITTED_TO_MYGOV"
+    cursor.execute("""
+        UPDATE publication_recommendations
+        SET mygov_app_num = ?, ministry_grif_num = ?, ministry_certificate_file = ?,
+            overall_status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (mygov_app_num, ministry_grif_num, ministry_certificate_file, overall, pub_id))
+    conn.commit()
+    cursor.execute("SELECT * FROM publication_recommendations WHERE id = ?", (pub_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def db_get_publication_by_token(token: str) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM publication_recommendations WHERE verification_token = ?", (token,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def db_delete_publication(pub_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM publication_recommendations WHERE id = ?", (pub_id,))
+    conn.commit()
+    conn.close()
 
 # Bazani ishga tushirish
 init_db()

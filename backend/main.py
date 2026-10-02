@@ -25,7 +25,11 @@ from database import (
     db_load_indicators, db_save_indicator,
     db_load_appeals, db_save_appeal, db_review_appeal,
     db_load_evaluators, db_add_evaluator, db_delete_evaluator,
-    db_save_workloads, db_get_teacher_workloads, db_get_workloads_summary
+    db_save_workloads, db_get_teacher_workloads, db_get_workloads_summary,
+    db_save_course_doc, db_get_course_docs, db_update_course_doc_review,
+    db_get_course_doc_by_token, db_delete_course_doc,
+    db_save_publication, db_get_publications, db_update_publication_stage,
+    db_update_publication_mygov, db_get_publication_by_token, db_delete_publication
 )
 
 
@@ -2893,6 +2897,191 @@ def export_hemis_excel():
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+# =============================================================
+# FAN HUJJATLARI (SILLABUS, ISHCHI DASTUR, BAHOLASH MEZONLARI)
+# =============================================================
+
+class CourseDocCreate(BaseModel):
+    teacher_id: Optional[int] = None
+    teacher_name: str
+    subject_name: str
+    department_name: Optional[str] = ""
+    academic_year: Optional[str] = "2024-2025"
+    doc_type: str  # SYLLABUS, WORK_PROGRAM, ASSESSMENT_CRITERIA, LECTURE_NOTES, OTHER
+    title: str
+    file_url: str
+    file_name: str
+
+class CourseDocReviewRequest(BaseModel):
+    role: str  # mudir | dean
+    status: str  # APPROVED | REJECTED
+    comment: Optional[str] = ""
+
+@app.post("/api/course-docs")
+def create_course_doc(doc: CourseDocCreate):
+    """Fanga tegishli o'quv-uslubiy hujjatni (sillabus, ishchi dastur va h.k.) ro'yxatdan o'tkazish"""
+    res = db_save_course_doc(doc.dict())
+    return {"success": True, "data": res}
+
+@app.get("/api/course-docs")
+def list_course_docs(
+    teacher_name: Optional[str] = None,
+    department_name: Optional[str] = None,
+    subject_name: Optional[str] = None
+):
+    """Fanning yuklangan o'quv-uslubiy hujjatlarini olish"""
+    docs = db_get_course_docs(
+        teacher_name=teacher_name,
+        department_name=department_name,
+        subject_name=subject_name
+    )
+    return {"success": True, "data": docs}
+
+@app.post("/api/course-docs/{doc_id}/review")
+def review_course_doc(doc_id: int, review: CourseDocReviewRequest):
+    """Kafedra mudiri yoki dekan tomonidan hujjatni tasdiqlash yoki qaytarish"""
+    updated = db_update_course_doc_review(
+        doc_id=doc_id,
+        role=review.role,
+        status=review.status,
+        comment=review.comment or ""
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Hujjat topilmadi yoki rol noto'g'ri ko'rsatilgan")
+    return {"success": True, "data": updated}
+
+@app.delete("/api/course-docs/{doc_id}")
+def delete_course_doc_endpoint(doc_id: int):
+    """Fan hujjatini o'chirish"""
+    db_delete_course_doc(doc_id)
+    return {"success": True, "message": "Hujjat o'chirildi"}
+
+@app.get("/api/verify/course-doc/{token}")
+def verify_course_doc(token: str):
+    """QR kod orqali fan hujjati haqiqiyligini tekshirish (ommaviy)"""
+    doc = db_get_course_doc_by_token(token)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bunday QR-kodli fan hujjati topilmadi!")
+    return {
+        "success": True,
+        "is_verified": doc.get("status") == "APPROVED",
+        "doc": doc
+    }
+
+
+# =============================================================
+# DARSLIK, O'QUV QO'LLANMA, MONOGRAFIYA KENGASHLAR ZANJIRI
+# =============================================================
+
+class PublicationCreate(BaseModel):
+    teacher_id: Optional[int] = None
+    teacher_name: str
+    subject_name: str
+    department_name: Optional[str] = ""
+    academic_year: Optional[str] = "2024-2025"
+    pub_type: str  # DARSLIK, O'QUV QO'LLANMA, USLUBIY QO'LLANMA, MONOGRAFIYA
+    title: str
+    authors: str
+    co_authors: Optional[str] = ""
+    manuscript_file: str
+    internal_review_file: str
+    internal_reviewer_name: Optional[str] = ""
+    external_review_file: str
+    external_reviewer_name: Optional[str] = ""
+    curriculum_file: str
+    antiplagiarism_file: str
+    antiplagiarism_score: float
+    workload_extract_file: Optional[str] = ""
+
+class PublicationStageReview(BaseModel):
+    stage: str  # kafedra | fakultet | methodical | council
+    status: str  # APPROVED | REJECTED
+    protocol_num: Optional[str] = ""
+    protocol_date: Optional[str] = ""
+    protocol_file: Optional[str] = ""
+    comment: Optional[str] = ""
+
+class PublicationMyGovUpdate(BaseModel):
+    mygov_app_num: str
+    ministry_grif_num: Optional[str] = ""
+    ministry_certificate_file: Optional[str] = ""
+
+@app.post("/api/publications")
+def create_publication_recommendation(pub: PublicationCreate):
+    """
+    O'qituvchi tomonidan darslik/qo'llanma/monografiya uchun tavsiya arizasini topshirish.
+    Barcha majburiy hujjatlar (ichki/tashqi taqriz, o'quv dasturi, antiplagiat xulosasi va foizi) bilan.
+    """
+    res = db_save_publication(pub.dict())
+    return {"success": True, "data": res}
+
+@app.get("/api/publications")
+def list_publication_recommendations(
+    teacher_name: Optional[str] = None,
+    department_name: Optional[str] = None,
+    subject_name: Optional[str] = None
+):
+    """Nashrlar tavsiyanoma zanjirini ro'yxatini olish"""
+    pubs = db_get_publications(
+        teacher_name=teacher_name,
+        department_name=department_name,
+        subject_name=subject_name
+    )
+    return {"success": True, "data": pubs}
+
+@app.post("/api/publications/{pub_id}/stage")
+def review_publication_stage(pub_id: int, review: PublicationStageReview):
+    """
+    Kengash bosqichini tasdiqlash (bayonnoma raqami, sanasi, fayli bilan birga):
+    1-Bosqich: kafedra | 2-Bosqich: fakultet | 3-Bosqich: methodical | 4-Bosqich: council
+    """
+    updated = db_update_publication_stage(
+        pub_id=pub_id,
+        stage=review.stage,
+        status=review.status,
+        protocol_num=review.protocol_num or "",
+        protocol_date=review.protocol_date or "",
+        protocol_file=review.protocol_file or "",
+        comment=review.comment or ""
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Nashr tavsiyanomasi topilmadi yoki bosqich nomi noto'g'ri")
+    return {"success": True, "data": updated}
+
+@app.post("/api/publications/{pub_id}/mygov")
+def update_publication_mygov_info(pub_id: int, data: PublicationMyGovUpdate):
+    """Filial Kengashi ko'chirmasi olingandan so'ng my.gov.uz va Vazirlik Grifi arizasi ma'lumotlarini kiritish"""
+    updated = db_update_publication_mygov(
+        pub_id=pub_id,
+        mygov_app_num=data.mygov_app_num,
+        ministry_grif_num=data.ministry_grif_num or "",
+        ministry_certificate_file=data.ministry_certificate_file or ""
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Nashr tavsiyanomasi topilmadi")
+    return {"success": True, "data": updated}
+
+@app.delete("/api/publications/{pub_id}")
+def delete_publication_endpoint(pub_id: int):
+    """Nashr arizasini o'chirish"""
+    db_delete_publication(pub_id)
+    return {"success": True, "message": "Nashr arizasi o'chirildi"}
+
+@app.get("/api/verify/publication/{token}")
+def verify_publication(token: str):
+    """
+    QR-kod orqali Kengash bayonnomasi ko'chirmasining haqiqiyligini tekshirish.
+    O'zMU Jizzax filiali Ilmiy Kengashi qarori va antiplagiat ma'lumotlarini qaytaradi.
+    """
+    pub = db_get_publication_by_token(token)
+    if not pub:
+        raise HTTPException(status_code=404, detail="Bunday QR-kodli nashr ko'chirmasi topilmadi!")
+    return {
+        "success": True,
+        "is_recommended": pub.get("council_status") == "APPROVED",
+        "publication": pub
+    }
 
 if __name__ == "__main__":
     import uvicorn
