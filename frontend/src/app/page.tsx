@@ -1971,10 +1971,53 @@ export default function KpiEnterpriseApp() {
     currentSafeReviewSubsPage * reviewSubsPerPage
   );
 
-  // Pagination calculations: Appeals (Apellyatsiyalar)
-  const totalAppealsPages = Math.ceil(appeals.length / appealsPerPage) || 1;
+  // Pagination calculations: Appeals (Apellyatsiyalar - Rollar kesimida izolyatsiya)
+  const roleFilteredAppeals = appeals.filter(a => {
+    // 1. ADMIN va RECTORATE: Filial bo'yicha barcha apellyatsiyalarni ko'radi
+    if (activeRole === "ADMIN" || activeRole === "RECTORATE") {
+      return true;
+    }
+
+    // 2. DEAN (Fakultet dekani): O'z fakultetidagi barcha kafedralar o'qituvchilari yoki shaxsiy arizalari
+    if (activeRole === "DEAN") {
+      if (a.teacher_id === currentUser?.id) return true;
+      if (currentUser?.name && a.teacher_name && a.teacher_name.toLowerCase().includes(currentUser.name.toLowerCase())) return true;
+      const teacherObj = teachers.find(t => t.id === a.teacher_id || (t.name && a.teacher_name && t.name.toLowerCase() === a.teacher_name.toLowerCase()));
+      if (teacherObj && currentUser?.faculty && teacherObj.department) {
+        const facName = currentUser.faculty.toLowerCase();
+        const facultyDepts = structureHierarchy?.faculties
+          ?.find(f => f.name.toLowerCase().includes(facName) || facName.includes(f.name.toLowerCase()))
+          ?.departments.map(d => d.name.toLowerCase()) || [];
+        if (facultyDepts.some(d => teacherObj.department.toLowerCase().includes(d))) return true;
+      }
+      return false;
+    }
+
+    // 3. HEAD_OF_DEPT (Kafedra mudiri): O'z kafedrasi xodimlari arizalari va o'zining shaxsiy arizalari
+    if (activeRole === "HEAD_OF_DEPT") {
+      if (a.teacher_id === currentUser?.id) return true;
+      if (currentUser?.name && a.teacher_name && a.teacher_name.toLowerCase().includes(currentUser.name.toLowerCase())) return true;
+      const teacherObj = teachers.find(t => t.id === a.teacher_id || (t.name && a.teacher_name && t.name.toLowerCase() === a.teacher_name.toLowerCase()));
+      if (teacherObj && currentUser?.department) {
+        const myDept = currentUser.department.toLowerCase();
+        const tDept = (teacherObj.department || "").toLowerCase();
+        if (tDept.includes(myDept) || myDept.includes(tDept)) return true;
+      }
+      return false;
+    }
+
+    // 4. TEACHER (O'qituvchi): FAQAT VA FAQAT O'ZIGA TEGISHLI APELLATSIYALARNI KO'RADI!
+    const isMyId = a.teacher_id === currentUser?.id;
+    const isMyName = Boolean(
+      currentUser?.name && a.teacher_name &&
+      a.teacher_name.toLowerCase().replace(/^(dots\.|prof\.)\s*/, '').trim() === currentUser.name.toLowerCase().replace(/^(dots\.|prof\.)\s*/, '').trim()
+    );
+    return isMyId || isMyName;
+  });
+
+  const totalAppealsPages = Math.ceil(roleFilteredAppeals.length / appealsPerPage) || 1;
   const currentSafeAppealsPage = Math.max(1, Math.min(appealsPage, totalAppealsPages));
-  const pagedAppeals = appeals.slice(
+  const pagedAppeals = roleFilteredAppeals.slice(
     (currentSafeAppealsPage - 1) * appealsPerPage,
     currentSafeAppealsPage * appealsPerPage
   );
@@ -5987,7 +6030,23 @@ export default function KpiEnterpriseApp() {
               </div>
 
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-                <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4">Roʻyxatga olingan apellyatsiyalar holati</h4>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                      {activeRole === "TEACHER"
+                        ? `Sizning apellyatsiya arizalaringiz tarixi (${roleFilteredAppeals.length} ta)`
+                        : activeRole === "HEAD_OF_DEPT"
+                        ? `Kafedrangiz aʼzolari va shaxsiy apellyatsiyalaringiz (${roleFilteredAppeals.length} ta)`
+                        : `Barcha roʻyxatga olingan apellyatsiyalar reyestri (${roleFilteredAppeals.length} ta)`}
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {activeRole === "TEACHER"
+                        ? "Faqat oʻzingiz topshirgan va eʼtiroz bildirilgan arizalarning koʻrib chiqilish holati (shaxsiy maxfiylik taʼminlangan)"
+                        : "Apellyatsiya komissiyasi xulosasi va yakuniy ballar"}
+                    </p>
+                  </div>
+                </div>
+
                 <table className="w-full text-left text-sm">
                   <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
                     <tr>
@@ -6003,10 +6062,12 @@ export default function KpiEnterpriseApp() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {appeals.length === 0 ? (
+                    {roleFilteredAppeals.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
-                          Hozircha roʻyxatga olingan apellyatsiyalar mavjud emas.
+                          {activeRole === "TEACHER"
+                            ? "Siz tomondan hozircha apellyatsiya arizasi topshirilmagan. Agar rad etilgan natijalaringiz boʻlsa, yuqoridagi forma yoki «Mening arizalarim» boʻlimidan eʼtiroz bildirishingiz mumkin."
+                            : "Ushbu toifa boʻyicha hozircha apellyatsiyalar mavjud emas."}
                         </td>
                       </tr>
                     ) : (
@@ -6079,7 +6140,7 @@ export default function KpiEnterpriseApp() {
                 <UniversalPagination
                   currentPage={currentSafeAppealsPage}
                   totalPages={totalAppealsPages}
-                  totalItems={appeals.length}
+                  totalItems={roleFilteredAppeals.length}
                   itemsPerPage={appealsPerPage}
                   onPageChange={setAppealsPage}
                   onItemsPerPageChange={(val) => {

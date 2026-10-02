@@ -1558,11 +1558,12 @@ def lookup_doi(req: DoiLookupRequest):
 # ==========================================
 
 @app.get("/api/appeals", response_model=List[Appeal])
-def get_appeals():
+def get_appeals(teacher_id: Optional[int] = None):
     db_items = db_load_appeals()
-    if db_items:
-        return [Appeal(**a) for a in db_items]
-    return APPEALS_DB
+    all_appeals = [Appeal(**a) for a in db_items] if db_items else APPEALS_DB
+    if teacher_id is not None:
+        return [a for a in all_appeals if a.teacher_id == teacher_id]
+    return all_appeals
 
 @app.post("/api/appeals", response_model=Appeal)
 def create_appeal(appeal_in: AppealCreate):
