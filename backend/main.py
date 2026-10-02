@@ -2,7 +2,7 @@ import os
 import io
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, status, UploadFile, File, Request
+from fastapi import FastAPI, HTTPException, status, UploadFile, File, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 import uuid
@@ -34,6 +34,8 @@ from database import (
     db_save_hemis_curriculum_subjects, db_get_hemis_curriculum_subjects,
     db_save_hemis_subject_resources, db_get_hemis_subject_resources, db_find_subject_id_by_name,
     db_save_hemis_subject_teachers, db_get_hemis_subject_teachers,
+    db_save_hemis_scientific_activities, db_get_hemis_scientific_activities,
+    db_save_hemis_doctorate_students, db_get_hemis_doctorate_students,
     db_get_hemis_academic_stats
 )
 
@@ -2526,25 +2528,31 @@ def fetch_all_hemis_curriculums():
         print(f"Error fetching curriculums: {e}")
     return []
 
-def fetch_all_hemis_curriculum_subjects(max_pages: int = 5):
-    """HEMIS API dan o'quv reja fanlarini yuklab olish"""
+def fetch_all_hemis_curriculum_subjects(max_pages: Optional[int] = None):
+    """HEMIS API dan o'quv reja fanlarini sahifalab keshlab yuklab olish"""
     items = []
-    for page in range(1, max_pages + 1):
+    page = 1
+    while True:
         url = f"{HEMIS_BASE_URL}/data/curriculum-subject-list?page={page}&limit=200"
         try:
-            res = requests.get(url, headers=get_hemis_headers(), timeout=20)
+            res = requests.get(url, headers=get_hemis_headers(), timeout=25)
             if res.status_code != 200:
                 break
-            p_items = res.json().get("data", {}).get("items", [])
+            data = res.json().get("data", {})
+            p_items = data.get("items", [])
             if not p_items:
                 break
+            db_save_hemis_curriculum_subjects(p_items, clear_existing=(page == 1))
             items.extend(p_items)
-            if len(p_items) < 200:
+            
+            pagination = data.get("pagination", {})
+            total_pages = pagination.get("pageCount", 1)
+            if page >= total_pages or (max_pages and page >= max_pages):
                 break
-        except Exception:
+            page += 1
+        except Exception as e:
+            print(f"Error fetching curriculum subjects page {page}: {e}")
             break
-    if items:
-        db_save_hemis_curriculum_subjects(items)
     return items
 
 def fetch_all_hemis_subject_resources(max_pages: int = 3):
@@ -2568,34 +2576,112 @@ def fetch_all_hemis_subject_resources(max_pages: int = 3):
         db_save_hemis_subject_resources(items)
     return items
 
-def fetch_all_hemis_subject_teachers(max_pages: int = 5):
-    """HEMIS API dan fanlarga biriktirilgan o'qituvchilar va guruhlarni yuklab olish"""
+def fetch_all_hemis_subject_teachers(max_pages: Optional[int] = None):
+    """HEMIS API dan fanlarga biriktirilgan o'qituvchilar va guruhlarni to'liq keshlab yuklab olish"""
     items = []
-    for page in range(1, max_pages + 1):
+    page = 1
+    while True:
         url = f"{HEMIS_BASE_URL}/data/curriculum-subject-teacher-list?page={page}&limit=200"
         try:
-            res = requests.get(url, headers=get_hemis_headers(), timeout=20)
+            res = requests.get(url, headers=get_hemis_headers(), timeout=25)
             if res.status_code != 200:
                 break
-            p_items = res.json().get("data", {}).get("items", [])
+            data = res.json().get("data", {})
+            p_items = data.get("items", [])
+            if not p_items:
+                break
+            db_save_hemis_subject_teachers(p_items, clear_existing=(page == 1))
+            items.extend(p_items)
+            
+            pagination = data.get("pagination", {})
+            total_pages = pagination.get("pageCount", 1)
+            if page >= total_pages or (max_pages and page >= max_pages):
+                break
+            page += 1
+        except Exception as e:
+            print(f"Error fetching subject teachers page {page}: {e}")
+            break
+    return items
+
+def fetch_all_hemis_scientific_activities():
+    """HEMIS API dan o'qituvchilarning ilmiy faoliyati, h-index va iqtiboslarini to'liq yuklab olish"""
+    items = []
+    page = 1
+    while True:
+        url = f"{HEMIS_BASE_URL}/data/scientific-activity-list?page={page}&limit=200"
+        try:
+            res = requests.get(url, headers=get_hemis_headers(), timeout=25)
+            if res.status_code != 200:
+                break
+            data = res.json().get("data", {})
+            p_items = data.get("items", [])
             if not p_items:
                 break
             items.extend(p_items)
-            if len(p_items) < 200:
+            pagination = data.get("pagination", {})
+            total_pages = pagination.get("pageCount", 1)
+            if page >= total_pages:
                 break
-        except Exception:
+            page += 1
+        except Exception as e:
+            print(f"Error fetching scientific activities: {e}")
             break
     if items:
-        db_save_hemis_subject_teachers(items)
+        db_save_hemis_scientific_activities(items, clear_existing=True)
+    return items
+
+def fetch_all_hemis_doctorate_students():
+    """HEMIS API dan doktorantlar va ularning dissertatsiya mavzularini yuklab olish"""
+    items = []
+    page = 1
+    while True:
+        url = f"{HEMIS_BASE_URL}/data/doctorate-student-list?page={page}&limit=200"
+        try:
+            res = requests.get(url, headers=get_hemis_headers(), timeout=25)
+            if res.status_code != 200:
+                break
+            data = res.json().get("data", {})
+            p_items = data.get("items", [])
+            if not p_items:
+                break
+            items.extend(p_items)
+            pagination = data.get("pagination", {})
+            total_pages = pagination.get("pageCount", 1)
+            if page >= total_pages:
+                break
+            page += 1
+        except Exception as e:
+            print(f"Error fetching doctorate students: {e}")
+            break
+    if items:
+        db_save_hemis_doctorate_students(items, clear_existing=True)
     return items
 
 _last_academic_sync_timestamp = 0
+_is_full_academic_syncing = False
+
+def _run_full_academic_background_sync():
+    """Fondagi to'liq akademik sinxronizatsiya: barcha 7200+ fan va 14500+ dars biriktiruvlari"""
+    global _is_full_academic_syncing
+    _is_full_academic_syncing = True
+    try:
+        print("[FULL SYNC] Starting background sync of all curriculums, subjects, teachers, science...")
+        fetch_all_hemis_curriculums()
+        fetch_all_hemis_curriculum_subjects(max_pages=None)
+        fetch_all_hemis_subject_teachers(max_pages=None)
+        fetch_all_hemis_scientific_activities()
+        fetch_all_hemis_doctorate_students()
+        stats = db_get_hemis_academic_stats()
+        print(f"[FULL SYNC COMPLETED] Stats: {stats}")
+    except Exception as e:
+        print(f"[FULL SYNC ERROR] {e}")
+    finally:
+        _is_full_academic_syncing = False
 
 @app.post("/api/hemis/sync-academic")
 def sync_hemis_academic_data():
     """
-    HEMIS dan o'quv rejalar, fanlar, elektron resurslar va o'qituvchi biriktiruvlarini sinxronlash.
-    Faqat Administrator tomonidan chaqirilishi mumkin. Anti-spam (30s) himoyalangan.
+    HEMIS dan o'quv rejalar, fanlar, elektron resurslar va o'qituvchi biriktiruvlarini sinxronlash (Tezkor rejim).
     """
     global _last_academic_sync_timestamp
     import time
@@ -2611,16 +2697,19 @@ def sync_hemis_academic_data():
         
     try:
         currs = fetch_all_hemis_curriculums()
-        subjs = fetch_all_hemis_curriculum_subjects(max_pages=5)
+        subjs = fetch_all_hemis_curriculum_subjects(max_pages=10)
         res = fetch_all_hemis_subject_resources(max_pages=3)
-        teachers = fetch_all_hemis_subject_teachers(max_pages=5)
+        teachers = fetch_all_hemis_subject_teachers(max_pages=10)
+        science = fetch_all_hemis_scientific_activities()
+        docs = fetch_all_hemis_doctorate_students()
         _last_academic_sync_timestamp = time.time()
         
         stats = db_get_hemis_academic_stats()
         audit_msg = (
-            f"HEMIS oʻquv mezonlari sinxronlandi: {stats['curriculums_count']} ta oʻquv reja, "
+            f"HEMIS oʻquv va ilmiy mezonlari sinxronlandi: {stats['curriculums_count']} ta oʻquv reja, "
             f"{stats['curriculum_subjects_count']} ta fan, {stats['subject_resources_count']} ta oʻquv resurs/fayl, "
-            f"{stats['subject_teachers_count']} ta dars biriktiruvi."
+            f"{stats['subject_teachers_count']} ta dars biriktiruvi, {stats['scientific_activities_count']} ta ilmiy profil, "
+            f"{stats['doctorate_students_count']} ta doktorant."
         )
         db_save_audit_log(datetime.now().strftime("%Y-%m-%d %H:%M"), "ADMIN", audit_msg)
         AUDIT_LOGS.insert(0, {
@@ -2632,11 +2721,62 @@ def sync_hemis_academic_data():
         
         return {
             "success": True,
-            "message": f"HEMIS oʻquv rejalari va resurslari muvaffaqiyatli yangilandi!",
+            "message": "HEMIS oʻquv rejalari, ilmiy profillar va resurslari muvaffaqiyatli yangilandi!",
             "stats": stats
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"HEMIS oʻquv maʼlumotlarini sinxronlashda xatolik: {str(e)}")
+
+@app.post("/api/hemis/sync-full-academic")
+def trigger_full_academic_sync(background_tasks: BackgroundTasks):
+    """Barcha 7200+ fan va 14500+ dars biriktiruvlarini fonda to'liq sinxronlashtirish"""
+    global _is_full_academic_syncing
+    if _is_full_academic_syncing:
+        return {
+            "success": True,
+            "message": "HEMIS toʻliq sinxronizatsiyasi fonda hozirda amalga oshirilmoqda...",
+            "stats": db_get_hemis_academic_stats()
+        }
+    background_tasks.add_task(_run_full_academic_background_sync)
+    return {
+        "success": True,
+        "message": "HEMIS barcha fan va biriktiruvlarini toʻliq sinxronlash fon jarayonida boshlandi.",
+        "stats": db_get_hemis_academic_stats()
+    }
+
+@app.get("/api/hemis/sync-full-status")
+def get_full_academic_sync_status():
+    """HEMIS to'liq sinxronlash jarayoni holati"""
+    return {
+        "is_syncing": _is_full_academic_syncing,
+        "stats": db_get_hemis_academic_stats()
+    }
+
+@app.get("/api/hemis/scientific-activity")
+def get_hemis_scientific_activity(employee_id: Optional[int] = None, employee_name: Optional[str] = None):
+    """O'qituvchilarning ilmiy profillari (Scopus, ResearchGate, h-index, maqolalar va iqtiboslar)"""
+    items = db_get_hemis_scientific_activities(employee_id=employee_id, employee_name=employee_name)
+    if not items and employee_id is None and employee_name is None:
+        fetch_all_hemis_scientific_activities()
+        items = db_get_hemis_scientific_activities()
+    return {
+        "success": True,
+        "total_items": len(items),
+        "items": items
+    }
+
+@app.get("/api/hemis/doctorate-students")
+def get_hemis_doctorate_students(search: Optional[str] = None):
+    """Doktorantlar va ilmiy izlanuvchilar ro'yxati hamda dissertatsiya mavzulari"""
+    items = db_get_hemis_doctorate_students(search=search)
+    if not items and not search:
+        fetch_all_hemis_doctorate_students()
+        items = db_get_hemis_doctorate_students()
+    return {
+        "success": True,
+        "total_items": len(items),
+        "items": items
+    }
 
 @app.get("/api/hemis/academic-stats")
 def get_hemis_academic_stats():

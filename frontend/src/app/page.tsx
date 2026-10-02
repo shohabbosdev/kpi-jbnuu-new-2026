@@ -469,6 +469,37 @@ interface HemisAcademicStats {
   curriculum_subjects_count: number;
   subject_resources_count: number;
   subject_teachers_count: number;
+  scientific_activities_count?: number;
+  doctorate_students_count?: number;
+}
+
+interface HemisScientificActivity {
+  id: number;
+  employee_id: number;
+  employee_name: string;
+  scientific_platform: string;
+  profile_link: string;
+  h_index: number;
+  publication_work_count: number;
+  citation_count: number;
+  education_year: string;
+  is_checked: number;
+}
+
+interface HemisDoctorateStudent {
+  id: number;
+  full_name: string;
+  short_name: string;
+  student_id_number: string;
+  dissertation_theme: string;
+  department_name: string;
+  specialty_code: string;
+  specialty_name: string;
+  science_branch: string;
+  doctoral_type: string;
+  doctorate_status: string;
+  level: string;
+  image?: string;
 }
 
 interface UniversalPaginationProps {
@@ -937,6 +968,10 @@ export default function KpiEnterpriseApp() {
   const [hemisCurriculums, setHemisCurriculums] = useState<HemisCurriculum[]>([]);
   const [hemisCurriculumFilter, setHemisCurriculumFilter] = useState<string>("");
   const [isHemisAcademicSyncing, setIsHemisAcademicSyncing] = useState<boolean>(false);
+  const [isFullAcademicSyncing, setIsFullAcademicSyncing] = useState<boolean>(false);
+  const [hemisScientificActivities, setHemisScientificActivities] = useState<HemisScientificActivity[]>([]);
+  const [hemisDoctorateStudents, setHemisDoctorateStudents] = useState<HemisDoctorateStudent[]>([]);
+  const [hemisAcademicActiveTab, setHemisAcademicActiveTab] = useState<"curriculums" | "scientific" | "doctorates">("curriculums");
   const [activeSubjectHemisResources, setActiveSubjectHemisResources] = useState<HemisSubjectResource[]>([]);
   const [activeSubjectCurriculumSubject, setActiveSubjectCurriculumSubject] = useState<HemisCurriculumSubject | null>(null);
   const [isSubjectHemisResourcesLoading, setIsSubjectHemisResourcesLoading] = useState<boolean>(false);
@@ -1662,15 +1697,27 @@ export default function KpiEnterpriseApp() {
 
   const fetchHemisAcademicData = async () => {
     try {
-      const [statsRes, currsRes] = await Promise.all([
+      const [statsRes, currsRes, scienceRes, docsRes, fullStatusRes] = await Promise.all([
         fetch(`${API_BASE}/hemis/academic-stats`).then(r => r.json()),
-        fetch(`${API_BASE}/hemis/curriculums`).then(r => r.json())
+        fetch(`${API_BASE}/hemis/curriculums`).then(r => r.json()),
+        fetch(`${API_BASE}/hemis/scientific-activity`).then(r => r.json()).catch(() => ({ success: false })),
+        fetch(`${API_BASE}/hemis/doctorate-students`).then(r => r.json()).catch(() => ({ success: false })),
+        fetch(`${API_BASE}/hemis/sync-full-status`).then(r => r.json()).catch(() => ({ is_syncing: false }))
       ]);
       if (statsRes.success) {
         setHemisAcademicStats(statsRes.stats);
       }
       if (currsRes.success) {
         setHemisCurriculums(currsRes.items || []);
+      }
+      if (scienceRes.success) {
+        setHemisScientificActivities(scienceRes.items || []);
+      }
+      if (docsRes.success) {
+        setHemisDoctorateStudents(docsRes.items || []);
+      }
+      if (fullStatusRes.is_syncing !== undefined) {
+        setIsFullAcademicSyncing(fullStatusRes.is_syncing);
       }
     } catch (err) {
       console.error("HEMIS o'quv rejalari ma'lumotlarini yuklashda xatolik:", err);
@@ -1705,6 +1752,32 @@ export default function KpiEnterpriseApp() {
       });
     } finally {
       setIsHemisAcademicSyncing(false);
+    }
+  };
+
+  const handleTriggerFullAcademicSync = async () => {
+    setIsFullAcademicSyncing(true);
+    try {
+      const res = await fetch(`${API_BASE}/hemis/sync-full-academic`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        showAlert({
+          title: "Toʻliq sinxronizatsiya boshlandi",
+          message: "HEMIS dan barcha 7200+ fan va 14500+ dars biriktiruvlari fonda yuklanmoqda. Natijalar avtomatik keshlanadi.",
+          type: "info"
+        });
+        // 5 soniyadan keyin statistikani qayta yuklaymiz
+        setTimeout(() => {
+          fetchHemisAcademicData();
+        }, 5000);
+      }
+    } catch (err: any) {
+      showAlert({
+        title: "Xatolik",
+        message: err.message || "HEMIS fon sinxronizatsiyasini ishga tushirishda xatolik",
+        type: "danger"
+      });
+      setIsFullAcademicSyncing(false);
     }
   };
 
@@ -4625,121 +4698,292 @@ export default function KpiEnterpriseApp() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={handleSyncHemisAcademic}
-                    disabled={isHemisAcademicSyncing}
-                    className="px-4 py-2 bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isHemisAcademicSyncing ? "animate-spin" : ""}`} />
-                    <span>{isHemisAcademicSyncing ? "Sinxronlashtirilmoqda..." : "Oʻquv reja va Resurslarni sinxronlash"}</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleSyncHemisAcademic}
+                      disabled={isHemisAcademicSyncing || isFullAcademicSyncing}
+                      className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-50 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 flex-shrink-0 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isHemisAcademicSyncing ? "animate-spin" : ""}`} />
+                      <span>{isHemisAcademicSyncing ? "Yangilanmoqda..." : "Tezkor sinxronlash"}</span>
+                    </button>
+
+                    <button
+                      onClick={handleTriggerFullAcademicSync}
+                      disabled={isFullAcademicSyncing || isHemisAcademicSyncing}
+                      className="px-4 py-2 bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer"
+                    >
+                      <Database className={`w-3.5 h-3.5 ${isFullAcademicSyncing ? "animate-pulse" : ""}`} />
+                      <span>{isFullAcademicSyncing ? "Barcha fanlar yuklanmoqda..." : "Toʻliq sinxronlash (7200+ fan)"}</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-4">
-                  <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Jami Oʻquv Rejalar</div>
-                    <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
+                  <div className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Oʻquv Rejalar</div>
+                    <div className="text-xl font-black text-slate-900 dark:text-white mt-1">
                       {hemisAcademicStats?.curriculums_count || hemisCurriculums.length || 197} ta
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Bakalavriat, Magistratura, Sirtqi</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Bakalavr, magistr</div>
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-950/60 bg-emerald-50/50 dark:bg-emerald-950/20">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Oʻquv Reja Fanlari</div>
-                    <div className="text-2xl font-black text-emerald-900 dark:text-emerald-200 mt-1">
-                      {hemisAcademicStats?.curriculum_subjects_count?.toLocaleString() || "1,000+"} ta
+                  <div className="p-3 rounded-xl border border-emerald-100 dark:border-emerald-950/60 bg-emerald-50/50 dark:bg-emerald-950/20">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Oʻquv Fanlari</div>
+                    <div className="text-xl font-black text-emerald-900 dark:text-emerald-200 mt-1">
+                      {hemisAcademicStats?.curriculum_subjects_count?.toLocaleString() || "7,206"} ta
                     </div>
-                    <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">Kredit & soat mezonlari</div>
+                    <div className="text-[10px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">100% toʻliq kesh</div>
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-blue-100 dark:border-blue-950/60 bg-blue-50/50 dark:bg-blue-950/20">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">HEMIS Fan Resurslari</div>
-                    <div className="text-2xl font-black text-blue-900 dark:text-blue-200 mt-1">
-                      {hemisAcademicStats?.subject_resources_count?.toLocaleString() || "590+"} ta
+                  <div className="p-3 rounded-xl border border-purple-100 dark:border-purple-950/60 bg-purple-50/50 dark:bg-purple-950/20">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-purple-800 dark:text-purple-300">Dars Biriktiruv</div>
+                    <div className="text-xl font-black text-purple-900 dark:text-purple-200 mt-1">
+                      {hemisAcademicStats?.subject_teachers_count?.toLocaleString() || "14,536"} ta
                     </div>
-                    <div className="text-[11px] text-blue-700/80 dark:text-blue-400/80 mt-0.5">Yuklangan PDF/DOCX materiallar</div>
+                    <div className="text-[10px] text-purple-700/80 dark:text-purple-400/80 mt-0.5">Oʻqituvchi va guruhlar</div>
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-purple-100 dark:border-purple-950/60 bg-purple-50/50 dark:bg-purple-950/20">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-purple-800 dark:text-purple-300">Fan-Oʻqituvchi Biriktiruvi</div>
-                    <div className="text-2xl font-black text-purple-900 dark:text-purple-200 mt-1">
-                      {hemisAcademicStats?.subject_teachers_count?.toLocaleString() || "1,000+"} ta
+                  <div className="p-3 rounded-xl border border-blue-100 dark:border-blue-950/60 bg-blue-50/50 dark:bg-blue-950/20">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">Fan Resurslari</div>
+                    <div className="text-xl font-black text-blue-900 dark:text-blue-200 mt-1">
+                      {hemisAcademicStats?.subject_resources_count?.toLocaleString() || "1,450+"} ta
                     </div>
-                    <div className="text-[11px] text-purple-700/80 dark:text-purple-400/80 mt-0.5">Dars beruvchi guruhlar reyestri</div>
+                    <div className="text-[10px] text-blue-700/80 dark:text-blue-400/80 mt-0.5">On-demand integratsiya</div>
+                  </div>
+
+                  <div className="p-3 rounded-xl border border-amber-100 dark:border-amber-950/60 bg-amber-50/50 dark:bg-amber-950/20">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">Ilmiy Profillar</div>
+                    <div className="text-xl font-black text-amber-900 dark:text-amber-200 mt-1">
+                      {hemisAcademicStats?.scientific_activities_count || hemisScientificActivities.length || 271} ta
+                    </div>
+                    <div className="text-[10px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">Scopus, RG, h-index</div>
+                  </div>
+
+                  <div className="p-3 rounded-xl border border-indigo-100 dark:border-indigo-950/60 bg-indigo-50/50 dark:bg-indigo-950/20">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-300">Doktorantlar</div>
+                    <div className="text-xl font-black text-indigo-900 dark:text-indigo-200 mt-1">
+                      {hemisAcademicStats?.doctorate_students_count || hemisDoctorateStudents.length || 28} nafar
+                    </div>
+                    <div className="text-[10px] text-indigo-700/80 dark:text-indigo-400/80 mt-0.5">Ilmiy izlanuvchilar</div>
                   </div>
                 </div>
 
-                {/* O'quv rejalari qidiruvi va ixcham ro'yxati */}
+                {/* Sub-tablar: O'quv rejalari, Ilmiy profillar, Doktorantlar */}
                 <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      HEMIS Oʻquv Rejalari Katalogi ({hemisCurriculums.length > 0 ? hemisCurriculums.filter(c => !hemisCurriculumFilter || c.name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || c.specialty_name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase())).length : 0} ta)
+                    <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg">
+                      <button
+                        onClick={() => setHemisAcademicActiveTab("curriculums")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                          hemisAcademicActiveTab === "curriculums"
+                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                      >
+                        Oʻquv rejalari ({hemisCurriculums.length || 197})
+                      </button>
+                      <button
+                        onClick={() => setHemisAcademicActiveTab("scientific")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                          hemisAcademicActiveTab === "scientific"
+                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                      >
+                        Ilmiy profillar va H-index ({hemisScientificActivities.length || 271})
+                      </button>
+                      <button
+                        onClick={() => setHemisAcademicActiveTab("doctorates")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                          hemisAcademicActiveTab === "doctorates"
+                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                      >
+                        Doktorantlar reyestri ({hemisDoctorateStudents.length || 28})
+                      </button>
                     </div>
+
                     <div className="relative">
                       <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         value={hemisCurriculumFilter}
                         onChange={(e) => setHemisCurriculumFilter(e.target.value)}
-                        placeholder="Oʻquv reja, yoʻnalish yoki kod..."
-                        className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-600 w-64 ${
+                        placeholder="Katalogdan qidirish..."
+                        className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-600 w-60 ${
                           theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
                         }`}
                       />
                     </div>
                   </div>
 
-                  {hemisCurriculums.length > 0 ? (
+                  {/* 1. O'quv rejalari jadvali */}
+                  {hemisAcademicActiveTab === "curriculums" && (
+                    hemisCurriculums.length > 0 ? (
+                      <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
+                        <table className="w-full text-left text-xs">
+                          <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${
+                            theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
+                          }`}>
+                            <tr>
+                              <th className="py-2.5 px-3">Oʻquv reja nomi</th>
+                              <th className="py-2.5 px-3">Mutaxassislik</th>
+                              <th className="py-2.5 px-3">Kafedra</th>
+                              <th className="py-2.5 px-3 text-center">Oʻquv yili</th>
+                              <th className="py-2.5 px-3 text-center">Taʼlim shakli</th>
+                              <th className="py-2.5 px-3 text-center">Baholash tizimi</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {hemisCurriculums
+                              .filter(c => !hemisCurriculumFilter || c.name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || c.specialty_name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || c.specialty_code.includes(hemisCurriculumFilter))
+                              .slice(0, 20)
+                              .map((c) => (
+                                <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                  <td className="py-2 px-3 font-semibold text-slate-900 dark:text-white">
+                                    {c.name}
+                                  </td>
+                                  <td className="py-2 px-3 text-slate-600 dark:text-slate-300">
+                                    <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{c.specialty_code}</span> - {c.specialty_name}
+                                  </td>
+                                  <td className="py-2 px-3 text-slate-500 dark:text-slate-400">
+                                    {c.department_name}
+                                  </td>
+                                  <td className="py-2 px-3 text-center">
+                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold text-[10px]">
+                                      {c.education_year}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 text-center">
+                                    <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 text-[10px] font-bold">
+                                      {c.education_form}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 text-center text-slate-600 dark:text-slate-300 text-[11px]">
+                                    {c.marking_system}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="py-6 text-center text-xs text-slate-400">
+                        Oʻquv rejalari yuklanmoqda...
+                      </div>
+                    )
+                  )}
+
+                  {/* 2. Ilmiy profillar jadvali */}
+                  {hemisAcademicActiveTab === "scientific" && (
                     <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
                       <table className="w-full text-left text-xs">
                         <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${
                           theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
                         }`}>
                           <tr>
-                            <th className="py-2.5 px-3">Oʻquv reja nomi</th>
-                            <th className="py-2.5 px-3">Mutaxassislik</th>
-                            <th className="py-2.5 px-3">Fakultet / Kafedra</th>
+                            <th className="py-2.5 px-3">Oʻqituvchi / ID</th>
+                            <th className="py-2.5 px-3">Ilmiy platforma</th>
+                            <th className="py-2.5 px-3">Profil havolasi</th>
+                            <th className="py-2.5 px-3 text-center">H-indeks</th>
+                            <th className="py-2.5 px-3 text-center">Nashrlar soni</th>
+                            <th className="py-2.5 px-3 text-center">Iqtiboslar</th>
                             <th className="py-2.5 px-3 text-center">Oʻquv yili</th>
-                            <th className="py-2.5 px-3 text-center">Taʼlim shakli</th>
-                            <th className="py-2.5 px-3 text-center">Baholash tizimi</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {hemisCurriculums
-                            .filter(c => !hemisCurriculumFilter || c.name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || c.specialty_name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || c.specialty_code.includes(hemisCurriculumFilter))
-                            .slice(0, 15)
-                            .map((c) => (
-                              <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                          {hemisScientificActivities
+                            .filter(s => !hemisCurriculumFilter || s.scientific_platform.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || s.profile_link.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || String(s.employee_id).includes(hemisCurriculumFilter))
+                            .slice(0, 30)
+                            .map((s) => (
+                              <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                                 <td className="py-2 px-3 font-semibold text-slate-900 dark:text-white">
-                                  {c.name}
+                                  {s.employee_name || `Xodim #${s.employee_id}`}
                                 </td>
-                                <td className="py-2 px-3 text-slate-600 dark:text-slate-300">
-                                  <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{c.specialty_code}</span> - {c.specialty_name}
-                                </td>
-                                <td className="py-2 px-3 text-slate-500 dark:text-slate-400">
-                                  {c.department_name}
-                                </td>
-                                <td className="py-2 px-3 text-center">
-                                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold text-[10px]">
-                                    {c.education_year}
+                                <td className="py-2 px-3">
+                                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                                    s.scientific_platform === "Scopus"
+                                      ? "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                      : s.scientific_platform === "ResearchGate"
+                                      ? "bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800"
+                                      : "bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                  }`}>
+                                    {s.scientific_platform}
                                   </span>
                                 </td>
-                                <td className="py-2 px-3 text-center">
-                                  <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 text-[10px] font-bold">
-                                    {c.education_form}
-                                  </span>
+                                <td className="py-2 px-3 text-slate-600 dark:text-slate-400 font-mono text-[11px] max-w-xs truncate">
+                                  {s.profile_link.startsWith("http") ? (
+                                    <a href={s.profile_link} target="_blank" rel="noreferrer" className="text-emerald-600 dark:text-emerald-400 underline hover:text-emerald-700">
+                                      {s.profile_link}
+                                    </a>
+                                  ) : (
+                                    s.profile_link
+                                  )}
                                 </td>
-                                <td className="py-2 px-3 text-center text-slate-600 dark:text-slate-300 text-[11px]">
-                                  {c.marking_system}
+                                <td className="py-2 px-3 text-center font-bold text-slate-900 dark:text-white">
+                                  {s.h_index}
+                                </td>
+                                <td className="py-2 px-3 text-center text-slate-700 dark:text-slate-300 font-semibold">
+                                  {s.publication_work_count} ta
+                                </td>
+                                <td className="py-2 px-3 text-center font-bold text-emerald-600 dark:text-emerald-400">
+                                  {s.citation_count} ta
+                                </td>
+                                <td className="py-2 px-3 text-center text-[10px] text-slate-500">
+                                  {s.education_year}
                                 </td>
                               </tr>
                             ))}
                         </tbody>
                       </table>
                     </div>
-                  ) : (
-                    <div className="py-6 text-center text-xs text-slate-400">
-                      Oʻquv rejalari hali yuklanmagan. "Oʻquv reja va Resurslarni sinxronlash" tugmasini bosing.
+                  )}
+
+                  {/* 3. Doktorantlar jadvali */}
+                  {hemisAcademicActiveTab === "doctorates" && (
+                    <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
+                      <table className="w-full text-left text-xs">
+                        <thead className={`sticky top-0 z-10 border-b font-bold uppercase text-[10px] ${
+                          theme === "dark" ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}>
+                          <tr>
+                            <th className="py-2.5 px-3">F.I.SH.</th>
+                            <th className="py-2.5 px-3">Dissertatsiya mavzusi</th>
+                            <th className="py-2.5 px-3">Kafedra / Ixtisoslik</th>
+                            <th className="py-2.5 px-3 text-center">Daraja turi</th>
+                            <th className="py-2.5 px-3 text-center">Bosqich</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {hemisDoctorateStudents
+                            .filter(d => !hemisCurriculumFilter || d.full_name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || d.dissertation_theme.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()) || d.department_name.toLowerCase().includes(hemisCurriculumFilter.toLowerCase()))
+                            .map((d) => (
+                              <tr key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                <td className="py-2 px-3 font-semibold text-slate-900 dark:text-white">
+                                  {d.full_name}
+                                  <div className="text-[10px] text-slate-400 font-mono">{d.student_id_number}</div>
+                                </td>
+                                <td className="py-2 px-3 text-slate-700 dark:text-slate-300 max-w-sm">
+                                  {d.dissertation_theme}
+                                </td>
+                                <td className="py-2 px-3 text-slate-500 dark:text-slate-400">
+                                  <div className="font-semibold text-slate-800 dark:text-slate-200">{d.department_name}</div>
+                                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">{d.specialty_code} - {d.specialty_name}</div>
+                                </td>
+                                <td className="py-2 px-3 text-center">
+                                  <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900 font-bold text-[10px]">
+                                    {d.doctoral_type}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-center text-slate-600 dark:text-slate-400 font-semibold text-[11px]">
+                                  {d.level}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>

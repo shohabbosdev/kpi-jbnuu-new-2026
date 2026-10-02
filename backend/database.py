@@ -372,6 +372,47 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_st_emp_name ON hemis_subject_teachers(employee_name);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_st_subj_name ON hemis_subject_teachers(subject_name);")
     
+    # 15. HEMIS Ilmiy faoliyat va iqtiboslik (Scientific Activity)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS hemis_scientific_activity (
+            id INTEGER PRIMARY KEY,
+            employee_id INTEGER,
+            employee_name TEXT,
+            scientific_platform TEXT,
+            profile_link TEXT,
+            h_index INTEGER DEFAULT 0,
+            publication_work_count INTEGER DEFAULT 0,
+            citation_count INTEGER DEFAULT 0,
+            education_year TEXT,
+            is_checked INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sa_emp_id ON hemis_scientific_activity(employee_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sa_emp_name ON hemis_scientific_activity(employee_name);")
+
+    # 16. HEMIS Doktorantlar va ilmiy izlanuvchilar (Doctorate Students)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS hemis_doctorate_students (
+            id INTEGER PRIMARY KEY,
+            full_name TEXT NOT NULL,
+            short_name TEXT,
+            student_id_number TEXT,
+            dissertation_theme TEXT,
+            department_name TEXT,
+            specialty_code TEXT,
+            specialty_name TEXT,
+            science_branch TEXT,
+            doctoral_type TEXT,
+            doctorate_status TEXT,
+            level TEXT,
+            image TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_name ON hemis_doctorate_students(full_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_dept ON hemis_doctorate_students(department_name);")
+
     conn.commit()
     conn.close()
 
@@ -1225,10 +1266,11 @@ def db_get_hemis_curriculums() -> List[Dict[str, Any]]:
 # -------------------------------------------------------------
 # HEMIS O'quv rejadagi fanlar (Curriculum Subjects)
 # -------------------------------------------------------------
-def db_save_hemis_curriculum_subjects(items: List[Dict[str, Any]]) -> int:
+def db_save_hemis_curriculum_subjects(items: List[Dict[str, Any]], clear_existing: bool = False) -> int:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM hemis_curriculum_subjects")
+    if clear_existing:
+        cursor.execute("DELETE FROM hemis_curriculum_subjects")
     
     rows = []
     for it in items:
@@ -1432,10 +1474,11 @@ def db_get_hemis_subject_resources(employee_name: Optional[str] = None, subject_
 # -------------------------------------------------------------
 # HEMIS Fanlarga biriktirilgan o'qituvchilar va guruhlar (Subject Teachers)
 # -------------------------------------------------------------
-def db_save_hemis_subject_teachers(items: List[Dict[str, Any]]) -> int:
+def db_save_hemis_subject_teachers(items: List[Dict[str, Any]], clear_existing: bool = False) -> int:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM hemis_subject_teachers")
+    if clear_existing:
+        cursor.execute("DELETE FROM hemis_subject_teachers")
     
     rows = []
     for it in items:
@@ -1486,6 +1529,132 @@ def db_get_hemis_subject_teachers(employee_name: Optional[str] = None, subject_n
     conn.close()
     return [dict(r) for r in rows]
 
+# -------------------------------------------------------------
+# HEMIS Ilmiy faoliyat va iqtiboslik (Scientific Activity)
+# -------------------------------------------------------------
+def db_save_hemis_scientific_activities(items: List[Dict[str, Any]], clear_existing: bool = False) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    if clear_existing:
+        cursor.execute("DELETE FROM hemis_scientific_activity")
+    
+    rows = []
+    for it in items:
+        # Platform nomi mapping
+        p_code = str(it.get("_scientific_platform") or "")
+        p_name = "Boshqa"
+        if p_code == "11":
+            p_name = "Scopus"
+        elif p_code == "12":
+            p_name = "ResearchGate"
+        elif p_code == "13":
+            p_name = "Google Scholar"
+        elif p_code == "14":
+            p_name = "Web of Science"
+            
+        emp_id = it.get("_employee")
+        emp_obj = it.get("employee") or {}
+        emp_name = emp_obj.get("name") or it.get("employee_name") or ""
+        
+        rows.append((
+            it.get("id"),
+            emp_id,
+            emp_name,
+            p_name,
+            it.get("profile_link") or "",
+            int(it.get("h_index") or 0),
+            int(it.get("publication_work_count") or 0),
+            int(it.get("citation_count") or 0),
+            str(it.get("_education_year") or ""),
+            1 if it.get("is_checked") else 0
+        ))
+    cursor.executemany("""
+        INSERT OR REPLACE INTO hemis_scientific_activity (
+            id, employee_id, employee_name, scientific_platform, profile_link,
+            h_index, publication_work_count, citation_count, education_year, is_checked
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, rows)
+    conn.commit()
+    count = cursor.rowcount
+    conn.close()
+    return count
+
+def db_get_hemis_scientific_activities(employee_id: Optional[int] = None, employee_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM hemis_scientific_activity WHERE 1=1"
+    params = []
+    if employee_id:
+        query += " AND employee_id = ?"
+        params.append(employee_id)
+    if employee_name and employee_name.strip():
+        query += " AND employee_name LIKE ?"
+        params.append(f"%{employee_name.strip()}%")
+    query += " ORDER BY citation_count DESC, h_index DESC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+# -------------------------------------------------------------
+# HEMIS Doktorantlar (Doctorate Students)
+# -------------------------------------------------------------
+def db_save_hemis_doctorate_students(items: List[Dict[str, Any]], clear_existing: bool = False) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    if clear_existing:
+        cursor.execute("DELETE FROM hemis_doctorate_students")
+    
+    rows = []
+    for it in items:
+        dept = it.get("department") or {}
+        spec = it.get("specialty") or {}
+        sbranch = it.get("scienceBranch") or {}
+        dtype = it.get("doctoralStudentType") or {}
+        dstatus = it.get("doctorateStudentStatus") or {}
+        
+        rows.append((
+            it.get("id"),
+            it.get("full_name") or "",
+            it.get("short_name") or "",
+            it.get("student_id_number") or "",
+            it.get("dissertation_theme") or "",
+            dept.get("name") or "",
+            spec.get("code") or "",
+            spec.get("name") or "",
+            sbranch.get("name") or "",
+            dtype.get("name") or "",
+            dstatus.get("name") or "",
+            it.get("level") or "",
+            it.get("image") or ""
+        ))
+    cursor.executemany("""
+        INSERT OR REPLACE INTO hemis_doctorate_students (
+            id, full_name, short_name, student_id_number, dissertation_theme,
+            department_name, specialty_code, specialty_name, science_branch,
+            doctoral_type, doctorate_status, level, image
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, rows)
+    conn.commit()
+    count = cursor.rowcount
+    conn.close()
+    return count
+
+def db_get_hemis_doctorate_students(search: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM hemis_doctorate_students WHERE 1=1"
+    params = []
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query += " AND (full_name LIKE ? OR dissertation_theme LIKE ? OR department_name LIKE ? OR specialty_name LIKE ?)"
+        params.extend([term, term, term, term])
+    query += " ORDER BY full_name ASC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 def db_get_hemis_academic_stats() -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
@@ -1497,12 +1666,18 @@ def db_get_hemis_academic_stats() -> Dict[str, Any]:
     res_count = cursor.fetchone()[0]
     cursor.execute("SELECT COUNT(*) FROM hemis_subject_teachers")
     st_count = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM hemis_scientific_activity")
+    sa_count = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM hemis_doctorate_students")
+    doc_count = cursor.fetchone()[0]
     conn.close()
     return {
         "curriculums_count": c_count,
         "curriculum_subjects_count": cs_count,
         "subject_resources_count": res_count,
-        "subject_teachers_count": st_count
+        "subject_teachers_count": st_count,
+        "scientific_activities_count": sa_count,
+        "doctorate_students_count": doc_count
     }
 
 # Bazani ishga tushirish
