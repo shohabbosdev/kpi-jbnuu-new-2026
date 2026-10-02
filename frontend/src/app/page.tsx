@@ -101,6 +101,7 @@ import { NavbarCountdownTimer } from "@/components/NavbarCountdownTimer";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { QRVerifyModal } from "@/components/QRVerifyModal";
 import { SubjectCabinet } from "@/components/SubjectCabinet";
+import { SubjectWorkloadDistribution } from "@/components/SubjectWorkloadDistribution";
 
 export default function KpiEnterpriseApp() {
   // Authentication State
@@ -7242,11 +7243,6 @@ export default function KpiEnterpriseApp() {
             const bachelorPercent = totalHours > 0 ? Math.round((bachelorHours / totalHours) * 100) : 0;
             const masterPercent = totalHours > 0 ? Math.round((masterHours / totalHours) * 100) : 0;
 
-            const segmentColors = [
-              "bg-emerald-500", "bg-blue-500", "bg-indigo-500", "bg-purple-500",
-              "bg-amber-500", "bg-rose-500", "bg-teal-500", "bg-cyan-500"
-            ];
-
             return (
               <div className="space-y-6">
                 {/* Hero Card */}
@@ -7449,60 +7445,12 @@ export default function KpiEnterpriseApp() {
                   </div>
                 </div>
 
-                {/* Creative Workload Distribution Progress Bar */}
-                {totalHours > 0 && rawSubjects.length > 0 && (
-                  <div className={`p-5 rounded-2xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-                    }`}>
-                    <div className="flex justify-between items-center mb-3">
-                      <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                          Fanlar Kesimida Yuklama Taqsimoti
-                        </h4>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          Har bir fanning umumiy dars soatlaridagi foiz ulushi
-                        </p>
-                      </div>
-                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                        Jami 100% ({totalHours} soat)
-                      </span>
-                    </div>
-
-                    {/* Segmented bar */}
-                    <div className="w-full h-4 rounded-full overflow-hidden flex bg-slate-100 dark:bg-slate-800 p-0.5 gap-0.5">
-                      {rawSubjects.map((sub, idx) => {
-                        const pct = (sub.total_hours / totalHours) * 100;
-                        const colorClass = segmentColors[idx % segmentColors.length];
-                        return (
-                          <div
-                            key={sub.id || idx}
-                            style={{ width: `${pct}%` }}
-                            className={`${colorClass} h-full first:rounded-l-full last:rounded-r-full transition-all duration-300 relative group`}
-                            title={`${sub.subject_name}: ${sub.total_hours} soat (${pct.toFixed(1)}%)`}
-                          />
-                        );
-                      })}
-                    </div>
-
-                    {/* Legend */}
-                    <div className="flex flex-wrap items-center gap-3 mt-4 text-xs">
-                      {rawSubjects.map((sub, idx) => {
-                        const pct = ((sub.total_hours / totalHours) * 100).toFixed(1);
-                        const colorClass = segmentColors[idx % segmentColors.length];
-                        return (
-                          <div key={sub.id || idx} className="flex items-center gap-1.5">
-                            <span className={`w-2.5 h-2.5 rounded-full ${colorClass} flex-shrink-0`} />
-                            <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[180px]">
-                              {sub.subject_name}
-                            </span>
-                            <span className="font-bold text-slate-900 dark:text-slate-100 font-mono text-[11px]">
-                              {sub.total_hours}s ({pct}%)
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                {/* Modern Subject Workload Distribution (Aggregated, Bar-List & Analytics) */}
+                <SubjectWorkloadDistribution
+                  rawSubjects={rawSubjects}
+                  totalHours={totalHours}
+                  theme={theme}
+                />
 
                 {/* Filter & Search Bar */}
                 <div className={`p-4 rounded-2xl border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
