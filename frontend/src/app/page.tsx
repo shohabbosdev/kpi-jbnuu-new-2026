@@ -3423,10 +3423,10 @@ export default function KpiEnterpriseApp() {
       </aside>
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 min-w-0 w-full max-w-full overflow-x-hidden ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 min-w-0 w-full max-w-full ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}>
         {/* Top Header */}
-        <header className={`sticky top-0 z-20 h-16 border-b px-2.5 sm:px-6 flex items-center justify-between backdrop-blur-md transition-colors w-full max-w-full overflow-hidden ${theme === "dark" ? "bg-slate-900/95 border-slate-800 text-slate-100" : "bg-white/95 border-slate-200 text-slate-900"
+        <header className={`sticky top-0 z-30 h-16 border-b px-2.5 sm:px-6 flex items-center justify-between backdrop-blur-md transition-colors w-full max-w-full overflow-visible ${theme === "dark" ? "bg-slate-900/95 border-slate-800 text-slate-100" : "bg-white/95 border-slate-200 text-slate-900"
           }`}>
           <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">
             <button

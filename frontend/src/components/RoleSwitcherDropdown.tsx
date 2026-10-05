@@ -185,10 +185,11 @@ export const RoleSwitcherDropdown: React.FC<RoleSwitcherDropdownProps> = ({
       {/* Ochiladigan menyu (Barcha rollar ro'yxati) */}
       {isOpen && (
         <div
-          className={`absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl border shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md ${
+          onMouseDown={(e) => e.stopPropagation()}
+          className={`absolute right-0 top-full mt-1.5 w-72 sm:w-80 rounded-2xl border shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md ${
             theme === "dark"
-              ? "bg-slate-900/98 border-slate-800 text-slate-100"
-              : "bg-white/98 border-slate-200 text-slate-900"
+              ? "bg-slate-900 border-slate-800 text-slate-100"
+              : "bg-white border-slate-200 text-slate-900"
           }`}
         >
           {/* Menyu sarlavhasi */}
@@ -212,7 +213,12 @@ export const RoleSwitcherDropdown: React.FC<RoleSwitcherDropdownProps> = ({
                 <button
                   key={role.code}
                   type="button"
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     onSelectRole(role.code);
                     setIsOpen(false);
                   }}
