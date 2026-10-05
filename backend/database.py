@@ -118,9 +118,14 @@ def init_db():
             max_ball REAL NOT NULL,
             validity TEXT,
             dept TEXT,
+            description TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
+    try:
+        cursor.execute("ALTER TABLE indicators ADD COLUMN description TEXT;")
+    except Exception:
+        pass
 
     # 6. Appeals table
     cursor.execute("""
@@ -859,7 +864,7 @@ def db_load_settings() -> Optional[Dict[str, Any]]:
 def db_load_indicators() -> List[Dict[str, Any]]:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM indicators ORDER BY CAST(SUBSTR(id, 1, INSTR(id || '.', '.') - 1) AS INTEGER), id ASC")
+    cursor.execute("SELECT * FROM indicators ORDER BY CAST(id AS INTEGER), id ASC")
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -868,22 +873,45 @@ def db_save_indicator(data: Dict[str, Any]):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO indicators (id, block, name, max_ball, validity, dept)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO indicators (id, block, name, max_ball, validity, dept, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             block = excluded.block,
             name = excluded.name,
             max_ball = excluded.max_ball,
             validity = excluded.validity,
-            dept = excluded.dept
+            dept = excluded.dept,
+            description = excluded.description
     """, (
-        data.get("id"),
+        str(data.get("id")),
         data.get("block"),
         data.get("name"),
         data.get("max_ball"),
         data.get("validity"),
-        data.get("dept")
+        data.get("dept"),
+        data.get("description", "")
     ))
+    conn.commit()
+    conn.close()
+
+def db_reset_to_council_indicators(indicators_list: List[Dict[str, Any]]):
+    """Rasmiy Ilmiy kengash nizomidagi 20 ta mezonni bazaga to'liq yangilash"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM indicators")
+    for ind in indicators_list:
+        cursor.execute("""
+            INSERT INTO indicators (id, block, name, max_ball, validity, dept, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            str(ind["id"]),
+            ind["block"],
+            ind["name"],
+            float(ind["max_ball"]),
+            ind.get("validity", ""),
+            ind.get("dept", ""),
+            ind.get("description", "")
+        ))
     conn.commit()
     conn.close()
 

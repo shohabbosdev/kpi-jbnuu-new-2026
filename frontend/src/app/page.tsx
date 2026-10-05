@@ -336,11 +336,11 @@ export default function KpiEnterpriseApp() {
   const [doiInput, setDoiInput] = useState("");
   const [modalBlockFilter, setModalBlockFilter] = useState<string>("ALL");
   const [modalIndicatorSearch, setModalIndicatorSearch] = useState<string>("");
-  const [modalIndicator, setModalIndicator] = useState("1.1");
+  const [modalIndicator, setModalIndicator] = useState("1");
   const [modalTitle, setModalTitle] = useState("");
   const [modalAuthors, setModalAuthors] = useState(1);
   const [modalDate, setModalDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [modalClaimedBall, setModalClaimedBall] = useState<number>(6.0);
+  const [modalClaimedBall, setModalClaimedBall] = useState<number>(5.0);
   const [modalDescription, setModalDescription] = useState<string>("");
   const [isDoiLoading, setIsDoiLoading] = useState(false);
   const [modalUploadedFile, setModalUploadedFile] = useState<File | null>(null);
@@ -3524,7 +3524,7 @@ export default function KpiEnterpriseApp() {
                     });
                     return;
                   }
-                  const firstInd = indicators[0] || { id: "1.1", max_ball: 6 };
+                  const firstInd = indicators[0] || { id: "1", max_ball: 5.0 };
                   setModalIndicator(firstInd.id);
                   setModalClaimedBall(firstInd.max_ball);
                   setModalAuthors(1);
@@ -3659,11 +3659,11 @@ export default function KpiEnterpriseApp() {
                 <div className="flex items-center gap-2 text-xs">
                   <span className={`font-semibold mr-2 ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>Bloklar boʻyicha:</span>
                   {[
-                    { id: "ALL", label: "Barcha mezonlar" },
-                    { id: "OQV", label: "Oʻquv-uslubiy (1.x)" },
-                    { id: "ILM", label: "Ilmiy-tadqiqot (2.x)" },
-                    { id: "XAL", label: "Xalqaro hamkorlik (3.x)" },
-                    { id: "MAN", label: "Maʼnaviy-maʼrifiy (4.x)" },
+                    { id: "ALL", label: "Barcha mezonlar (20 ta)" },
+                    { id: "OQV", label: "I. Oʻquv-uslubiy (30 ball)" },
+                    { id: "ILM", label: "II. Ilmiy-tadqiqot (48 ball)" },
+                    { id: "XAL", label: "III. Xalqaro hamkorlik (7 ball)" },
+                    { id: "MAN", label: "IV. Maʼnaviy va intizom (15 ball)" },
                   ].map((tab) => {
                     const isTabActive = selectedBlockFilter.toLowerCase() === tab.id.toLowerCase();
                     return (
@@ -4713,7 +4713,7 @@ export default function KpiEnterpriseApp() {
                     {/* 4 Blocks */}
                     <div className="grid grid-cols-4 gap-4">
                       <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                        <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">I. Oʻquv-metodik</div>
+                        <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">I. Oʻquv va oʻquv-uslubiy</div>
                         <div className="text-xl font-black text-slate-900 dark:text-slate-100 mb-2">{currentTeacher.scores.oqv} <span className="text-xs font-medium text-slate-400 dark:text-slate-500">/ 30 ball</span></div>
                         <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                           <div className="h-full bg-blue-900 dark:bg-blue-600 rounded-full" style={{ width: `${(currentTeacher.scores.oqv / 30) * 100}%` }} />
@@ -4721,10 +4721,10 @@ export default function KpiEnterpriseApp() {
                       </div>
 
                       <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                        <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">II. Ilmiy-tadqiqot</div>
-                        <div className="text-xl font-black text-slate-900 dark:text-slate-100 mb-2">{currentTeacher.scores.ilm} <span className="text-xs font-medium text-slate-400 dark:text-slate-500">/ 40 ball</span></div>
+                        <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">II. Ilmiy va innovatsion</div>
+                        <div className="text-xl font-black text-slate-900 dark:text-slate-100 mb-2">{currentTeacher.scores.ilm} <span className="text-xs font-medium text-slate-400 dark:text-slate-500">/ 48 ball</span></div>
                         <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-900 dark:bg-blue-600 rounded-full" style={{ width: `${(currentTeacher.scores.ilm / 40) * 100}%` }} />
+                          <div className="h-full bg-blue-900 dark:bg-blue-600 rounded-full" style={{ width: `${(currentTeacher.scores.ilm / 48) * 100}%` }} />
                         </div>
                         {currentTeacher.scores.flex_applied > 0 && (
                           <div className="text-[11px] font-semibold text-purple-700 dark:text-purple-400 mt-2">
@@ -4735,17 +4735,17 @@ export default function KpiEnterpriseApp() {
 
                       <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                         <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">III. Xalqaro hamkorlik</div>
-                        <div className="text-xl font-black text-slate-900 dark:text-slate-100 mb-2">{currentTeacher.scores.xal} <span className="text-xs font-medium text-slate-400 dark:text-slate-500">/ 20 ball</span></div>
+                        <div className="text-xl font-black text-slate-900 dark:text-slate-100 mb-2">{currentTeacher.scores.xal} <span className="text-xs font-medium text-slate-400 dark:text-slate-500">/ 7 ball</span></div>
                         <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-900 dark:bg-blue-600 rounded-full" style={{ width: `${(currentTeacher.scores.xal / 20) * 100}%` }} />
+                          <div className="h-full bg-blue-900 dark:bg-blue-600 rounded-full" style={{ width: `${(currentTeacher.scores.xal / 7) * 100}%` }} />
                         </div>
                       </div>
 
                       <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                        <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">IV. Maʼnaviy va bandlik</div>
-                        <div className="text-xl font-black text-slate-900 dark:text-slate-100 mb-2">{currentTeacher.scores.man} <span className="text-xs font-medium text-slate-400 dark:text-slate-500">/ 10 ball</span></div>
+                        <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">IV. Maʼnaviy va intizom</div>
+                        <div className="text-xl font-black text-slate-900 dark:text-slate-100 mb-2">{currentTeacher.scores.man} <span className="text-xs font-medium text-slate-400 dark:text-slate-500">/ 15 ball</span></div>
                         <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-900 dark:bg-blue-600 rounded-full" style={{ width: `${(currentTeacher.scores.man / 10) * 100}%` }} />
+                          <div className="h-full bg-blue-900 dark:bg-blue-600 rounded-full" style={{ width: `${(currentTeacher.scores.man / 15) * 100}%` }} />
                         </div>
                       </div>
                     </div>
@@ -4884,7 +4884,7 @@ export default function KpiEnterpriseApp() {
                           });
                           return;
                         }
-                        const firstInd = indicators[0] || { id: "1.1", max_ball: 6 };
+                        const firstInd = indicators[0] || { id: "1", max_ball: 5.0 };
                         setModalIndicator(firstInd.id);
                         setModalClaimedBall(firstInd.max_ball);
                         setModalTitle("");
@@ -5622,7 +5622,7 @@ export default function KpiEnterpriseApp() {
                     : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                     }`}
                 >
-                  Barcha mezonlar (41 ta)
+                  Barcha mezonlar (20 ta)
                 </button>
                 <button
                   onClick={() => setSelectedBlockFilter("oqv")}
@@ -5631,7 +5631,7 @@ export default function KpiEnterpriseApp() {
                     : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                     }`}
                 >
-                  I. Oʻquv-metodik (30 ball)
+                  I. Oʻquv va oʻquv-uslubiy (30 ball)
                 </button>
                 <button
                   onClick={() => setSelectedBlockFilter("ilm")}
@@ -5640,7 +5640,7 @@ export default function KpiEnterpriseApp() {
                     : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                     }`}
                 >
-                  II. Ilmiy-innovatsion (40 ball)
+                  II. Ilmiy va innovatsiyalar (48 ball)
                 </button>
                 <button
                   onClick={() => setSelectedBlockFilter("xal")}
@@ -5649,7 +5649,7 @@ export default function KpiEnterpriseApp() {
                     : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                     }`}
                 >
-                  III. Xalqaro hamkorlik (20 ball)
+                  III. Xalqaro hamkorlik (7 ball)
                 </button>
                 <button
                   onClick={() => setSelectedBlockFilter("man")}
@@ -5658,7 +5658,7 @@ export default function KpiEnterpriseApp() {
                     : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                     }`}
                 >
-                  IV. Maʼnaviy va bandlik (10 ball)
+                  IV. Maʼnaviy va intizom (15 ball)
                 </button>
               </div>
 
@@ -6025,10 +6025,10 @@ export default function KpiEnterpriseApp() {
                   2.1. Umumiy baholash 100 ballik meʼyoriy koʻrsatkich asosida amalga oshiriladi:
                 </p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li><b>I. Oʻquv-uslubiy faoliyat:</b> maksimal 30 ball;</li>
-                  <li><b>II. Ilmiy-tadqiqot va innovatsiya faoliyati:</b> maksimal 40 ball;</li>
-                  <li><b>III. Xalqaro hamkorlik faoliyati:</b> maksimal 20 ball;</li>
-                  <li><b>IV. Maʼnaviy-maʼrifiy va bitiruvchilar bandligi:</b> maksimal 10 ball.</li>
+                  <li><b>I. Oʻquv va oʻquv-uslubiy ishlar:</b> maksimal 30 ball (7 ta mezon);</li>
+                  <li><b>II. Ilmiy va innovatsiyalarga oid ishlar:</b> maksimal 48 ball (7 ta mezon);</li>
+                  <li><b>III. Xalqaro hamkorlikka oid ishlar:</b> maksimal 7 ball (2 ta mezon);</li>
+                  <li><b>IV. Maʼnaviy-maʼrifiy va ijro intizomi:</b> maksimal 15 ball (4 ta mezon).</li>
                 </ul>
 
                 <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 uppercase mt-6">V Bob. Manfaatlar toʻqnashuvining oldini olish</h4>
@@ -6738,14 +6738,16 @@ export default function KpiEnterpriseApp() {
         });
 
         const POPULAR_PRESETS = [
-          { id: "1.1", label: "Scopus / WoS (Q1-Q4)", badge: "Ilmiy" },
-          { id: "1.3", label: "OAK ilmiy maqolasi", badge: "Ilmiy" },
-          { id: "2.1", label: "Darslik / Qoʻllanma", badge: "Oʻquv" },
-          { id: "3.1", label: "Xalqaro til sertifikati", badge: "Xalqaro" },
-          { id: "4.1", label: "Talaba yutugʻi / toʻgarak", badge: "Maʼnaviy" }
+          { id: "8", label: "Scopus maqola (20 ball)", badge: "Ilmiy" },
+          { id: "2", label: "Darslik (6 ball)", badge: "Oʻquv" },
+          { id: "7", label: "Chet tili B2+ (5 ball)", badge: "Oʻquv" },
+          { id: "10", label: "Monografiya (2 ball)", badge: "Ilmiy" },
+          { id: "15", label: "Xorijiy mutaxassis / talaba (4 ball)", badge: "Xalqaro" },
+          { id: "17", label: "Toʻgarak / stipendiya (4 ball)", badge: "Maʼnaviy" },
+          { id: "20", label: "Ijro va mehnat intizomi (4 ball)", badge: "Intizom" }
         ];
 
-        const isDoiRelevant = modalIndicator.startsWith("1.") || (currentSelectedInd && currentSelectedInd.block.toLowerCase() === "ilm");
+        const isDoiRelevant = modalIndicator === "8" || modalIndicator === "9" || modalIndicator === "10" || modalIndicator === "11" || (currentSelectedInd && currentSelectedInd.block.toLowerCase() === "ilm");
 
         return (
           <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto overflow-x-hidden w-full max-w-full">

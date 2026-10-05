@@ -22,7 +22,7 @@ from database import (
     db_load_submissions, db_save_submission, db_delete_submission,
     db_save_audit_log, db_load_audit_logs,
     db_load_settings, db_save_settings,
-    db_load_indicators, db_save_indicator,
+    db_load_indicators, db_save_indicator, db_reset_to_council_indicators,
     db_load_appeals, db_save_appeal, db_review_appeal,
     db_load_evaluators, db_add_evaluator, db_delete_evaluator,
     db_save_workloads, db_get_teacher_workloads, db_get_workloads_summary,
@@ -427,66 +427,162 @@ AUDIT_LOGS = [
 ]
 
 INDICATORS_DB: List[Indicator] = [
-    Indicator(id="1.1", block="oqv", name="Nashr etilgan darslik (vazirlik yoki OTM grifi, ISBN raqami bilan)", max_ball=6.0, validity="2 yil", dept="Oʻquv-uslubiy boshqarma"),
-    Indicator(id="1.2", block="oqv", name="Nashr etilgan oʻquv qoʻllanma (ISBN raqami bilan)", max_ball=4.0, validity="1 yil", dept="Oʻquv-uslubiy boshqarma"),
-    Indicator(id="1.3", block="oqv", name="TOP-300 xorijiy OTM adabiyotlarini oʻzga tillardan tarjima qilganlik", max_ball=6.0, validity="2 yil", dept="Oʻquv boshqarma, Xalqaro boʻlim"),
-    Indicator(id="1.4", block="oqv", name="Videodars va virtual laboratoriya ishlab chiqqanlik (Jalingo studiyasi)", max_ball=3.0, validity="1 yil", dept="Raqamli taʼlim texnologiyalari markazi"),
-    Indicator(id="1.5", block="oqv", name="HEMIS axborot tizimiga sifatli oʻquv kontentlarini toʻliq yuklaganlik", max_ball=2.0, validity="1 yil", dept="Oʻquv-uslubiy boshqarma"),
-    Indicator(id="1.6", block="oqv", name="TOP-300 dasturi asosida yangi fan dasturi va sillabus ishlab chiqqanlik", max_ball=3.0, validity="1 yil", dept="Oʻquv-uslubiy boshqarma"),
-    Indicator(id="1.7", block="oqv", name="Namunali ochiq dars mashgʻulotlarini oʻtkazganlik", max_ball=1.0, validity="1 yil", dept="Taʼlim sifatini nazorat qilish boʻlimi"),
-    Indicator(id="1.8", block="oqv", name="Respublika tarmoq markazlarida malaka oshirganlik (144 soat)", max_ball=2.0, validity="3 yil", dept="Oʻquv-uslubiy boshqarma"),
-    Indicator(id="1.9", block="oqv", name="Talabalar va hamkasblar oʻrtasidagi soʻrovnoma natijalari", max_ball=4.0, validity="1 yil", dept="Taʼlim sifatini nazorat qilish boʻlimi"),
-    Indicator(id="1.10", block="oqv", name="HEMIS tizimida talabalar davomatini kunlik namunali yuritganlik", max_ball=2.0, validity="1 yil", dept="Oʻquv boʻlimi"),
+    # I. Oʻquv va oʻquv-uslubiy ishlar (jami 30 ball)
+    Indicator(
+        id="1", block="oqv",
+        name="Sifatli oʻquv kontentlari tayyorlanganligi va ularning muntazam yangilanib borilganligi",
+        max_ball=5.0, validity="6 oy", dept="Taʼlim sifatini nazorat qilish boʻlimi, Kafedra mudiri",
+        description="Bitta fan boʻyicha toʻliq kontent (maʼruza matni, savol va kazuslar, tarqatma materiallar, videodars) — 5 ball; ikkitagacha fan kontenti bir qismi — 2 ball; uchta va undan ortiq fan kontenti bir qismi — 4 ball. Maksimal 5 ball."
+    ),
+    Indicator(
+        id="2", block="oqv",
+        name="Darslik chop etilganligi",
+        max_ball=6.0, validity="1 yil", dept="Taʼlim sifatini nazorat qilish boʻlimi, Oʻquv-uslubiy boshqarma",
+        description="Vazirlik nashr ruxsatnomasi mavjud darsliklar. 6 va undan koʻproq bosma taboq — 6 ball; 4-5 bosma taboq — 4 ball; 2-3 bosma taboq — 2 ball. Hammualliflikda yozilganda mualliflar soniga taqsimlanadi."
+    ),
+    Indicator(
+        id="3", block="oqv",
+        name="Oʻquv qoʻllanma chop etilganligi",
+        max_ball=2.0, validity="1 yil", dept="Taʼlim sifatini nazorat qilish boʻlimi, Oʻquv-uslubiy boshqarma",
+        description="Vazirlik nashr ruxsatnomasi bilan chop etilgan oʻquv qoʻllanmalar. Hammualliflar 2 nafar boʻlsa — har biriga 1 balldan; 2 nafardan ortiq boʻlsa — 0.5 balldan. Maksimal 2 ball."
+    ),
+    Indicator(
+        id="4", block="oqv",
+        name="Oʻquv adabiyotlarini oʻzga tillardan tarjima qilganligi",
+        max_ball=3.0, validity="1 yil", dept="Taʼlim sifatini nazorat qilish boʻlimi",
+        description="Xorijiy tillar mutaxassislarining taqrizi asosida. 6 va undan koʻproq bosma taboq — 3 ball; 4-5 bosma taboq — 2 ball; 2-3 bosma taboq — 1 ball (1 bosma taboq = 16 bet)."
+    ),
+    Indicator(
+        id="5", block="oqv",
+        name="Oʻqitish sifati darajasi (semestr yakuni boʻyicha talabalar oʻrtasidagi soʻrovnoma natijalariga koʻra)",
+        max_ball=7.0, validity="6 oy", dept="Taʼlim sifatini nazorat qilish boʻlimi, Oʻquv-uslubiy boshqarma",
+        description="Elektron platforma orqali talabalar oʻrtasida oʻtkaziladigan soʻrovnoma. 10 ta mezon boʻyicha olingan ballar umumiy hisobidan 0-7 ballgacha belgilanadi."
+    ),
+    Indicator(
+        id="6", block="oqv",
+        name="Oʻquv jarayoniga amaliyotchi xodimlarni jalb qilinganligi yoki sayyor dars mashgʻulotlar oʻtkazilganligi",
+        max_ball=2.0, validity="6 oy", dept="Fakultet dekanati, Oʻquv boʻlimi",
+        description="Har bir oʻtkazilgan master-klass yoki sayyor dars mashgʻuloti uchun 0.5 ball. Olti oy davomida toʻplanadigan eng yuqori ball 2 ball."
+    ),
+    Indicator(
+        id="7", block="oqv",
+        name="Xorijiy tillarni egallaganligi",
+        max_ball=5.0, validity="1 yil", dept="Xodimlar boʻlimi",
+        description="Ingliz tili B2+ (IELTS 5.5, TOEFL IBT 72, FCE); nemis, fransuz, yapon tili B2+ (Goethe, TestDaF, DELF, JLPT №2) yoki xorijiy OTMni chet tilida tamomlaganlik — 5 ball. Xorijiy tillar kafedrasi uchun TOLES talab etiladi."
+    ),
 
-    Indicator(id="2.1", block="ilm", name="Falsafa doktori (PhD) yoki fan doktori (DSc) ilmiy darajasi mavjudligi", max_ball=3.0, validity="Doimiy", dept="Ilmiy boʻlim, Kadrlar boʻlimi"),
-    Indicator(id="2.2", block="ilm", name="Ilmiy rahbarligida PhD yoki maslahatchiligida DSc kadr tayyorlaganlik", max_ball=3.0, validity="1 yil", dept="Ilmiy-tadqiqotlar boʻlimi"),
-    Indicator(id="2.3", block="ilm", name="Scopus va Web of Science (Q1, Q2 kvartildagi jurnallarda maqola)", max_ball=8.0, validity="1 yil", dept="Ilmiy-tadqiqotlar boʻlimi"),
-    Indicator(id="2.4", block="ilm", name="Scopus va Web of Science (Q3, Q4 kvartildagi jurnallarda maqola)", max_ball=6.0, validity="1 yil", dept="Ilmiy-tadqiqotlar boʻlimi"),
-    Indicator(id="2.5", block="ilm", name="Scopus/WoS indeksatsiyalangan xalqaro konferensiyalarda maqola nashri", max_ball=4.0, validity="1 yil", dept="Ilmiy-tadqiqotlar boʻlimi"),
-    Indicator(id="2.6", block="ilm", name="Scopus va Web of Science bazalaridagi Xirsh indeksi (h-index)", max_ball=5.0, validity="1 yil", dept="Ilmiy-tadqiqotlar boʻlimi"),
-    Indicator(id="2.7", block="ilm", name="OAK roʻyxatidagi xorijiy va mahalliy ilmiy jurnallarda maqola chop etish", max_ball=4.0, validity="1 yil", dept="Ilmiy-tadqiqotlar boʻlimi"),
-    Indicator(id="2.8", block="ilm", name="Monografiya yozganlik va lugʻat tuzganlik (ISBN raqami bilan)", max_ball=4.0, validity="1 yil", dept="Ilmiy-tadqiqotlar boʻlimi"),
-    Indicator(id="2.9", block="ilm", name="Ilmiy-tadqiqot samaradorligi: patent (ixtiro, sanoat namunasi)", max_ball=5.0, validity="1 yil", dept="Tijoratlashtirish boʻlimi"),
-    Indicator(id="2.10", block="ilm", name="Dasturiy vositalar uchun mualliflik guvohnomasi (DGU) olish", max_ball=3.0, validity="1 yil", dept="Tijoratlashtirish boʻlimi"),
-    Indicator(id="2.11", block="ilm", name="Sohalar buyurtmalari (xoʻjalik shartnomalari) asosida tushgan mablagʻ", max_ball=6.0, validity="1 yil", dept="Tijoratlashtirish boʻlimi"),
-    Indicator(id="2.12", block="ilm", name="Davlat ilmiy-texnika dasturlari va grantlariga rahbarlik qilish", max_ball=8.0, validity="Loyiha muddati", dept="Ilmiy boʻlim, Tijoratlashtirish"),
+    # II. Ilmiy va innovatsiyalarga oid ishlar (jami 48 ball)
+    Indicator(
+        id="8", block="ilm",
+        name="«Scopus» xalqaro ilmiy-texnik bazasiga kiruvchi jurnalda maqola chop etilganligi",
+        max_ball=20.0, validity="1 yil", dept="Ilmiy tadqiqotlar, innovatsiyalar ilmiy-pedagog kadrlar tayyorlash boʻlimi",
+        description="Yakka mualliflikda 20 ball. Hammualliflikda boʻlinganda: 2 ta boʻlsa 10 ball, 3 ta boʻlsa 6.7 ball, 4 ta boʻlsa 5.0 ball, 5 ta boʻlsa 4.0 ball (20/N nisbatda taqsimlanadi)."
+    ),
+    Indicator(
+        id="9", block="ilm",
+        name="Xorijiy hammualliflar bilan birgalikda maqola chop etilganligi",
+        max_ball=3.0, validity="1 yil", dept="Ilmiy tadqiqotlar, innovatsiyalar ilmiy-pedagog kadrlar tayyorlash boʻlimi",
+        description="Xorijiy nufuzli hammualliflar bilan birgalikda ilmiy maqola chop etilganligi uchun 3 ball beriladi."
+    ),
+    Indicator(
+        id="10", block="ilm",
+        name="Monografiya chop etilganligi",
+        max_ball=2.0, validity="1 yil", dept="Ilmiy tadqiqotlar, innovatsiyalar ilmiy-pedagog kadrlar tayyorlash boʻlimi",
+        description="OTM Ilmiy-uslubiy kengashi qarori bilan chop etilgan monografiya — 2 ball. Hammualliflar soniga qarab mutanosib taqsimlanadi (masalan, 4 ta muallif — 0.5 ball, 3 ta — 0.7 ball)."
+    ),
+    Indicator(
+        id="11", block="ilm",
+        name="Xalqaro koʻrsatkichlarga koʻra professor-oʻqituvchilar nashrlariga iqtiboslar («Web of Science», «Scopus», «Google Scholar») mavjudligi",
+        max_ball=8.0, validity="1 yil", dept="Ilmiy tadqiqotlar boʻlimi, Taʼlim sifatini nazorat qilish boʻlimi",
+        description="Kalendar yili davomida nashrlarga xalqaro indekslangan bazalarda kamida 2 ta iqtibos mavjudligi uchun 0-8 ball belgilanadi."
+    ),
+    Indicator(
+        id="12", block="ilm",
+        name="Ilmiy grantlar va xoʻjalik shartnomalari mablagʻlari jalb qilinganligi",
+        max_ball=9.0, validity="3 oy", dept="Tijoratlashtirish boʻlimi, Ilmiy boʻlim, Buxgalteriya",
+        description="Xorijiy grantlar kamida 40 mln soʻm — 2 ball (har chorakda 10 mln); Xoʻjalik shartnomalari kamida 4 mln soʻm — 5 ball (har chorakda 1 mln); Davlat grantlari kamida 12 mln soʻm — 2 ball (har chorakda 4 mln). Jami maksimal 9 ball."
+    ),
+    Indicator(
+        id="13", block="ilm",
+        name="Axborot-kommunikatsiya texnologiyalariga oid dasturlar (DGU) va patentlar olinganligi",
+        max_ball=1.0, validity="6 oy", dept="Tijoratlashtirish boʻlimi, Ilmiy boʻlim",
+        description="Mualliflik huquqi bilan himoyalangan dasturiy guvohnoma (DGU) yoki patentlar. Hammualliflikda ulushiga mutanosib taqsimlanadi. Maksimal 1 ball."
+    ),
+    Indicator(
+        id="14", block="ilm",
+        name="Professor-oʻqituvchi tomonidan dissertatsiya himoya qilinganligi yoki ilmiy unvonlar olganligi",
+        max_ball=5.0, validity="1 yil", dept="Ilmiy boʻlim, Kadrlar boʻlimi",
+        description="Ilmiy daraja (PhD, DSc) yoki ilmiy unvon (dotsent, professor) olinganligi toʻgʻrisidagi diplom sanasi hisobga olingan holda 5 ball beriladi."
+    ),
 
-    Indicator(id="3.1", block="xal", name="TOP-1000 xorijiy OTMlarda oʻquv mashgʻulotlari (maʼruzalar) oʻtkazganlik", max_ball=4.0, validity="1 yil", dept="Xalqaro hamkorlik boʻlimi"),
-    Indicator(id="3.2", block="xal", name="Xalqaro ilmiy loyihalarda (Erasmus+, Horizon, KOICA) rahbarlik yoki aʼzolik", max_ball=4.0, validity="Loyiha muddati", dept="Xalqaro hamkorlik boʻlimi"),
-    Indicator(id="3.3", block="xal", name="Xorijiy tilni bilish boʻyicha xalqaro sertifikat (IELTS, TOEFL, CEFR B2/C1)", max_ball=3.0, validity="Sertifikat muddati", dept="Xalqaro hamkorlik boʻlimi"),
-    Indicator(id="3.4", block="xal", name="Mutaxassislik fanlarini toʻliq chet tilida oʻqitish", max_ball=2.0, validity="6 oy", dept="Oʻquv boshqarma, Xalqaro boʻlim"),
-    Indicator(id="3.5", block="xal", name="Xorijiy nufuzli OTMda malaka oshirish yoki stajirovka oʻtaganlik", max_ball=4.0, validity="1 yil", dept="Xalqaro hamkorlik boʻlimi"),
-    Indicator(id="3.6", block="xal", name="Xorijiy investitsiya va grant mablagʻlarini filial hisobiga jalb etganlik", max_ball=3.0, validity="1 yil", dept="Xalqaro boʻlim, Buxgalteriya"),
-    Indicator(id="3.7", block="xal", name="Taʼlim eksportini amalga oshirganlik (xorijiy fuqarolarni jalb qilish)", max_ball=2.0, validity="1 yil", dept="Xalqaro hamkorlik boʻlimi"),
+    # III. Xalqaro hamkorlikka oid ishlar (jami 7 ball)
+    Indicator(
+        id="15", block="xal",
+        name="Xorijlik olimlar (ekspert, mutaxassis)ni darsga jalb qilganligi yoki xorijlik talabalarni jalb qilganligi",
+        max_ball=4.0, validity="6 oy", dept="Xalqaro hamkorlik boʻlimi",
+        description="Xorijlik olimlarni dars jarayoniga jalb qilish yoki xorijiy talabalarni jalb qilish — 4 ball. TOP-1000 OTMlarda PhD/DSc darajasini olganlik ham hisobga olinadi."
+    ),
+    Indicator(
+        id="16", block="xal",
+        name="Professor-oʻqituvchi rahbarligida xalqaro olimpiada, tanlov va musobaqalarda sovrinli oʻrinlar olinganligi",
+        max_ball=3.0, validity="1 yil", dept="Xalqaro hamkorlik boʻlimi, Yoshlar bilan ishlash boʻlimi",
+        description="Xalqaro olimpiada va nufuzli tanlovlarda yagona sovrindor tayyorlaganlik — 3 ball; har bir ishtirokchi uchun — 0.5 ball; jamoaviy sovrinli oʻrin uchun — 3 ball."
+    ),
 
-    Indicator(id="4.1", block="man", name="Bitiruvchi shogirdlarni mutaxassisligi boʻyicha ishga joylashtirish (YAMMT)", max_ball=4.0, validity="1 yil", dept="Marketing va bandlik boʻlimi"),
-    Indicator(id="4.2", block="man", name="Korxonalar bilan bitiruvchilarni ishga olish boʻyicha 3 tomonlama shartnomalar", max_ball=2.0, validity="1 yil", dept="Marketing va bandlik boʻlimi"),
-    Indicator(id="4.3", block="man", name="Ijtimoiy, maʼnaviy va maʼrifiy tadbirlarni namunali tashkil etganlik", max_ball=2.0, validity="1 yil", dept="Yoshlar bilan ishlash boʻlimi"),
-    Indicator(id="4.4", block="man", name="Talabalar oʻrtasida doimiy ishlovchi fan va ijodiy toʻgaraklar rahbarligi", max_ball=2.0, validity="1 yil", dept="Yoshlar bilan ishlash boʻlimi"),
-    Indicator(id="4.5", block="man", name="Akademik guruh murabbiyi sifatida talabalar davomatini (90%+) taʼminlash", max_ball=2.0, validity="1 yil", dept="Yoshlar bilan ishlash boʻlimi"),
-    Indicator(id="4.6", block="man", name="Markaziy ommaviy axborot vositalarida tahliliy maqolalar bilan chiqish qilish", max_ball=1.0, validity="1 yil", dept="Matbuot xizmati"),
+    # IV. Maʼnaviy-maʼrifiy ishlar hamda mehnat va ijro intizomi (jami 15 ball)
+    Indicator(
+        id="17", block="man",
+        name="Talabalarning darsdan tashqari vaqtlarini mazmunli tashkil etish (toʻgarak, ilmiy maktab) hamda davlat stipendiyalariga tayyorlash",
+        max_ball=4.0, validity="1 yil", dept="Yoshlar bilan ishlash, maʼnaviyat va maʼrifat boʻlimi, Ilmiy boʻlim",
+        description="Toʻgarak, ilmiy maktab va klublarni samarali yuritganlik yoki talabalarni respublika olimpiadalari va davlat stipendiyalariga tayyorlaganlik uchun 0-4 ball."
+    ),
+    Indicator(
+        id="18", block="man",
+        name="OAV yoki ijtimoiy tarmoqlarda mamlakatda amalga oshirilayotgan islohotlar yuzasidan chiqishlar qilganligi",
+        max_ball=4.0, validity="6 oy", dept="Matbuot kotibi",
+        description="OAV va ijtimoiy tarmoqlarda har oyda kamida 1 marotaba tahliliy chiqish qilganligi uchun 4 ball (0-4 ball)."
+    ),
+    Indicator(
+        id="19", block="man",
+        name="Akademik litsey, texnikumlar va maktablar bilan ishlashga oid faoliyatdagi ishtiroki",
+        max_ball=3.0, validity="6 oy", dept="Oʻquv-uslubiy boshqarma",
+        description="Belgilangan tasdiqlovchi hujjatlar asosida litsey, texnikum va maktablarga metodik yordam koʻrsatganligi uchun 0-3 ball."
+    ),
+    Indicator(
+        id="20", block="man",
+        name="OTM rahbariyati tomonidan berilgan topshiriqlar ijrosini oʻz vaqtida va sifatli bajarganligi hamda mehnat intizomi",
+        max_ball=4.0, validity="3 oy", dept="Murojaatlar bilan ishlash, nazorat va monitoring boʻlimi, dekanat, kafedra mudiri",
+        description="Choraklik (3 oylik) ijro intizomi, rahbariyat topshiriqlari va yuklamalarni oʻz vaqtida bajarganlik holati boʻyicha 0-4 ball."
+    )
 ]
 
 def calculate_kpi(raw_oqv: float, raw_ilm: float, raw_xal: float, raw_man: float, jarima: float, fte: float, is_first_year: bool) -> TeacherScoreDetail:
+    # Oliy ta'lim muassasasi Ilmiy kengashi rasmiy nizomi me'yorlari:
+    # 1-blok (O'quv): max 30 ball
+    # 2-blok (Ilmiy): max 48 ball
+    # 3-blok (Xalqaro): max 7 ball
+    # 4-blok (Ma'naviy va intizom): max 15 ball
+    # Jami: 30 + 48 + 7 + 15 = 100 ball
     oqv = min(raw_oqv, 30.0)
-    xal = min(raw_xal, 20.0)
+    xal = min(raw_xal, 7.0)
     
     flex_applied = 0.0
-    if raw_ilm > 40.0:
-        flex_surplus = raw_ilm - 40.0
-        ilm = 40.0
-        needed = 10.0 - raw_man
+    if raw_ilm > 48.0:
+        flex_surplus = raw_ilm - 48.0
+        ilm = 48.0
+        needed = 15.0 - raw_man
         if needed > 0:
             flex_applied = min(needed, flex_surplus)
-            effective_man = min(10.0, raw_man + flex_applied)
+            effective_man = min(15.0, raw_man + flex_applied)
         else:
-            effective_man = min(10.0, raw_man)
+            effective_man = min(15.0, raw_man)
     else:
-        ilm = min(raw_ilm, 40.0)
-        effective_man = min(10.0, raw_man)
+        ilm = min(raw_ilm, 48.0)
+        effective_man = min(15.0, raw_man)
 
-    raw_total = oqv + ilm + xal + effective_man + jarima
-    normalized = round((raw_total / fte) * 10) / 10
+    raw_total = max(0.0, oqv + ilm + xal + effective_man - abs(jarima))
+    safe_fte = fte if fte and fte > 0 else 1.0
+    normalized = round((raw_total / safe_fte) * 10) / 10
 
     if normalized >= 71.0:
         zone = "green"
@@ -508,7 +604,7 @@ def calculate_kpi(raw_oqv: float, raw_ilm: float, raw_xal: float, raw_man: float
     return TeacherScoreDetail(
         oqv=oqv, ilm=ilm, xal=xal, man=effective_man,
         jarima=jarima, flex_applied=flex_applied, raw_total=raw_total,
-        fte=fte, normalized_score=normalized, svetafor_zone=zone,
+        fte=safe_fte, normalized_score=normalized, svetafor_zone=zone,
         svetafor_label=label, bonus_label=bonus
     )
 
@@ -841,13 +937,13 @@ if existing_settings:
 else:
     db_save_settings(SYSTEM_SETTINGS.dict())
 
-# Indicators doimiy saqlash
+# Indicators doimiy saqlash (OTM Kengashi tasdiqlagan rasmiy 20 ta mezon tizimi)
 existing_indicators = db_load_indicators()
-if existing_indicators and len(existing_indicators) >= 40:
+if existing_indicators and len(existing_indicators) == 20 and any(str(i.get("id")) == "1" and i.get("block") == "oqv" for i in existing_indicators):
     INDICATORS_DB = [Indicator(**i) for i in existing_indicators]
 else:
-    for ind in INDICATORS_DB:
-        db_save_indicator(ind.dict())
+    db_reset_to_council_indicators([ind.dict() for ind in INDICATORS_DB])
+    INDICATORS_DB = [Indicator(**i) for i in db_load_indicators()]
 
 # Barcha doimiy foydalanuvchilarni SQLite bazasidan yuklab olish
 db_saved_users = db_load_users()
@@ -1219,7 +1315,7 @@ def get_indicators(block: Optional[str] = None, include_inactive: bool = False):
     if not include_inactive:
         res = [ind for ind in res if getattr(ind, "is_active", True)]
     if block and block != "ALL":
-        res = [ind for ind in res if ind.block == block]
+        res = [ind for ind in res if ind.block.lower() == block.lower()]
     return res
 
 @app.post("/api/indicators", response_model=Indicator)
@@ -1289,6 +1385,48 @@ def delete_indicator(indicator_id: str):
         "action": f"Mezon arxivlandi (faolsizlantirildi): {ind.id}"
     })
     return {"success": True, "message": f"'{ind.id}' mezoni muvaffaqiyatli arxivlandi (nofaol holatga oʻtkazildi)"}
+
+@app.post("/api/indicators/reset-council")
+def reset_to_council_indicators():
+    """OTM Kengashi tomonidan tasdiqlangan rasmiy 20 ta mezon tizimiga qayta tiklash"""
+    global INDICATORS_DB
+    # Boshlang'ich 20 ta mezonga qaytarish
+    council_list = [
+        # I. O'quv (30 ball)
+        {"id": "1", "block": "oqv", "name": "Sifatli oʻquv kontentlari tayyorlanganligi va ularning muntazam yangilanib borilganligi", "max_ball": 5.0, "validity": "6 oy", "dept": "Taʼlim sifatini nazorat qilish boʻlimi, Kafedra mudiri", "description": "Bitta fan boʻyicha toʻliq kontent — 5 ball; ikkitagacha fan kontenti bir qismi — 2 ball; uchta va undan ortiq fan kontenti bir qismi — 4 ball."},
+        {"id": "2", "block": "oqv", "name": "Darslik chop etilganligi", "max_ball": 6.0, "validity": "1 yil", "dept": "Taʼlim sifatini nazorat qilish boʻlimi, Oʻquv-uslubiy boshqarma", "description": "Vazirlik nashr ruxsatnomasi mavjud darsliklar. 6 va undan koʻp bosma taboq — 6 ball; 4-5 bosma taboq — 4 ball; 2-3 bosma taboq — 2 ball. Hammualliflikda mualliflar soniga boʻlinadi."},
+        {"id": "3", "block": "oqv", "name": "Oʻquv qoʻllanma chop etilganligi", "max_ball": 2.0, "validity": "1 yil", "dept": "Taʼlim sifatini nazorat qilish boʻlimi, Oʻquv-uslubiy boshqarma", "description": "Vazirlik nashr ruxsatnomasi bilan chop etilgan oʻquv qoʻllanmalar. 2 nafar muallif — 1 balldan; 2 nafardan ortiq — 0.5 balldan."},
+        {"id": "4", "block": "oqv", "name": "Oʻquv adabiyotlarini oʻzga tillardan tarjima qilganligi", "max_ball": 3.0, "validity": "1 yil", "dept": "Taʼlim sifatini nazorat qilish boʻlimi", "description": "Taqriz asosida: 6 va undan koʻp bosma taboq — 3 ball; 4-5 bosma taboq — 2 ball; 2-3 bosma taboq — 1 ball."},
+        {"id": "5", "block": "oqv", "name": "Oʻqitish sifati darajasi (semestr yakuni boʻyicha talabalar oʻrtasidagi soʻrovnoma natijalariga koʻra)", "max_ball": 7.0, "validity": "6 oy", "dept": "Taʼlim sifatini nazorat qilish boʻlimi, Oʻquv-uslubiy boshqarma", "description": "Elektron platforma orqali talabalar oʻrtasida oʻtkaziladigan soʻrovnoma (10 mezon asosida 0-7 ball)."},
+        {"id": "6", "block": "oqv", "name": "Oʻquv jarayoniga amaliyotchi xodimlarni jalb qilinganligi yoki sayyor dars mashgʻulotlar oʻtkazilganligi", "max_ball": 2.0, "validity": "6 oy", "dept": "Fakultet dekanati, Oʻquv boʻlimi", "description": "Har bir master-klass yoki sayyor dars uchun 0.5 ball (maksimal 2 ball)."},
+        {"id": "7", "block": "oqv", "name": "Xorijiy tillarni egallaganligi", "max_ball": 5.0, "validity": "1 yil", "dept": "Xodimlar boʻlimi", "description": "Ingliz tili B2+ (IELTS 5.5, TOEFL 72, FCE); nemis, fransuz, yapon B2+ yoki chet elda tamomlangan diplom — 5 ball."},
+        # II. Ilmiy (48 ball)
+        {"id": "8", "block": "ilm", "name": "«Scopus» xalqaro ilmiy-texnik bazasiga kiruvchi jurnalda maqola chop etilganligi", "max_ball": 20.0, "validity": "1 yil", "dept": "Ilmiy tadqiqotlar, innovatsiyalar ilmiy-pedagog kadrlar tayyorlash boʻlimi", "description": "Yakka mualliflikda 20 ball. Hammualliflar soniga mutanosib (20/N): 2 kishi — 10 ball, 3 kishi — 6.7 ball, 4 kishi — 5 ball, 5 kishi — 4 ball."},
+        {"id": "9", "block": "ilm", "name": "Xorijiy hammualliflar bilan birgalikda maqola chop etilganligi", "max_ball": 3.0, "validity": "1 yil", "dept": "Ilmiy tadqiqotlar, innovatsiyalar ilmiy-pedagog kadrlar tayyorlash boʻlimi", "description": "Nufuzli xorijiy hammuallif bilan ilmiy maqola chop etilganligi — 3 ball."},
+        {"id": "10", "block": "ilm", "name": "Monografiya chop etilganligi", "max_ball": 2.0, "validity": "1 yil", "dept": "Ilmiy tadqiqotlar, innovatsiyalar ilmiy-pedagog kadrlar tayyorlash boʻlimi", "description": "OTM Ilmiy kengashi qarori bilan chop etilgan monografiya — 2 ball (hammualliflar soniga boʻlinadi)."},
+        {"id": "11", "block": "ilm", "name": "Xalqaro koʻrsatkichlarga koʻra professor-oʻqituvchilar nashrlariga iqtiboslar («Web of Science», «Scopus», «Google Scholar») mavjudligi", "max_ball": 8.0, "validity": "1 yil", "dept": "Ilmiy tadqiqotlar boʻlimi, Taʼlim sifatini nazorat qilish boʻlimi", "description": "Kalendar yili davomida nashrlarga xalqaro indekslangan bazalarda kamida 2 ta iqtibos — 0-8 ball."},
+        {"id": "12", "block": "ilm", "name": "Ilmiy grantlar va xoʻjalik shartnomalari mablagʻlari jalb qilinganligi", "max_ball": 9.0, "validity": "3 oy", "dept": "Tijoratlashtirish boʻlimi, Ilmiy boʻlim, Buxgalteriya", "description": "Xorijiy grant kamida 40 mln — 2 ball; Xoʻjalik shartnomasi kamida 4 mln — 5 ball; Davlat granti kamida 12 mln — 2 ball. Jami max 9 ball."},
+        {"id": "13", "block": "ilm", "name": "Axborot-kommunikatsiya texnologiyalariga oid dasturlar (DGU) va patentlar olinganligi", "max_ball": 1.0, "validity": "6 oy", "dept": "Tijoratlashtirish boʻlimi, Ilmiy boʻlim", "description": "Dasturiy guvohnoma (DGU) yoki patentlar. Hammualliflikda ulushiga mutanosib. Maksimal 1 ball."},
+        {"id": "14", "block": "ilm", "name": "Professor-oʻqituvchi tomonidan dissertatsiya himoya qilinganligi yoki ilmiy unvonlar olganligi", "max_ball": 5.0, "validity": "1 yil", "dept": "Ilmiy boʻlim, Kadrlar boʻlimi", "description": "PhD, DSc ilmiy darajasi yoki dotsent, professor unvoni olinganligi uchun 5 ball."},
+        # III. Xalqaro (7 ball)
+        {"id": "15", "block": "xal", "name": "Xorijlik olimlar (ekspert, mutaxassis)ni darsga jalb qilganligi yoki xorijlik talabalarni jalb qilganligi", "max_ball": 4.0, "validity": "6 oy", "dept": "Xalqaro hamkorlik boʻlimi", "description": "Xorijlik olimlarni jalb qilish yoki xorijiy talabalar qabuli — 4 ball. TOP-1000 OTMlarda PhD/DSc olganlik ham hisobga olinadi."},
+        {"id": "16", "block": "xal", "name": "Professor-oʻqituvchi rahbarligida xalqaro olimpiada, tanlov va musobaqalarda sovrinli oʻrinlar olinganligi", "max_ball": 3.0, "validity": "1 yil", "dept": "Xalqaro hamkorlik boʻlimi, Yoshlar bilan ishlash boʻlimi", "description": "Xalqaro olimpiada sovrindori tayyorlaganlik — 3 ball; har bir ishtirokchi uchun — 0.5 ball; jamoaviy sovrin uchun — 3 ball."},
+        # IV. Ma'naviy va intizom (15 ball)
+        {"id": "17", "block": "man", "name": "Talabalarning darsdan tashqari vaqtlarini mazmunli tashkil etish (toʻgarak, ilmiy maktab) hamda davlat stipendiyalariga tayyorlash", "max_ball": 4.0, "validity": "1 yil", "dept": "Yoshlar bilan ishlash, maʼnaviyat va maʼrifat boʻlimi, Ilmiy boʻlim", "description": "Toʻgarak va toʻgarak aʼzolarining respublika/nomli stipendiyalarga tayyorgarligi — 0-4 ball."},
+        {"id": "18", "block": "man", "name": "OAV yoki ijtimoiy tarmoqlarda mamlakatda amalga oshirilayotgan islohotlar yuzasidan chiqishlar qilganligi", "max_ball": 4.0, "validity": "6 oy", "dept": "Matbuot kotibi", "description": "OAV va ijtimoiy tarmoqlarda oyiga kamida 1 marotaba tahliliy chiqish — 0-4 ball."},
+        {"id": "19", "block": "man", "name": "Akademik litsey, texnikumlar va maktablar bilan ishlashga oid faoliyatdagi ishtiroki", "max_ball": 3.0, "validity": "6 oy", "dept": "Oʻquv-uslubiy boshqarma", "description": "Litsey, texnikum va maktablarga metodik yordam va hamkorlik faoliyati — 0-3 ball."},
+        {"id": "20", "block": "man", "name": "OTM rahbariyati tomonidan berilgan topshiriqlar ijrosini oʻz vaqtida va sifatli bajarganligi hamda mehnat intizomi", "max_ball": 4.0, "validity": "3 oy", "dept": "Murojaatlar bilan ishlash, nazorat va monitoring boʻlimi, dekanat, kafedra mudiri", "description": "Choraklik yuklama, topshiriqlar ijrosi va mehnat intizomi — 0-4 ball."}
+    ]
+    db_reset_to_council_indicators(council_list)
+    INDICATORS_DB = [Indicator(**i) for i in db_load_indicators()]
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": "2026-10-05 15:50",
+        "user": "admin",
+        "action": "Mezonlar OTM Kengashi tasdiqlagan 20 ta mezon tizimiga (30/48/7/15 ball) qayta tiklandi"
+    })
+    return {"success": True, "count": len(INDICATORS_DB), "indicators": INDICATORS_DB}
+
 
 @app.get("/api/teachers", response_model=List[Teacher])
 def get_teachers():
