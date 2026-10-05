@@ -239,3 +239,135 @@ export const IconRefresh: React.FC<IconProps> = ({ size = 18, className = "", ..
     <path d="M4 13A8.1 8.1 0 0 0 19.5 15M20 19V15H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
+
+// 14. Rol almashtirish (Hand-crafted Role Switcher)
+export const IconRoleSwitch: React.FC<IconProps> = ({ size = 18, className = "", ...props }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    {...props}
+  >
+    <circle cx="12" cy="7" r="3.25" stroke="currentColor" strokeWidth="1.8" />
+    <path
+      d="M6 18.5C6 15.1863 8.68629 13 12 13C13.2 13 14.3 13.3 15.2 13.8"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    />
+    <path
+      d="M17 16L21 16M21 16L19 14M21 16L19 18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M19 20L15 20M15 20L17 18M15 20L17 22"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// 15. Administrator roli (Hand-crafted Admin Shield & Gear)
+export const IconRoleAdmin: React.FC<IconProps> = ({ size = 18, className = "", ...props }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    {...props}
+  >
+    <path
+      d="M12 2.75L4.5 6V11.25C4.5 16.2 7.7 20.7 12 21.75C16.3 20.7 19.5 16.2 19.5 11.25V6L12 2.75Z"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+    />
+    <circle cx="12" cy="10.5" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M12 13V16.5M10.5 15H13.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+);
+
+// 16. Dekan roli (Hand-crafted Faculty Dean / Academic Columns)
+export const IconRoleDean: React.FC<IconProps> = ({ size = 18, className = "", ...props }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    {...props}
+  >
+    <path d="M3 8.5L12 3.5L21 8.5H3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M4 19.5H20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M6 9.5V18.5M10 9.5V18.5M14 9.5V18.5M18 9.5V18.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <circle cx="12" cy="6" r="0.75" fill="currentColor" />
+  </svg>
+);
+
+// 17. Kafedra mudiri roli (Hand-crafted Department Chair / Leadership)
+export const IconRoleHead: React.FC<IconProps> = ({ size = 18, className = "", ...props }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    {...props}
+  >
+    <circle cx="12" cy="6.5" r="3" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M6.5 18.5C6.5 15 8.9 12.5 12 12.5C15.1 12.5 17.5 15 17.5 18.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <circle cx="4.5" cy="10.5" r="2" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M2.5 18.5C2.5 16.5 3.5 15 5 14.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <circle cx="19.5" cy="10.5" r="2" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M21.5 18.5C21.5 16.5 20.5 15 19 14.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);
+
+// 18. O'qituvchi roli (Hand-crafted Professor / Educator)
+export const IconRoleTeacher: React.FC<IconProps> = ({ size = 18, className = "", ...props }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    {...props}
+  >
+    <path d="M4 4.5H16C17.1 4.5 18 5.4 18 6.5V14.5C18 15.6 17.1 16.5 16 16.5H4C2.9 16.5 2 15.6 2 14.5V6.5C2 5.4 2.9 4.5 4 4.5Z" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M7 8.5H13M7 11.5H11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M14 16.5L16 20.5M6 16.5L4 20.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <circle cx="19.5" cy="13.5" r="2.25" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M19.5 17C18.5 17 17.5 17.8 17.5 19V20.5H21.5V19C21.5 17.8 20.5 17 19.5 17Z" stroke="currentColor" strokeWidth="1.7" />
+  </svg>
+);
+
+// 19. Rektorat roli (Hand-crafted Rectorate Emblem / Institutional Crest)
+export const IconRoleRectorate: React.FC<IconProps> = ({ size = 18, className = "", ...props }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    {...props}
+  >
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M12 5.5L13.7 9.5H18L14.5 12.2L15.8 16.5L12 13.8L8.2 16.5L9.5 12.2L6 9.5H10.3L12 5.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    <circle cx="12" cy="11.5" r="1.5" fill="currentColor" />
+  </svg>
+);
+

@@ -107,6 +107,8 @@ import { HemisIntegrationPanel } from "@/components/HemisIntegrationPanel";
 import { SearchableTeacherSelect } from "@/components/SearchableTeacherSelect";
 import { AdminDashboardView } from "@/components/AdminDashboardView";
 import { RbacRolesPanel } from "@/components/RbacRolesPanel";
+import { RoleSwitcherDropdown } from "@/components/RoleSwitcherDropdown";
+import { IconUser } from "@/components/AppCustomIcons";
 import { hasPermission } from "@/utils/rbac";
 
 export default function KpiEnterpriseApp() {
@@ -3401,7 +3403,7 @@ export default function KpiEnterpriseApp() {
                 <div className="text-xs font-bold truncate leading-tight">{currentUser.name}</div>
                 <div className={`text-[10px] font-medium truncate flex items-center gap-1 mt-0.5 ${activePage === "profile" ? "text-blue-200" : "text-blue-500"
                   }`}>
-                  <UserCog className="w-3 h-3" />
+                  <IconUser size={12} className="shrink-0" />
                   <span>Mening profilim</span>
                 </div>
               </div>
@@ -3470,35 +3472,16 @@ export default function KpiEnterpriseApp() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            {/* Admin inspector view switcher (compact unified role switcher) */}
+            {/* Admin inspector view switcher (compact unified role switcher with handcrafted SVG icons) */}
             {currentUser.role === "ADMIN" && (
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border text-xs shadow-xs transition-all ${
-                theme === "dark"
-                  ? "bg-slate-800/90 border-slate-700 hover:border-slate-600 text-slate-100"
-                  : "bg-white border-slate-200 hover:border-blue-400 text-slate-800"
-              }`}>
-                <UserCog className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                <div className="flex flex-col text-left">
-                  <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-450 tracking-wider leading-none hidden sm:inline">
-                    Rol koʻrinishi:
-                  </span>
-                  <select
-                    value={activeRole}
-                    onChange={(e) => {
-                      setActiveRole(e.target.value as any);
-                      setActivePage("dashboard");
-                    }}
-                    className="bg-transparent font-bold text-xs focus:outline-none cursor-pointer pr-1 text-slate-900 dark:text-slate-100"
-                    title="Rol koʻrinishini almashtirish (Administrator inspektori)"
-                  >
-                    <option value="ADMIN" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">🛡️ Admin (Tizim boshqaruvi)</option>
-                    <option value="DEAN" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">🏛️ Dekan (Fakultet KPI)</option>
-                    <option value="HEAD_OF_DEPT" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">👥 Mudir (Kafedra monitoringi)</option>
-                    <option value="TEACHER" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">👨‍🏫 Oʻqituvchi (Shaxsiy faoliyat)</option>
-                    <option value="RECTORATE" className="text-slate-900 dark:bg-slate-800 dark:text-slate-100">🎓 Rektorat (Integral KPI)</option>
-                  </select>
-                </div>
-              </div>
+              <RoleSwitcherDropdown
+                activeRole={activeRole}
+                onSelectRole={(newRole) => {
+                  setActiveRole(newRole);
+                  setActivePage("dashboard");
+                }}
+                theme={theme}
+              />
             )}
 
             {/* Non-admin user role badge */}
