@@ -232,7 +232,7 @@ export default function KpiEnterpriseApp() {
   const [editingSubmission, setEditingSubmission] = useState<Submission | null>(null);
   const [activeSvetaforFilter, setActiveSvetaforFilter] = useState<string>("ALL");
   const [selectedBlockFilter, setSelectedBlockFilter] = useState<string>("ALL");
-  const [fteFilter, setFteFilter] = useState<"ALL" | "1.5" | "1.0" | "PART">("ALL");
+  const [fteFilter, setFteFilter] = useState<"ALL" | "OVER_1" | "1.0" | "PART">("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [structureHierarchy, setStructureHierarchy] = useState<StructureHierarchy | null>(null);
 
@@ -2278,6 +2278,13 @@ export default function KpiEnterpriseApp() {
   let filteredTeachers = teachers;
   if (activeSvetaforFilter !== "ALL") {
     filteredTeachers = filteredTeachers.filter(t => t.scores?.svetafor_zone === activeSvetaforFilter);
+  }
+  if (fteFilter === "OVER_1") {
+    filteredTeachers = filteredTeachers.filter(t => t.fte > 1.0);
+  } else if (fteFilter === "1.0") {
+    filteredTeachers = filteredTeachers.filter(t => t.fte === 1.0);
+  } else if (fteFilter === "PART") {
+    filteredTeachers = filteredTeachers.filter(t => t.fte < 1.0);
   }
   if (searchQuery.trim()) {
     filteredTeachers = filteredTeachers.filter(t =>
@@ -4663,8 +4670,11 @@ export default function KpiEnterpriseApp() {
                           <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                             {currentTeacher.position}
                           </span>
-                          <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                            Shtat: <b>{currentTeacher.fte}</b>
+                          <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${currentTeacher.fte > 1.0
+                            ? "bg-purple-50 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                            }`}>
+                            Shtat: <b>{currentTeacher.fte > 1.0 ? `${currentTeacher.fte} (ichki oʻrindosh)` : `${currentTeacher.fte} stavka`}</b>
                           </span>
                           <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                             Traektoriya: <b>{currentTeacher.track}</b>
@@ -5231,13 +5241,13 @@ export default function KpiEnterpriseApp() {
                                 </td>
                                 <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.position}</td>
                                 <td className="py-3.5 px-4">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${t.fte >= 1.5
+                                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${t.fte > 1.0
                                     ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
-                                    : t.fte >= 1.0
+                                    : t.fte === 1.0
                                       ? "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
                                       : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                                     }`}>
-                                    {t.fte} stavka
+                                    {t.fte > 1.0 ? `${t.fte} stavka (ichki oʻrindosh)` : `${t.fte} stavka`}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300">{t.scores.oqv}</td>
@@ -5268,83 +5278,80 @@ export default function KpiEnterpriseApp() {
               )}
 
               {/* DEAN ROLE VIEW */}
-              {activeRole === "DEAN" && (
-                <div className="space-y-6">
-                  {/* Faculty Dean Banner */}
-                  <div className={`p-6 rounded-2xl border transition-all ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
-                    }`}>
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300">
-                            Fakultet dekanati
-                          </span>
-                          <span className="text-xs text-slate-400 font-medium">
-                            Oʻzbekiston Milliy universiteti Jizzax filiali
-                          </span>
+              {activeRole === "DEAN" && (() => {
+                const facultyDepts = structureHierarchy?.faculties.find(f =>
+                  currentUser?.faculty ? f.name.toLowerCase().includes(currentUser.faculty.toLowerCase()) : false
+                )?.departments || [];
+                const facultyTeachers = teachers.filter(t =>
+                  !currentUser?.faculty || (t.department && facultyDepts.some(d => t.department.toLowerCase().includes(d.name.toLowerCase()) || d.name.toLowerCase().includes(t.department.toLowerCase())))
+                );
+                const fteOver1Teachers = facultyTeachers.filter(t => t.fte > 1.0);
+                const avgFacScore = facultyTeachers.length > 0
+                  ? Math.round((facultyTeachers.reduce((acc, t) => acc + (t.scores?.normalized_score || 0), 0) / facultyTeachers.length) * 10) / 10
+                  : 0;
+
+                return (
+                  <div className="space-y-6">
+                    {/* Faculty Dean Banner */}
+                    <div className={`p-6 rounded-2xl border transition-all ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+                      }`}>
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300">
+                              Fakultet dekanati
+                            </span>
+                            <span className="text-xs text-slate-400 font-medium">
+                              Oʻzbekiston Milliy universiteti Jizzax filiali
+                            </span>
+                          </div>
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                            {currentUser?.faculty || "Fakultet dekanati"}
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                            Dekan: <b className="text-slate-800 dark:text-slate-200">{currentUser?.name || "Dekan"}</b> ({currentUser?.fte || 1.25} stavka)
+                          </p>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-                          {currentUser?.faculty || "Fakultet dekanati"}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                          Dekan: <b className="text-slate-800 dark:text-slate-200">{currentUser?.name || "Dekan"}</b> ({currentUser?.fte || 1.25} stavka)
-                        </p>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setActivePage("structure")}
+                            className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm transition-all"
+                          >
+                            <Building className="w-4 h-4" />
+                            <span>Tashkiliy ierarxiya daraxti</span>
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => setActivePage("structure")}
-                          className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm transition-all"
-                        >
-                          <Building className="w-4 h-4" />
-                          <span>Tashkiliy ierarxiya daraxti</span>
-                        </button>
+                      {/* Faculty Overview Quick Stats */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
+                        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                          <div className="text-xs text-slate-400 font-medium">Kafedralar</div>
+                          <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-0.5">
+                            {facultyDepts.length || 4} ta
+                          </div>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                          <div className="text-xs text-slate-400 font-medium">Fakultet xodimlari</div>
+                          <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-0.5">
+                            {facultyTeachers.length} nafar
+                          </div>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-800/60">
+                          <div className="text-xs text-purple-700 dark:text-purple-300 font-medium">1 stavkadan oshiqlar</div>
+                          <div className="text-xl font-black text-purple-700 dark:text-purple-300 mt-0.5">
+                            {fteOver1Teachers.length} nafar
+                          </div>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                          <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">Fakultet oʻrtacha bali</div>
+                          <div className="text-xl font-black text-blue-800 dark:text-blue-300 mt-0.5">
+                            {avgFacScore} ball
+                          </div>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Faculty Overview Quick Stats */}
-                    {(() => {
-                      const facultyDepts = structureHierarchy?.faculties.find(f =>
-                        currentUser?.faculty ? f.name.toLowerCase().includes(currentUser.faculty.toLowerCase()) : false
-                      )?.departments || [];
-                      const facultyTeachers = teachers.filter(t =>
-                        !currentUser?.faculty || (t.department && facultyDepts.some(d => t.department.toLowerCase().includes(d.name.toLowerCase()) || d.name.toLowerCase().includes(t.department.toLowerCase())))
-                      );
-                      const fte15Teachers = facultyTeachers.filter(t => t.fte >= 1.5);
-                      const avgFacScore = facultyTeachers.length > 0
-                        ? Math.round((facultyTeachers.reduce((acc, t) => acc + (t.scores?.normalized_score || 0), 0) / facultyTeachers.length) * 10) / 10
-                        : 0;
-
-                      return (
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
-                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                            <div className="text-xs text-slate-400 font-medium">Kafedralar</div>
-                            <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-0.5">
-                              {facultyDepts.length || 4} ta
-                            </div>
-                          </div>
-                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                            <div className="text-xs text-slate-400 font-medium">Fakultet xodimlari</div>
-                            <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-0.5">
-                              {facultyTeachers.length} nafar
-                            </div>
-                          </div>
-                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                            <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">1.50 stavkali pedagoglar</div>
-                            <div className="text-xl font-black text-purple-700 dark:text-purple-300 mt-0.5">
-                              {fte15Teachers.length} nafar
-                            </div>
-                          </div>
-                          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                            <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">Fakultet oʻrtacha bali</div>
-                            <div className="text-xl font-black text-blue-800 dark:text-blue-300 mt-0.5">
-                              {avgFacScore} ball
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
 
                   {/* Faculty Teachers Table with FTE Filter */}
                   <div className={`p-6 rounded-2xl border transition-all ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
@@ -5369,11 +5376,11 @@ export default function KpiEnterpriseApp() {
                           Barchasi
                         </button>
                         <button
-                          onClick={() => setFteFilter("1.5")}
-                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "1.5" ? "bg-purple-600 text-white shadow-xs" : "text-slate-500"
+                          onClick={() => setFteFilter("OVER_1")}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "OVER_1" ? "bg-purple-600 text-white shadow-xs" : "text-slate-500"
                             }`}
                         >
-                          1.50 stavka
+                          ⚡ 1 stavkadan oshiq ({fteOver1Teachers.length})
                         </button>
                         <button
                           onClick={() => setFteFilter("1.0")}
@@ -5381,6 +5388,13 @@ export default function KpiEnterpriseApp() {
                             }`}
                         >
                           1.00 stavka
+                        </button>
+                        <button
+                          onClick={() => setFteFilter("PART")}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "PART" ? "bg-slate-700 text-white shadow-xs" : "text-slate-500"
+                            }`}
+                        >
+                          Yarim stavka
                         </button>
                       </div>
                     </div>
@@ -5399,10 +5413,11 @@ export default function KpiEnterpriseApp() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {teachers
+                          {facultyTeachers
                             .filter(t => {
-                              if (fteFilter === "1.5") return t.fte >= 1.5;
+                              if (fteFilter === "OVER_1") return t.fte > 1.0;
                               if (fteFilter === "1.0") return t.fte === 1.0;
+                              if (fteFilter === "PART") return t.fte < 1.0;
                               return true;
                             })
                             .map(t => (
@@ -5431,13 +5446,13 @@ export default function KpiEnterpriseApp() {
                                 <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-xs">{t.department}</td>
                                 <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{t.position}</td>
                                 <td className="py-3.5 px-4">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${t.fte >= 1.5
-                                    ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
-                                    : t.fte >= 1.0
+                                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${t.fte > 1.0
+                                    ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 shadow-2xs"
+                                    : t.fte === 1.0
                                       ? "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
                                       : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                                     }`}>
-                                    {t.fte} stavka
+                                    {t.fte > 1.0 ? `${t.fte} stavka (ichki oʻrindosh)` : `${t.fte} stavka`}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4 font-black text-slate-900 dark:text-slate-100">
@@ -5463,18 +5478,92 @@ export default function KpiEnterpriseApp() {
                     </div>
                   </div>
                 </div>
-              )}
+              );
+            })()}
 
               {/* RECTORATE ROLE VIEW */}
               {activeRole === "RECTORATE" && (
                 <div>
-                  <div className="flex justify-between items-center mb-4">
+                  {/* Summary Metric Cards for FTE & Teachers in Rectorate */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+                    <div
+                      onClick={() => { setFteFilter("ALL"); setTeacherPage(1); }}
+                      className={`p-4 rounded-xl border cursor-pointer transition-all ${fteFilter === "ALL" ? "bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300"}`}
+                    >
+                      <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Jami pedagoglar</div>
+                      <div className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">{teachers.length} nafar</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">Barcha shtat birliklari</div>
+                    </div>
+                    <div
+                      onClick={() => { setFteFilter("OVER_1"); setTeacherPage(1); }}
+                      className={`p-4 rounded-xl border cursor-pointer transition-all ${fteFilter === "OVER_1" ? "bg-purple-50/80 dark:bg-purple-950/40 border-purple-300 dark:border-purple-700 ring-2 ring-purple-500/20" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-purple-300"}`}
+                    >
+                      <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 flex items-center justify-between">
+                        <span>1 stavkadan oshiq</span>
+                        <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
+                      </div>
+                      <div className="text-2xl font-black text-purple-700 dark:text-purple-300 mt-1">
+                        {teachers.filter(t => t.fte > 1.0).length} nafar
+                      </div>
+                      <div className="text-[11px] text-purple-600/80 dark:text-purple-400/80 mt-0.5">1.25 va 1.50 stavkali (ichki oʻrindosh)</div>
+                    </div>
+                    <div
+                      onClick={() => { setFteFilter("1.0"); setTeacherPage(1); }}
+                      className={`p-4 rounded-xl border cursor-pointer transition-all ${fteFilter === "1.0" ? "bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300"}`}
+                    >
+                      <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">1.0 toʻliq stavka</div>
+                      <div className="text-2xl font-black text-blue-800 dark:text-blue-200 mt-1">
+                        {teachers.filter(t => t.fte === 1.0).length} nafar
+                      </div>
+                      <div className="text-[11px] text-blue-500 mt-0.5">Asosiy shtat xodimlari</div>
+                    </div>
+                    <div
+                      onClick={() => { setFteFilter("PART"); setTeacherPage(1); }}
+                      className={`p-4 rounded-xl border cursor-pointer transition-all ${fteFilter === "PART" ? "bg-slate-100 dark:bg-slate-800 border-slate-400 dark:border-slate-600 ring-2 ring-slate-500/20" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300"}`}
+                    >
+                      <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Yarim stavka / oʻrindosh</div>
+                      <div className="text-2xl font-black text-slate-700 dark:text-slate-300 mt-1">
+                        {teachers.filter(t => t.fte < 1.0).length} nafar
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">0.50 va 0.25 stavka</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
                     <div>
                       <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Filial umumiy KPI reytingi</h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400">Barcha fakultetlar va kafedralar boʻyicha integratsiyalashgan jadval</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      {/* FTE tezkor filtri */}
+                      <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                        <button
+                          onClick={() => { setFteFilter("ALL"); setTeacherPage(1); }}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "ALL" ? "bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-300 shadow-xs" : "text-slate-500 hover:text-slate-800"}`}
+                        >
+                          Barchasi ({teachers.length})
+                        </button>
+                        <button
+                          onClick={() => { setFteFilter("OVER_1"); setTeacherPage(1); }}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "OVER_1" ? "bg-purple-600 text-white shadow-xs" : "text-slate-500 hover:text-purple-600"}`}
+                        >
+                          ⚡ 1 stavkadan oshiq ({teachers.filter(t => t.fte > 1.0).length})
+                        </button>
+                        <button
+                          onClick={() => { setFteFilter("1.0"); setTeacherPage(1); }}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "1.0" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-blue-600"}`}
+                        >
+                          1.0 stavka ({teachers.filter(t => t.fte === 1.0).length})
+                        </button>
+                        <button
+                          onClick={() => { setFteFilter("PART"); setTeacherPage(1); }}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition-all ${fteFilter === "PART" ? "bg-slate-700 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"}`}
+                        >
+                          Yarim stavka ({teachers.filter(t => t.fte < 1.0).length})
+                        </button>
+                      </div>
+
                       <div className="relative">
                         <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
@@ -5482,7 +5571,7 @@ export default function KpiEnterpriseApp() {
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="F.I.Sh. yoki kafedrani qidirish..."
-                          className="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-900 w-64"
+                          className="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-900 w-56"
                         />
                       </div>
                       <a
@@ -5492,14 +5581,14 @@ export default function KpiEnterpriseApp() {
                         title="KPI reyting natijalarini toʻliq formatlangan Excel (.xlsx) faylida yuklab olish"
                       >
                         <FileSpreadsheet className="w-4 h-4 text-emerald-100" />
-                        <span>Excel (.xlsx) yuklab olish</span>
+                        <span>Excel (.xlsx)</span>
                       </a>
                       <a
                         href="http://localhost:8080/api/download/nizom"
                         className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        <span>Rasmiy qaror (Word)</span>
+                        <span>Nizom (Word)</span>
                       </a>
                     </div>
                   </div>
@@ -5548,7 +5637,22 @@ export default function KpiEnterpriseApp() {
                             </td>
                             <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{t.department}</td>
                             <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{t.position}</td>
-                            <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{t.fte}</td>
+                            <td className="py-3.5 px-4">
+                              {t.fte > 1.0 ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 shadow-2xs">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse" />
+                                  <span>{t.fte} stavka (ichki oʻrindosh)</span>
+                                </span>
+                              ) : t.fte === 1.0 ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                  <span>1.00 stavka (asosiy)</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                  <span>{t.fte} stavka (oʻrindosh)</span>
+                                </span>
+                              )}
+                            </td>
                             <td className="py-3.5 px-4 font-black text-blue-950 dark:text-blue-300">{t.scores.normalized_score}</td>
                             <td className="py-3.5 px-4">
                               <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${t.scores.svetafor_zone === "green"

@@ -582,7 +582,15 @@ def calculate_kpi(raw_oqv: float, raw_ilm: float, raw_xal: float, raw_man: float
 
     raw_total = max(0.0, oqv + ilm + xal + effective_man - abs(jarima))
     safe_fte = fte if fte and fte > 0 else 1.0
-    normalized = round((raw_total / safe_fte) * 10) / 10
+
+    # Shtat stavkasi bo'yicha me'yorlashtirish qoidasi:
+    # 1. Yarim stavka (fte < 1.0, masalan 0.5 stavka): o'qituvchi yuklamasiga mutanosib ravishda 1 stavkaga normallashtiriladi (raw_total / safe_fte).
+    # 2. 1.0 va undan oshiq stavkalar (1.0, 1.25, 1.50 stavka): o'qituvchining 20 ta rasmiy mezon bo'yicha to'plagan haqiqiy sof bali to'liq saqlanadi.
+    #    Chunki 1.5 stavkali faol o'qituvchi 100 ball to'plaganida, uni 1.5 ga bo'lib 66.7 ball (sariq toifa)ga tushirib qo'yish mantiqsizlikdir.
+    if safe_fte < 1.0:
+        normalized = min(100.0, round((raw_total / safe_fte) * 10) / 10)
+    else:
+        normalized = min(100.0, round(raw_total * 10) / 10)
 
     if normalized >= 71.0:
         zone = "green"
@@ -2160,18 +2168,20 @@ def get_hemis_departments():
         raise HTTPException(status_code=500, detail=f"HEMIS API xatoligi: {str(e)}")
 
 def parse_fte(staff_str: Any) -> float:
-    """HEMIS shtat matnidan raqamli stavkani aniqlash"""
+    """HEMIS shtat matnidan raqamli stavkani aniqlash (1.50, 1.25, 1.00, 0.75, 0.50, 0.25)"""
     if not staff_str:
         return 1.0
     s = str(staff_str).strip()
-    if "0,25" in s or "0.25" in s:
-        return 0.25
-    if "0,50" in s or "0.5" in s:
-        return 0.50
-    if "0,75" in s or "0.75" in s:
-        return 0.75
     if "1,50" in s or "1.5" in s:
         return 1.50
+    if "1,25" in s or "1.25" in s:
+        return 1.25
+    if "0,75" in s or "0.75" in s:
+        return 0.75
+    if "0,50" in s or "0.5" in s:
+        return 0.50
+    if "0,25" in s or "0.25" in s:
+        return 0.25
     if "1,00" in s or "1.0" in s:
         return 1.0
     return 1.0
