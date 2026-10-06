@@ -2197,6 +2197,7 @@ def get_admin_users(q: Optional[str] = None, role: Optional[str] = None):
             "username": k,
             "name": v.get("name", ""),
             "role": u_role,
+            "roles": v.get("roles") or ([u_role, "TEACHER"] if u_role in ["HEAD_OF_DEPT", "DEAN", "RECTORATE"] else [u_role]),
             "department": v.get("department", "—"),
             "position": v.get("position", "—"),
             "fte": v.get("fte", 1.0),
@@ -2221,11 +2222,16 @@ def update_user_role(username: str, body: AdminUserRoleUpdate):
         raise HTTPException(status_code=404, detail="Foydalanuvchi hisobi topilmadi")
 
     old_role = user.get("role", "TEACHER")
-    user["role"] = body.role.upper()
-    db_update_user_role(u_key, body.role.upper(), body.roles)
+    clean_role = body.role.upper()
+    assigned_roles = body.roles if body.roles else [clean_role]
+    user["role"] = clean_role
+    user["roles"] = assigned_roles
+
+    db_update_user_role(u_key, clean_role, assigned_roles)
     updated_user = db_get_user(u_key)
     if updated_user:
         user.update(updated_user)
+    USERS_DB[u_key] = user
 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     AUDIT_LOGS.insert(0, {
