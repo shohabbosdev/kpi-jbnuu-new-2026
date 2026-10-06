@@ -487,9 +487,7 @@ export default function KpiEnterpriseApp() {
     ? (process.env.NEXT_PUBLIC_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:8080/api" : "/kpi/api"))
     : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8080/api");
 
-  const BASE_PATH = typeof window !== "undefined"
-    ? (window.location.pathname.startsWith("/kpi") ? "/kpi" : "")
-    : "";
+  const BASE_PATH = process.env.NODE_ENV === "production" ? "/kpi" : (process.env.NEXT_PUBLIC_BASE_PATH || "");
   const LOGO_SRC = `${BASE_PATH}/logo-kpi.png`;
 
   // Check saved session on mount
