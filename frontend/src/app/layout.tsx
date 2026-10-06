@@ -12,12 +12,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const basePath = process.env.NODE_ENV === "production" ? "/kpi" : (process.env.NEXT_PUBLIC_BASE_PATH || "");
+
 export const metadata: Metadata = {
   title: "KPI Axborot Tizimi — Oʻzbekiston Milliy Universiteti Jizzax Filiali",
   description: "Mirzo Ulugʻbek nomidagi Oʻzbekiston Milliy universiteti Jizzax filiali professor-oʻqituvchilari faoliyatini baholash va ragʻbatlantirish portali (2026)",
   icons: {
-    icon: "/logo-kpi.png",
-    apple: "/logo-kpi.png",
+    icon: `${basePath}/logo-kpi.png`,
+    apple: `${basePath}/logo-kpi.png`,
   },
 };
 
