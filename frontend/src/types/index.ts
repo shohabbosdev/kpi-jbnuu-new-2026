@@ -112,6 +112,7 @@ export interface AuthUser {
   username: string;
   name: string;
   role: "ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE";
+  roles?: ("ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE")[];
   department?: string;
   faculty?: string;
   position?: string;
@@ -201,6 +202,7 @@ export interface AdminUserRecord {
   username: string;
   name: string;
   role: string;
+  roles?: string[];
   department?: string;
   position?: string;
   fte: number;

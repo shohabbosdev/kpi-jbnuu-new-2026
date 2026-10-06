@@ -54,6 +54,10 @@ def init_db():
         cursor.execute("ALTER TABLE users ADD COLUMN inn TEXT;")
     except Exception:
         pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN roles TEXT;")
+    except Exception:
+        pass
     
     # 2. Submissions / Applications table
     cursor.execute("""
@@ -613,6 +617,42 @@ def db_delete_rbac_role(role_code: str) -> bool:
     conn.close()
     return True
 
+def _format_user_dict(row_dict: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not row_dict:
+        return None
+    d = dict(row_dict)
+    d["must_change_password"] = bool(d.get("must_change_password", 0))
+    d["is_active"] = bool(d.get("is_active", 1))
+
+    # Ko'p rollilik (Multi-role RBAC)
+    raw_roles = d.get("roles")
+    roles_list = []
+    if raw_roles:
+        try:
+            if isinstance(raw_roles, str):
+                import json
+                roles_list = json.loads(raw_roles)
+            elif isinstance(raw_roles, list):
+                roles_list = raw_roles
+        except Exception:
+            roles_list = [r.strip() for r in raw_roles.split(",") if r.strip()]
+
+    if not roles_list:
+        primary_role = d.get("role", "TEACHER")
+        if primary_role == "HEAD_OF_DEPT":
+            roles_list = ["HEAD_OF_DEPT", "TEACHER"]
+        elif primary_role == "DEAN":
+            roles_list = ["DEAN", "TEACHER"]
+        elif primary_role == "ADMIN":
+            roles_list = ["ADMIN", "DEAN", "HEAD_OF_DEPT", "TEACHER", "RECTORATE"]
+        elif primary_role == "RECTORATE":
+            roles_list = ["RECTORATE", "TEACHER"]
+        else:
+            roles_list = [primary_role]
+
+    d["roles"] = roles_list
+    return d
+
 # Foydalanuvchilar amallari
 def db_load_users() -> Dict[str, Dict[str, Any]]:
     conn = get_connection()
@@ -622,10 +662,9 @@ def db_load_users() -> Dict[str, Dict[str, Any]]:
     conn.close()
     users = {}
     for r in rows:
-        d = dict(r)
-        d["must_change_password"] = bool(d.get("must_change_password", 0))
-        d["is_active"] = bool(d.get("is_active", 1))
-        users[d["username"].lower()] = d
+        formatted = _format_user_dict(dict(r))
+        if formatted:
+            users[formatted["username"].lower()] = formatted
     return users
 
 def db_get_user(username: str) -> Optional[Dict[str, Any]]:
@@ -636,10 +675,7 @@ def db_get_user(username: str) -> Optional[Dict[str, Any]]:
     conn.close()
     if not row:
         return None
-    d = dict(row)
-    d["must_change_password"] = bool(d.get("must_change_password", 0))
-    d["is_active"] = bool(d.get("is_active", 1))
-    return d
+    return _format_user_dict(dict(row))
 
 def db_get_user_by_pinfl(pinfl: str) -> Optional[Dict[str, Any]]:
     if not pinfl or len(pinfl.strip()) < 5:
@@ -652,10 +688,7 @@ def db_get_user_by_pinfl(pinfl: str) -> Optional[Dict[str, Any]]:
     conn.close()
     if not row:
         return None
-    d = dict(row)
-    d["must_change_password"] = bool(d.get("must_change_password", 0))
-    d["is_active"] = bool(d.get("is_active", 1))
-    return d
+    return _format_user_dict(dict(row))
 
 def db_get_user_by_name(full_name: str) -> Optional[Dict[str, Any]]:
     if not full_name or len(full_name.strip()) < 3:
@@ -676,10 +709,7 @@ def db_get_user_by_name(full_name: str) -> Optional[Dict[str, Any]]:
     conn.close()
     if not row:
         return None
-    d = dict(row)
-    d["must_change_password"] = bool(d.get("must_change_password", 0))
-    d["is_active"] = bool(d.get("is_active", 1))
-    return d
+    return _format_user_dict(dict(row))
 
 def db_attach_pinfl(username: str, pinfl: str, inn: Optional[str] = None) -> bool:
     if not username or not pinfl:
@@ -780,10 +810,26 @@ def db_reset_user_password(username: str, initial_password: str):
     conn.commit()
     conn.close()
 
-def db_update_user_role(username: str, new_role: str):
+def db_update_user_role(username: str, new_role: str, roles: Optional[List[str]] = None):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET role = ? WHERE LOWER(username) = LOWER(?)", (new_role.upper(), username.strip()))
+    new_role_clean = new_role.upper().strip()
+    roles_json = None
+    if roles:
+        roles_json = json.dumps(roles, ensure_ascii=False)
+    else:
+        if new_role_clean == "HEAD_OF_DEPT":
+            roles_json = json.dumps(["HEAD_OF_DEPT", "TEACHER"], ensure_ascii=False)
+        elif new_role_clean == "DEAN":
+            roles_json = json.dumps(["DEAN", "TEACHER"], ensure_ascii=False)
+        elif new_role_clean == "ADMIN":
+            roles_json = json.dumps(["ADMIN", "DEAN", "HEAD_OF_DEPT", "TEACHER", "RECTORATE"], ensure_ascii=False)
+        elif new_role_clean == "RECTORATE":
+            roles_json = json.dumps(["RECTORATE", "TEACHER"], ensure_ascii=False)
+        else:
+            roles_json = json.dumps([new_role_clean], ensure_ascii=False)
+
+    cursor.execute("UPDATE users SET role = ?, roles = ? WHERE LOWER(username) = LOWER(?)", (new_role_clean, roles_json, username.strip()))
     conn.commit()
     conn.close()
 

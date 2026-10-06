@@ -16,6 +16,7 @@ export type RoleType = "ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORAT
 
 interface RoleSwitcherDropdownProps {
   activeRole: RoleType;
+  allowedRoles?: RoleType[];
   onSelectRole: (role: RoleType) => void;
   theme: "light" | "dark";
 }
@@ -104,13 +105,18 @@ const ROLES: RoleConfig[] = [
 
 export const RoleSwitcherDropdown: React.FC<RoleSwitcherDropdownProps> = ({
   activeRole,
+  allowedRoles,
   onSelectRole,
   theme
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const currentRole = ROLES.find((r) => r.code === activeRole) || ROLES[0];
+  const visibleRoles = allowedRoles && allowedRoles.length > 0
+    ? ROLES.filter((r) => allowedRoles.includes(r.code))
+    : ROLES;
+
+  const currentRole = visibleRoles.find((r) => r.code === activeRole) || visibleRoles[0] || ROLES[0];
   const ActiveIcon = currentRole.Icon;
 
   // Tashqariga bosilganda menyuni yopish
@@ -147,7 +153,7 @@ export const RoleSwitcherDropdown: React.FC<RoleSwitcherDropdownProps> = ({
         onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        title="Rol koʻrinishini almashtirish (Administrator inspektori)"
+        title={visibleRoles.length > 2 ? "Rol koʻrinishini almashtirish" : "Shaxsiy profil va rahbarlik portali oʻrtasida almashish"}
         className={`flex items-center gap-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl border text-xs shadow-xs transition-all cursor-pointer ${
           isOpen
             ? "border-blue-900 ring-2 ring-blue-900/20"
@@ -200,12 +206,12 @@ export const RoleSwitcherDropdown: React.FC<RoleSwitcherDropdownProps> = ({
                 Rolni tanlang
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 font-mono">5 ta portal</span>
+            <span className="text-[10px] text-slate-400 font-mono">{visibleRoles.length} ta portal</span>
           </div>
 
           {/* Rollar ro'yxati */}
           <div className="space-y-1">
-            {ROLES.map((role) => {
+            {visibleRoles.map((role) => {
               const isSelected = role.code === activeRole;
               const RoleIcon = role.Icon;
 

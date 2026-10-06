@@ -185,6 +185,7 @@ class UserProfile(BaseModel):
     image: Optional[str] = None
     must_change_password: bool = False
     permissions: List[str] = []
+    roles: List[str] = []
 
 class LoginResponse(BaseModel):
     success: bool
@@ -247,6 +248,7 @@ class AdminUserCreate(BaseModel):
 
 class AdminUserRoleUpdate(BaseModel):
     role: str
+    roles: Optional[List[str]] = None
 
 class TeacherScoreDetail(BaseModel):
     oqv: float
@@ -1132,7 +1134,8 @@ def login(creds: LoginRequest, request: Request):
         inn=user_record.get("inn"),
         image=user_img,
         must_change_password=must_change,
-        permissions=db_get_user_permissions(user_record["role"])
+        permissions=db_get_user_permissions(user_record["role"]),
+        roles=user_record.get("roles") or [user_record["role"]]
     )
 
     success_msg = f"Tizimga muvaffaqiyatli kirdi (IP: {client_ip}, Rol: {user_record['role']}, Birlamchi parol holati: {'Almashtirish shart' if must_change else 'Faol'})"
@@ -1291,7 +1294,8 @@ def eimzo_login(req: EimzoLoginRequest, request: Request):
         inn=req.inn or user_record.get("inn"),
         image=user_record.get("image"),
         must_change_password=False,
-        permissions=db_get_user_permissions(user_record["role"])
+        permissions=db_get_user_permissions(user_record["role"]),
+        roles=user_record.get("roles") or [user_record["role"]]
     )
 
     # Audit log (JSHSHIR shaxsga doir ma'lumot sifatida niqoblanadi)
@@ -1389,7 +1393,8 @@ def change_password(req: ChangePasswordRequest):
         degree=user_record.get("degree"),
         fte=user_record.get("fte", 1.0),
         employee_id_number=user_record.get("employee_id_number"),
-        must_change_password=False
+        must_change_password=False,
+        roles=user_record.get("roles") or [user_record["role"]]
     )
 
     return {
@@ -2217,13 +2222,17 @@ def update_user_role(username: str, body: AdminUserRoleUpdate):
 
     old_role = user.get("role", "TEACHER")
     user["role"] = body.role.upper()
-    db_update_user_role(u_key, body.role.upper())
+    db_update_user_role(u_key, body.role.upper(), body.roles)
+    updated_user = db_get_user(u_key)
+    if updated_user:
+        user.update(updated_user)
 
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
-        "time": "2026-10-01 21:45",
+        "time": now_str,
         "user": "admin",
-        "action": f"Foydalanuvchi roli oʻzgartirildi: {username} ({old_role} -> {user['role']})"
+        "action": f"Foydalanuvchi roli oʻzgartirildi: {username} ({old_role} -> {user['role']}, Rollar: {user.get('roles', [])})"
     })
     return {"success": True, "message": f"Foydalanuvchi roli '{user['role']}' deb muvaffaqiyatli yangilandi", "user": user}
 

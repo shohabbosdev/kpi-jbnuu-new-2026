@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import StructureHierarchyView from "../components/StructureHierarchyView";
 import {
   LayoutDashboard,
@@ -107,7 +107,7 @@ import { HemisIntegrationPanel } from "@/components/HemisIntegrationPanel";
 import { SearchableTeacherSelect } from "@/components/SearchableTeacherSelect";
 import { AdminDashboardView } from "@/components/AdminDashboardView";
 import { RbacRolesPanel } from "@/components/RbacRolesPanel";
-import { RoleSwitcherDropdown } from "@/components/RoleSwitcherDropdown";
+import { RoleSwitcherDropdown, RoleType } from "@/components/RoleSwitcherDropdown";
 import { EimzoLoginPanel } from "@/components/EimzoLoginPanel";
 import { IconUser } from "@/components/AppCustomIcons";
 import { hasPermission } from "@/utils/rbac";
@@ -123,8 +123,29 @@ export default function KpiEnterpriseApp() {
   const [loginMethod, setLoginMethod] = useState<"PASSWORD" | "EIMZO">("PASSWORD");
 
   // Active Role and Navigation
-  const [activeRole, setActiveRole] = useState<"ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE">("ADMIN");
+  const [activeRole, setActiveRole] = useState<RoleType>("ADMIN");
   const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  // Foydalanuvchi ega bo'lgan ruxsat etilgan rollar ro'yxati (Multi-role RBAC)
+  const allowedRoles: RoleType[] = useMemo(() => {
+    if (!currentUser) return ["TEACHER"];
+    if (currentUser.role === "ADMIN") {
+      return ["ADMIN", "DEAN", "HEAD_OF_DEPT", "TEACHER", "RECTORATE"];
+    }
+    if (currentUser.roles && currentUser.roles.length > 0) {
+      return currentUser.roles as RoleType[];
+    }
+    if (currentUser.role === "HEAD_OF_DEPT") {
+      return ["HEAD_OF_DEPT", "TEACHER"];
+    }
+    if (currentUser.role === "DEAN") {
+      return ["DEAN", "TEACHER"];
+    }
+    if (currentUser.role === "RECTORATE") {
+      return ["RECTORATE", "TEACHER"];
+    }
+    return [currentUser.role as RoleType];
+  }, [currentUser]);
 
   const [activePage, setActivePage] = useState<
     "dashboard" | "structure" | "indicators" | "svetafor" | "appeals" | "doc" | "admin_settings" | "admin_users" | "admin_logs" | "admin_hemis" | "admin_indicators" | "profile" | "subjects" | "admin_rbac"
@@ -522,11 +543,18 @@ export default function KpiEnterpriseApp() {
       try {
         const parsed = JSON.parse(saved);
         setCurrentUser(parsed);
-        // Faqat ADMIN ga boshqa rollarni inspeksiya qilish ruxsati bor.
-        // Oddiy foydalanuvchilar (TEACHER, HEAD_OF_DEPT, DEAN, RECTORATE) uchun rol qatʼiy oʻziniki boʻladi!
-        if (parsed.role === "ADMIN") {
-          const savedRole = localStorage.getItem("kpi_active_role");
-          setActiveRole((savedRole as any) || "ADMIN");
+        // Ko'p rollilikni hisobga olgan holda faol rolni tiklaymiz:
+        const userRoles: RoleType[] = parsed.role === "ADMIN"
+          ? ["ADMIN", "DEAN", "HEAD_OF_DEPT", "TEACHER", "RECTORATE"]
+          : (parsed.roles && parsed.roles.length > 0)
+            ? parsed.roles
+            : (parsed.role === "HEAD_OF_DEPT" || parsed.role === "DEAN" || parsed.role === "RECTORATE")
+              ? [parsed.role, "TEACHER"]
+              : [parsed.role];
+
+        const savedRole = localStorage.getItem("kpi_active_role") as RoleType | null;
+        if (savedRole && userRoles.includes(savedRole)) {
+          setActiveRole(savedRole);
         } else {
           setActiveRole(parsed.role);
           localStorage.setItem("kpi_active_role", parsed.role);
@@ -555,16 +583,17 @@ export default function KpiEnterpriseApp() {
   }, [activePage, activeRole]);
 
   useEffect(() => {
-    // Xavfsizlik nazorati: Agar foydalanuvchi ADMIN boʻlmasa, uning roli qatʼiy oʻziniki boʻlishi shart!
-    if (currentUser && currentUser.role !== "ADMIN" && activeRole !== currentUser.role) {
-      setActiveRole(currentUser.role);
-      localStorage.setItem("kpi_active_role", currentUser.role);
+    // Xavfsizlik nazorati: Tanlangan activeRole foydalanuvchiga biriktirilgan rollar ro'yxatida bo'lishi shart!
+    if (currentUser && !allowedRoles.includes(activeRole)) {
+      const fallbackRole = allowedRoles[0] || currentUser.role;
+      setActiveRole(fallbackRole);
+      localStorage.setItem("kpi_active_role", fallbackRole);
       return;
     }
     if (activeRole) {
       localStorage.setItem("kpi_active_role", activeRole);
     }
-  }, [activeRole, currentUser?.role]);
+  }, [activeRole, currentUser, allowedRoles]);
 
   // Toggle Theme handler
   const toggleTheme = () => {
@@ -3534,20 +3563,19 @@ export default function KpiEnterpriseApp() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            {/* Admin inspector view switcher (compact unified role switcher with handcrafted SVG icons) */}
-            {currentUser.role === "ADMIN" && (
+            {/* Ko'p rolli xodimlar (Admin, Mudir, Dekan va b.) uchun Rol almashtirgich */}
+            {currentUser && allowedRoles.length > 1 ? (
               <RoleSwitcherDropdown
                 activeRole={activeRole}
+                allowedRoles={allowedRoles}
                 onSelectRole={(newRole) => {
                   setActiveRole(newRole);
                   setActivePage("dashboard");
                 }}
                 theme={theme}
               />
-            )}
-
-            {/* Non-admin user role badge */}
-            {currentUser.role !== "ADMIN" && (
+            ) : currentUser ? (
+              /* Yagona rolga ega bo'lgan foydalanuvchilar (oddiy o'qituvchi) uchun statik badge */
               <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${theme === "dark" ? "bg-slate-800/80 border-slate-700 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"
                 }`}>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -3571,7 +3599,7 @@ export default function KpiEnterpriseApp() {
                   </span>
                 )}
               </div>
-            )}
+            ) : null}
 
             {/* Quick KPI Submission button for teachers and department heads */}
             {(activeRole === "TEACHER" || activeRole === "HEAD_OF_DEPT") && (
@@ -4034,17 +4062,29 @@ export default function KpiEnterpriseApp() {
                             {u.fte} stavka
                           </td>
                           <td className="py-3 px-4">
-                            <select
-                              value={u.role}
-                              onChange={(e) => handleUpdateUserRole(u.username, e.target.value)}
-                              className={`px-2.5 py-1 text-xs font-semibold rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer shadow-sm ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-300 text-slate-900"
-                                }`}
-                            >
-                              <option value="TEACHER">TEACHER (Oʻqituvchi)</option>
-                              <option value="HEAD_OF_DEPT">HEAD_OF_DEPT (Kafedra mudiri)</option>
-                              <option value="RECTORATE">RECTORATE (Rektorat/Ekspert)</option>
-                              <option value="ADMIN">ADMIN (Bosh administrator)</option>
-                            </select>
+                            <div className="flex flex-col gap-1">
+                              <select
+                                value={u.role}
+                                onChange={(e) => handleUpdateUserRole(u.username, e.target.value)}
+                                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer shadow-sm ${theme === "dark" ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-300 text-slate-900"
+                                  }`}
+                              >
+                                <option value="TEACHER">TEACHER (Oʻqituvchi)</option>
+                                <option value="HEAD_OF_DEPT">HEAD_OF_DEPT (Kafedra mudiri)</option>
+                                <option value="DEAN">DEAN (Fakultet dekani)</option>
+                                <option value="RECTORATE">RECTORATE (Rektorat/Ekspert)</option>
+                                <option value="ADMIN">ADMIN (Bosh administrator)</option>
+                              </select>
+                              {u.roles && u.roles.length > 1 && (
+                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                  {u.roles.map((r: string) => (
+                                    <span key={r} className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                      {r}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${u.is_active !== false
