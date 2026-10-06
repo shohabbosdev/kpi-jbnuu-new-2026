@@ -2358,19 +2358,20 @@ def get_hemis_departments():
             raise HTTPException(status_code=res.status_code, detail="HEMIS dan kafedralarni yuklab boʻlmadi")
 
         raw_data = res.json().get("data", {}).get("items", [])
-        # Faqat zarur bo'lgan xizmat ma'lumotlarini qoldiramiz
-        departments = [
-            {
+        departments = []
+        for d in raw_data:
+            if not d.get("active", True):
+                continue
+            st = d.get("structureType")
+            st_dict = st if isinstance(st, dict) else {}
+            departments.append({
                 "id": d.get("id"),
                 "name": d.get("name"),
                 "code": d.get("code"),
-                "structure_type": d.get("structureType", {}).get("name", "Boshqa"),
-                "is_department": d.get("structureType", {}).get("code") == "12",
+                "structure_type": st_dict.get("name", "Boshqa"),
+                "is_department": st_dict.get("code") == "12",
                 "active": d.get("active", True)
-            }
-            for d in raw_data
-            if d.get("active", True)
-        ]
+            })
         return {"total": len(departments), "items": departments}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"HEMIS API xatoligi: {str(e)}")
