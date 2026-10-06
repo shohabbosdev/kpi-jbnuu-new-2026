@@ -483,7 +483,9 @@ export default function KpiEnterpriseApp() {
   const [showProfNewPassword, setShowProfNewPassword] = useState<boolean>(false);
   const [showProfConfirmPassword, setShowProfConfirmPassword] = useState<boolean>(false);
 
-  const API_BASE = "http://localhost:8080/api";
+  const API_BASE = typeof window !== "undefined"
+    ? (process.env.NEXT_PUBLIC_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:8080/api" : "/kpi/api"))
+    : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8080/api");
 
   // Check saved session on mount
   useEffect(() => {
@@ -5575,7 +5577,7 @@ export default function KpiEnterpriseApp() {
                         />
                       </div>
                       <a
-                        href="http://localhost:8080/api/export/kpi-excel"
+                        href={`${API_BASE}/export/kpi-excel`}
                         download
                         className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-colors"
                         title="KPI reyting natijalarini toʻliq formatlangan Excel (.xlsx) faylida yuklab olish"
@@ -5584,7 +5586,7 @@ export default function KpiEnterpriseApp() {
                         <span>Excel (.xlsx)</span>
                       </a>
                       <a
-                        href="http://localhost:8080/api/download/nizom"
+                        href={`${API_BASE}/download/nizom`}
                         className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5"
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -6107,7 +6109,7 @@ export default function KpiEnterpriseApp() {
                   </div>
                 </div>
                 <a
-                  href="http://localhost:8080/api/download/nizom"
+                  href={`${API_BASE}/download/nizom`}
                   className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />

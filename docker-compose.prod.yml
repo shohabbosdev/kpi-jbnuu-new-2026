@@ -1,0 +1,48 @@
+services:
+  # ==========================================
+  # 1. BACKEND SERVISI (FastAPI + SQLite)
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kpi_backend_2026
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8095:8080"
+    volumes:
+      - ./backend/kpi_system.db:/app/kpi_system.db
+      - ./backend/uploads:/app/uploads
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8080
+    networks:
+      - kpi_network
+
+  # ==========================================
+  # 2. FRONTEND SERVISI (Next.js SSR - /kpi)
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_BASE_PATH: /kpi
+        NEXT_PUBLIC_API_URL: /kpi/api
+    container_name: kpi_frontend_2026
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3005:3000"
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_BASE_PATH=/kpi
+      - NEXT_PUBLIC_API_URL=/kpi/api
+    networks:
+      - kpi_network
+
+networks:
+  kpi_network:
+    driver: bridge
