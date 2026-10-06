@@ -2179,14 +2179,15 @@ def get_admin_users(q: Optional[str] = None, role: Optional[str] = None):
 
     for k, v in USERS_DB.items():
         u_role = v.get("role", "TEACHER")
-        if u_role == "ADMIN": stats["admin"] += 1
-        elif u_role == "DEAN": stats["dean"] += 1
-        elif u_role == "HEAD_OF_DEPT": stats["head_of_dept"] += 1
-        elif u_role == "RECTORATE": stats["rectorate"] += 1
-        else: stats["teacher"] += 1
+        u_roles = v.get("roles") or ([u_role, "TEACHER"] if u_role in ["HEAD_OF_DEPT", "DEAN", "RECTORATE"] else [u_role])
+        if "ADMIN" in u_roles: stats["admin"] += 1
+        if "DEAN" in u_roles: stats["dean"] += 1
+        if "HEAD_OF_DEPT" in u_roles: stats["head_of_dept"] += 1
+        if "RECTORATE" in u_roles: stats["rectorate"] += 1
+        if "TEACHER" in u_roles: stats["teacher"] += 1
 
-        # Filtrlash
-        if role and role != "ALL" and u_role != role:
+        # Filtrlash (Asosiy rol yoki biriktirilgan qo'shimcha rollar bo'yicha)
+        if role and role != "ALL" and (u_role != role and role not in u_roles):
             continue
 
         search_target = f"{k} {v.get('name', '')} {v.get('department', '')} {v.get('position', '')}".lower()

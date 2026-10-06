@@ -322,10 +322,11 @@ export default function KpiEnterpriseApp() {
   const [adminUsersStats, setAdminUsersStats] = useState<{
     total: number;
     teacher: number;
+    dean: number;
     head_of_dept: number;
     rectorate: number;
     admin: number;
-  }>({ total: 0, teacher: 0, head_of_dept: 0, rectorate: 0, admin: 0 });
+  }>({ total: 0, teacher: 0, dean: 0, head_of_dept: 0, rectorate: 0, admin: 0 });
   const [userActionMessage, setUserActionMessage] = useState<string>("");
 
   // Admin Multi-role User Assignment Modal State
@@ -3939,53 +3940,65 @@ export default function KpiEnterpriseApp() {
               )}
 
               {/* Statistics Grid */}
-              <div className="grid grid-cols-4 gap-4">
-                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className={`p-3.5 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                   }`}>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[11px] font-bold uppercase text-slate-500">Jami hisoblar</span>
+                    <span className="text-[10px] font-bold uppercase text-slate-500">Jami hisoblar</span>
                     <Users className="w-4 h-4 text-slate-400" />
                   </div>
-                  <div className={`text-2xl font-black ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
+                  <div className={`text-xl font-black ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
                     {adminUsersStats.total || adminUsers.length} ta
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-1">Barcha faol tizim foydalanuvchilari</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 truncate">Barcha faol hisoblar</div>
                 </div>
 
-                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                <div className={`p-3.5 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                   }`}>
                   <div className="flex justify-between items-center mb-1">
-                    <span className={`text-[11px] font-bold uppercase ${theme === "dark" ? "text-blue-400" : "text-blue-700"}`}>Oʻqituvchilar</span>
+                    <span className={`text-[10px] font-bold uppercase ${theme === "dark" ? "text-blue-400" : "text-blue-700"}`}>Oʻqituvchilar</span>
                     <GraduationCap className="w-4 h-4 text-blue-500" />
                   </div>
-                  <div className={`text-2xl font-black ${theme === "dark" ? "text-blue-400" : "text-blue-900"}`}>
+                  <div className={`text-xl font-black ${theme === "dark" ? "text-blue-400" : "text-blue-900"}`}>
                     {adminUsersStats.teacher} nafar
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-1">TEACHER roli biriktirilgan</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 truncate">TEACHER roli</div>
                 </div>
 
-                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                <div className={`p-3.5 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                   }`}>
                   <div className="flex justify-between items-center mb-1">
-                    <span className={`text-[11px] font-bold uppercase ${theme === "dark" ? "text-sky-400" : "text-sky-700"}`}>Kafedra mudirlari</span>
+                    <span className={`text-[10px] font-bold uppercase ${theme === "dark" ? "text-sky-400" : "text-sky-700"}`}>Kafedra mudirlari</span>
                     <Building className="w-4 h-4 text-sky-500" />
                   </div>
-                  <div className={`text-2xl font-black ${theme === "dark" ? "text-sky-400" : "text-sky-900"}`}>
+                  <div className={`text-xl font-black ${theme === "dark" ? "text-sky-400" : "text-sky-900"}`}>
                     {adminUsersStats.head_of_dept} nafar
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-1">HEAD_OF_DEPT tasdiqlovchi roli</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 truncate">HEAD_OF_DEPT roli</div>
                 </div>
 
-                <div className={`p-4 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                <div className={`p-3.5 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
                   }`}>
                   <div className="flex justify-between items-center mb-1">
-                    <span className={`text-[11px] font-bold uppercase ${theme === "dark" ? "text-purple-400" : "text-purple-700"}`}>Rahbariyat & Admin</span>
+                    <span className={`text-[10px] font-bold uppercase ${theme === "dark" ? "text-indigo-400" : "text-indigo-700"}`}>Fakultet dekanlari</span>
+                    <Building className="w-4 h-4 text-indigo-500" />
+                  </div>
+                  <div className={`text-xl font-black ${theme === "dark" ? "text-indigo-400" : "text-indigo-900"}`}>
+                    {adminUsersStats.dean} nafar
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 truncate">DEAN roli</div>
+                </div>
+
+                <div className={`p-3.5 rounded-xl border shadow-sm ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className={`text-[10px] font-bold uppercase ${theme === "dark" ? "text-purple-400" : "text-purple-700"}`}>Rahbariyat & Admin</span>
                     <ShieldCheck className="w-4 h-4 text-purple-500" />
                   </div>
-                  <div className={`text-2xl font-black ${theme === "dark" ? "text-purple-400" : "text-purple-900"}`}>
+                  <div className={`text-xl font-black ${theme === "dark" ? "text-purple-400" : "text-purple-900"}`}>
                     {adminUsersStats.rectorate + adminUsersStats.admin} nafar
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-1">RECTORATE va ADMIN rollari</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 truncate">RECTORATE va ADMIN</div>
                 </div>
               </div>
 
@@ -4022,14 +4035,15 @@ export default function KpiEnterpriseApp() {
                 </div>
 
                 {/* Role Tabs */}
-                <div className="flex items-center gap-2 mb-4 text-xs">
-                  <span className={`font-semibold mr-2 ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>Roli boʻyicha filter:</span>
+                <div className="flex flex-wrap items-center gap-1.5 mb-4 text-xs">
+                  <span className={`font-semibold mr-1.5 ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>Roli boʻyicha filter:</span>
                   {[
-                    { id: "ALL", label: "Barchasi" },
-                    { id: "TEACHER", label: "Oʻqituvchilar" },
-                    { id: "HEAD_OF_DEPT", label: "Kafedra mudirlari" },
-                    { id: "RECTORATE", label: "Rektorat" },
-                    { id: "ADMIN", label: "Administratorlar" },
+                    { id: "ALL", label: "Barchasi", count: adminUsersStats.total },
+                    { id: "TEACHER", label: "Oʻqituvchilar", count: adminUsersStats.teacher },
+                    { id: "HEAD_OF_DEPT", label: "Kafedra mudirlari", count: adminUsersStats.head_of_dept },
+                    { id: "DEAN", label: "Fakultet dekanlari", count: adminUsersStats.dean },
+                    { id: "RECTORATE", label: "Filial rahbariyati", count: adminUsersStats.rectorate },
+                    { id: "ADMIN", label: "Administratorlar", count: adminUsersStats.admin },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -4039,14 +4053,25 @@ export default function KpiEnterpriseApp() {
                           .then(r => r.json())
                           .then(d => { if (d.items) setAdminUsers(d.items); });
                       }}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${adminUsersFilterRole === tab.id
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer ${adminUsersFilterRole === tab.id
                         ? "bg-blue-900 text-white shadow-sm"
                         : theme === "dark"
                           ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                     >
-                      {tab.label}
+                      <span>{tab.label}</span>
+                      {typeof tab.count === "number" && tab.count > 0 && (
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                          adminUsersFilterRole === tab.id
+                            ? "bg-blue-800 text-blue-100"
+                            : theme === "dark"
+                              ? "bg-slate-700 text-slate-300"
+                              : "bg-slate-200 text-slate-700"
+                        }`}>
+                          {tab.count}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
