@@ -19,6 +19,7 @@ HEMIS_API_TOKEN = os.getenv("HEMIS_API_TOKEN", "Qn8Jp7TVvpGdQUvWoqpBC1i0p7ukHKT0
 
 from database import (
     db_load_users, db_get_user, db_save_user, db_update_password,
+    db_get_user_by_pinfl, db_get_user_by_name, db_attach_pinfl,
     db_reset_user_password, db_update_user_role, db_toggle_user_status,
     db_load_submissions, db_save_submission, db_delete_submission,
     db_save_audit_log, db_load_audit_logs,
