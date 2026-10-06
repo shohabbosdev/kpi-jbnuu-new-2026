@@ -28,7 +28,7 @@ export const QRVerifyModal: React.FC<QRVerifyModalProps> = ({
             Oʻzbekiston Respublikasi Oliy Taʼlim, Fan va Innovatsiyalar Vazirligi
           </div>
           <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-950">
-            MIRZO ULUGʻBEK NOMIDAGI OʻZBEKISTON MILLIY UNIVERSITETI JIZZAX FILIALI
+            MIRZO ULUGʻBEK NOMIDAGI OʻZBEKISTON MILLIY UNIVERSITETINING JIZZAX FILIALI
           </h2>
           <div className="text-xs font-bold text-blue-950">
             {verifyItemData.type === "pub"
@@ -53,7 +53,7 @@ export const QRVerifyModal: React.FC<QRVerifyModalProps> = ({
               </div>
 
               <p>
-                Mirzo Ulugʻbek nomidagi Oʻzbekiston Milliy universiteti Jizzax filiali Ilmiy Kengashi fanning{" "}
+                Mirzo Ulugʻbek nomidagi Oʻzbekiston Milliy universitetining Jizzax filiali Ilmiy Kengashi fanning{" "}
                 <b>"{verifyItemData.data.subject_name}"</b> kafedrasi boʻyicha professor-oʻqituvchi{" "}
                 <b>{verifyItemData.data.authors}</b> tomonidan tayyorlangan quyidagi adabiyotni koʻrib chiqdi va
                 vazirlik grifiga tavsiya etdi:

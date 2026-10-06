@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 # .env faylini yuklash
 load_dotenv()
 HEMIS_BASE_URL = os.getenv("HEMIS_BASE_URL", "https://student.jbnuu.uz/rest/v1")
-HEMIS_API_TOKEN = os.getenv("HEMIS_API_TOKEN", "Qn8Jp7TVvpGdQUvWoqpBC1i0p7ukHKT0")
+HEMIS_API_TOKEN = os.getenv("HEMIS_API_TOKEN", "")
 
 from database import (
     db_load_users, db_get_user, db_save_user, db_update_password,
@@ -1173,73 +1173,13 @@ def get_eimzo_challenge():
     EIMZO_ACTIVE_CHALLENGES[challenge] = time.time() + 900
     return EimzoChallengeResponse(challenge=challenge, expires_in=900)
 
-@app.get("/api/auth/e-imzo/demo-keys")
-def get_eimzo_demo_keys():
-    """
-    E-IMZO dasturi bo'lmagan yoki sinovdan o'tkazmoqchi bo'lgan foydalanuvchilar uchun
-    haqiqiy DSQ E-IMZO sertifikati formatidagi namunaviy test kalitlari.
-    """
-    return {
-        "success": True,
-        "keys": [
-            {
-                "id": "demo_key_admin",
-                "cn": "Tizim Administratori (Rektorat)",
-                "pinfl": "30101851234567",
-                "inn": "548123987",
-                "org": "OʻzMU JBNUU",
-                "role": "Bosh administrator (Rektorat)",
-                "username": "admin",
-                "valid_from": "2025-01-01",
-                "valid_to": "2027-01-01",
-                "serial_number": "1A2B3C4D5E6F01"
-            },
-            {
-                "id": "demo_key_teacher_1",
-                "cn": "MUXAMADIYEV ABDINABI NURALIYEVICH",
-                "pinfl": "31508821234568",
-                "inn": "452789123",
-                "org": "OʻzMU JBNUU",
-                "role": "Dotsent (ATT kafedrasi)",
-                "username": "3881811013",
-                "valid_from": "2025-02-10",
-                "valid_to": "2027-02-10",
-                "serial_number": "1A2B3C4D5E6F02"
-            },
-            {
-                "id": "demo_key_teacher_2",
-                "cn": "TOVBOYEV BAXROM XABIBULLAYEVICH",
-                "pinfl": "32009891234569",
-                "inn": "789123456",
-                "org": "OʻzMU JBNUU",
-                "role": "Professor-oʻqituvchi",
-                "username": "3081411008",
-                "valid_from": "2025-03-15",
-                "valid_to": "2027-03-15",
-                "serial_number": "1A2B3C4D5E6F03"
-            },
-            {
-                "id": "demo_key_teacher_3",
-                "cn": "KARIMOVA HULKAR AKRAM QIZI",
-                "pinfl": "32511941234570",
-                "inn": "321654987",
-                "org": "OʻzMU JBNUU",
-                "role": "Katta oʻqituvchi",
-                "username": "3512212062",
-                "valid_from": "2025-04-01",
-                "valid_to": "2027-04-01",
-                "serial_number": "1A2B3C4D5E6F04"
-            }
-        ]
-    }
-
 @app.post("/api/auth/e-imzo/login", response_model=LoginResponse)
 def eimzo_login(req: EimzoLoginRequest, request: Request):
     """
     E-IMZO raqamli imzo orqali tizimga kirish:
     1. Challenge haqiqiyligini tekshiradi;
-    2. Sertifikatdagi JSHSHIR (PINFL) yoki F.I.Sh. bo'yicha tizimdan xodimni topadi;
-    3. Agar PINFL bog'lanmagan bo'lsa, avtomatik ravishda xodim hisobiga biriktiradi;
+    2. Sertifikatdagi JSHSHIR (PINFL) yoki F.I.Sh. boʻyicha tizimdan xodimni topadi;
+    3. Agar PINFL bogʻlanmagan boʻlsa, avtomatik ravishda xodim hisobiga biriktiradi;
     4. Xavfsiz sessiya tokeni va profilni qaytaradi.
     """
     client_ip = get_client_ip(request)
@@ -1251,9 +1191,6 @@ def eimzo_login(req: EimzoLoginRequest, request: Request):
         exp = EIMZO_ACTIVE_CHALLENGES.pop(ch)
         if time.time() > exp:
             raise HTTPException(status_code=400, detail="E-IMZO seans muddati tugadi. Iltimos, qaytadan urinib koʻring.")
-    elif ch.startswith("DEMO_CHALLENGE_") or len(ch) >= 16:
-        # Demo / offline rejim
-        pass
     else:
         raise HTTPException(status_code=400, detail="Notoʻgʻri yoki eskirgan E-IMZO tasdiq kodi (Challenge).")
 
@@ -1357,8 +1294,9 @@ def eimzo_login(req: EimzoLoginRequest, request: Request):
         permissions=db_get_user_permissions(user_record["role"])
     )
 
-    # Audit log
-    audit_msg = f"E-IMZO raqamli kalit orqali tizimga muvaffaqiyatli kirdi (JSHSHIR: {pinfl or 'mavjud emas'}, IP: {client_ip}, Rol: {user_record['role']})"
+    # Audit log (JSHSHIR shaxsga doir ma'lumot sifatida niqoblanadi)
+    masked_p = f"{pinfl[:4]}••••{pinfl[-4:]}" if len(pinfl) >= 8 else (pinfl or "mavjud emas")
+    audit_msg = f"E-IMZO raqamli kalit orqali tizimga muvaffaqiyatli kirdi (JSHSHIR: {masked_p}, IP: {client_ip}, Rol: {user_record['role']})"
     db_save_audit_log(now_str, username, audit_msg)
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,

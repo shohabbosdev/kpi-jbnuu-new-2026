@@ -128,6 +128,10 @@ export interface AuthUser {
 
 export interface EimzoKeyItem {
   id: string;
+  disk: string;
+  path: string;
+  name: string;
+  alias: string;
   cn: string;
   pinfl: string;
   inn?: string;
@@ -137,7 +141,6 @@ export interface EimzoKeyItem {
   valid_from: string;
   valid_to: string;
   serial_number: string;
-  is_demo?: boolean;
 }
 
 export interface RbacPermission {

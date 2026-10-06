@@ -74,7 +74,7 @@ export default function StructureHierarchyView({
   const visibleFaculties = faculties.filter(f => {
     if (userRole === "DEAN" && userFaculty) {
       return f.name.toLowerCase().includes(userFaculty.toLowerCase()) ||
-             userFaculty.toLowerCase().includes(f.name.toLowerCase());
+        userFaculty.toLowerCase().includes(f.name.toLowerCase());
     }
     return true;
   });
@@ -82,11 +82,10 @@ export default function StructureHierarchyView({
   return (
     <div className="space-y-6">
       {/* Branch Header Overview Card */}
-      <div className={`p-6 rounded-2xl border transition-all ${
-        theme === "dark"
-          ? "bg-slate-900/90 border-slate-800 shadow-xl"
-          : "bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-lg"
-      }`}>
+      <div className={`p-6 rounded-2xl border transition-all ${theme === "dark"
+        ? "bg-slate-900/90 border-slate-800 shadow-xl"
+        : "bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-lg"
+        }`}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-blue-600/30 border border-blue-400/30 flex items-center justify-center flex-shrink-0">
@@ -100,7 +99,7 @@ export default function StructureHierarchyView({
                 <span className="text-xs text-blue-200/80">Filial — Fakultet — Kafedra</span>
               </div>
               <h2 className="text-xl md:text-2xl font-black mt-1 text-white">
-                {hierarchyData?.branch_name || "Oʻzbekiston Milliy universiteti Jizzax filiali"}
+                {hierarchyData?.branch_name || "Oʻzbekiston Milliy Universitetining Jizzax filiali"}
               </h2>
               <p className="text-xs text-blue-200/80 mt-1">
                 Kafedralar va fakultetlar faoliyatining meʼzonlar boʻyicha integratsiyalashgan daraxtsimon tuzilmasi
@@ -126,9 +125,8 @@ export default function StructureHierarchyView({
       </div>
 
       {/* Role Navigation Banner */}
-      <div className={`p-4 rounded-xl border flex items-center justify-between ${
-        theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-300" : "bg-blue-50 border-blue-200 text-blue-900"
-      }`}>
+      <div className={`p-4 rounded-xl border flex items-center justify-between ${theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-300" : "bg-blue-50 border-blue-200 text-blue-900"
+        }`}>
         <div className="flex items-center gap-2 text-xs font-semibold">
           <Filter className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           <span>Sizning tizimdagi birikmangiz:</span>
@@ -136,10 +134,10 @@ export default function StructureHierarchyView({
             {userRole === "DEAN"
               ? `Fakultet Dekani (${userFaculty || "Psixologiya fakulteti"})`
               : userRole === "HEAD_OF_DEPT"
-              ? `Kafedra Mudiri (${userDepartment || "Amaliy matematika"})`
-              : userRole === "RECTORATE"
-              ? "Filial Rahbariyati (Barcha 3 ta fakultet va 9 ta kafedra)"
-              : "Administrator boshqaruvi"}
+                ? `Kafedra Mudiri (${userDepartment || "Amaliy matematika"})`
+                : userRole === "RECTORATE"
+                  ? "Filial Rahbariyati (Barcha 3 ta fakultet va 9 ta kafedra)"
+                  : "Administrator boshqaruvi"}
           </span>
         </div>
         <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -159,18 +157,16 @@ export default function StructureHierarchyView({
           return (
             <div
               key={faculty.id}
-              className={`rounded-2xl border transition-all ${
-                theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
-              }`}
+              className={`rounded-2xl border transition-all ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+                }`}
             >
               {/* Faculty Card Header */}
               <div
                 onClick={() => toggleFaculty(faculty.id)}
-                className={`p-5 flex items-center justify-between cursor-pointer border-b transition-colors rounded-t-2xl ${
-                  theme === "dark"
-                    ? "border-slate-800 hover:bg-slate-800/50"
-                    : "border-slate-100 hover:bg-slate-50"
-                }`}
+                className={`p-5 flex items-center justify-between cursor-pointer border-b transition-colors rounded-t-2xl ${theme === "dark"
+                  ? "border-slate-800 hover:bg-slate-800/50"
+                  : "border-slate-100 hover:bg-slate-50"
+                  }`}
               >
                 <div className="flex items-center gap-4">
                   <div className="w-11 h-11 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-300 flex items-center justify-center font-bold">
@@ -211,9 +207,8 @@ export default function StructureHierarchyView({
                     </div>
                   </div>
                   <button
-                    className={`p-2 rounded-lg ${
-                      theme === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"
-                    }`}
+                    className={`p-2 rounded-lg ${theme === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"
+                      }`}
                   >
                     {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                   </button>
@@ -237,15 +232,14 @@ export default function StructureHierarchyView({
                           setSelectedDeptId(dept.id);
                           if (onSelectDepartment) onSelectDepartment(dept.name);
                         }}
-                        className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                          isUserDept
-                            ? "ring-2 ring-blue-600 bg-blue-50/60 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800"
-                            : isSelected
+                        className={`p-4 rounded-xl border transition-all cursor-pointer ${isUserDept
+                          ? "ring-2 ring-blue-600 bg-blue-50/60 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800"
+                          : isSelected
                             ? "ring-2 ring-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 border-indigo-300 dark:border-indigo-800"
                             : theme === "dark"
-                            ? "bg-slate-800/80 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600"
-                            : "bg-white border-slate-200 hover:border-blue-300 hover:shadow-md"
-                        }`}
+                              ? "bg-slate-800/80 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600"
+                              : "bg-white border-slate-200 hover:border-blue-300 hover:shadow-md"
+                          }`}
                       >
                         <div className="flex justify-between items-start gap-2">
                           <div className="min-w-0">
@@ -266,13 +260,12 @@ export default function StructureHierarchyView({
                           </div>
 
                           <div className="text-right flex-shrink-0">
-                            <span className={`px-2 py-1 rounded-lg text-xs font-black ${
-                              dept.avg_score >= 85
-                                ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
-                                : dept.avg_score >= 70
+                            <span className={`px-2 py-1 rounded-lg text-xs font-black ${dept.avg_score >= 85
+                              ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                              : dept.avg_score >= 70
                                 ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300"
                                 : "bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300"
-                            }`}>
+                              }`}>
                               {dept.avg_score} ball
                             </span>
                           </div>

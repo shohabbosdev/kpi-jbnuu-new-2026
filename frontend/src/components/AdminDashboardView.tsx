@@ -75,8 +75,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const avgBranchScore =
     teachers.length > 0
       ? (
-          teachers.reduce((acc, t) => acc + (t.scores?.normalized_score || 0), 0) / teachers.length
-        ).toFixed(1)
+        teachers.reduce((acc, t) => acc + (t.scores?.normalized_score || 0), 0) / teachers.length
+      ).toFixed(1)
       : "78.4";
 
   const approvedSubs = submissions.filter((s) => s.status === "APPROVED").length;
@@ -86,9 +86,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* 1. HERO COMMAND BANNER */}
       <div
-        className={`rounded-3xl border shadow-sm p-6 sm:p-8 relative overflow-hidden ${
-          theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-        }`}
+        className={`rounded-3xl border shadow-sm p-6 sm:p-8 relative overflow-hidden ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+          }`}
       >
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-blue-600/10 via-emerald-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
@@ -102,7 +101,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               Assalomu alaykum, {currentUser?.name || "Bosh Administrator"}!
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
-              Oʻzbekiston Milliy universiteti Jizzax filiali professor-oʻqituvchilari faoliyatini baholash (KPI),
+              ning Jizzax filiali professor-oʻqituvchilari faoliyatini baholash (KPI),
               HEMIS axborot tizimi integratsiyasi va tashkiliy monitoring portali.
             </p>
           </div>
@@ -110,9 +109,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           {/* Davr va HEMIS status vidjeti */}
           <div className="flex flex-wrap sm:flex-nowrap gap-3 shrink-0">
             <div
-              className={`p-3.5 rounded-2xl border text-xs min-w-[170px] ${
-                theme === "dark" ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"
-              }`}
+              className={`p-3.5 rounded-2xl border text-xs min-w-[170px] ${theme === "dark" ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"
+                }`}
             >
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
                 <span className="font-semibold text-[11px]">Baholash davri:</span>
@@ -127,9 +125,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
 
             <div
-              className={`p-3.5 rounded-2xl border text-xs min-w-[170px] ${
-                theme === "dark" ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"
-              }`}
+              className={`p-3.5 rounded-2xl border text-xs min-w-[170px] ${theme === "dark" ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"
+                }`}
             >
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
                 <span className="font-semibold text-[11px]">HEMIS API aloqasi:</span>
@@ -151,9 +148,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         {/* Pedagoglar va xodimlar */}
         <div
           onClick={() => setActivePage("admin_hemis")}
-          className={`p-5 rounded-2xl border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer group ${
-            theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-blue-700" : "bg-white border-slate-200 hover:border-blue-300"
-          }`}
+          className={`p-5 rounded-2xl border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer group ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-blue-700" : "bg-white border-slate-200 hover:border-blue-300"
+            }`}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-900 dark:text-blue-300 flex items-center justify-center">
@@ -178,9 +174,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         {/* Tashkiliy tuzilma */}
         <div
           onClick={() => setActivePage("structure")}
-          className={`p-5 rounded-2xl border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer group ${
-            theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-amber-700" : "bg-white border-slate-200 hover:border-amber-300"
-          }`}
+          className={`p-5 rounded-2xl border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer group ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-amber-700" : "bg-white border-slate-200 hover:border-amber-300"
+            }`}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 flex items-center justify-center">
@@ -205,9 +200,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         {/* Hujjatlar va Natijalar */}
         <div
           onClick={() => setActivePage("admin_settings")}
-          className={`p-5 rounded-2xl border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer group ${
-            theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-emerald-700" : "bg-white border-slate-200 hover:border-emerald-300"
-          }`}
+          className={`p-5 rounded-2xl border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer group ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-emerald-700" : "bg-white border-slate-200 hover:border-emerald-300"
+            }`}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
@@ -232,9 +226,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         {/* Oʻrtacha Filial KPI Bali */}
         <div
           onClick={() => setActivePage("svetafor")}
-          className={`p-5 rounded-2xl border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer group ${
-            theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-purple-700" : "bg-white border-slate-200 hover:border-purple-300"
-          }`}
+          className={`p-5 rounded-2xl border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer group ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-purple-700" : "bg-white border-slate-200 hover:border-purple-300"
+            }`}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 flex items-center justify-center">
@@ -267,9 +260,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           <button
             type="button"
             onClick={() => setActivePage("admin_users")}
-            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${
-              theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-blue-800" : "bg-white border-slate-200 hover:border-blue-300"
-            }`}
+            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-blue-800" : "bg-white border-slate-200 hover:border-blue-300"
+              }`}
           >
             <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-300 flex items-center justify-center shrink-0">
               <Users className="w-6 h-6" />
@@ -292,9 +284,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           <button
             type="button"
             onClick={() => setActivePage("admin_rbac")}
-            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${
-              theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-indigo-800" : "bg-white border-slate-200 hover:border-indigo-300"
-            }`}
+            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-indigo-800" : "bg-white border-slate-200 hover:border-indigo-300"
+              }`}
           >
             <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 flex items-center justify-center shrink-0">
               <IconShield size={24} />
@@ -317,9 +308,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           <button
             type="button"
             onClick={() => setActivePage("subjects")}
-            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${
-              theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-emerald-800" : "bg-white border-slate-200 hover:border-emerald-300"
-            }`}
+            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-emerald-800" : "bg-white border-slate-200 hover:border-emerald-300"
+              }`}
           >
             <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center justify-center shrink-0">
               <IconBook size={24} />
@@ -342,9 +332,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           <button
             type="button"
             onClick={() => setActivePage("admin_hemis")}
-            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${
-              theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-teal-800" : "bg-white border-slate-200 hover:border-teal-300"
-            }`}
+            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-teal-800" : "bg-white border-slate-200 hover:border-teal-300"
+              }`}
           >
             <div className="w-12 h-12 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 flex items-center justify-center shrink-0">
               <IconDatabase size={24} />
@@ -367,9 +356,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           <button
             type="button"
             onClick={() => setActivePage("structure")}
-            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${
-              theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-amber-800" : "bg-white border-slate-200 hover:border-amber-300"
-            }`}
+            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-amber-800" : "bg-white border-slate-200 hover:border-amber-300"
+              }`}
           >
             <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
               <IconBuilding size={24} />
@@ -392,9 +380,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           <button
             type="button"
             onClick={() => setActivePage("admin_settings")}
-            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${
-              theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-rose-800" : "bg-white border-slate-200 hover:border-rose-300"
-            }`}
+            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-rose-800" : "bg-white border-slate-200 hover:border-rose-300"
+              }`}
           >
             <div className="w-12 h-12 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 flex items-center justify-center shrink-0">
               <Settings className="w-6 h-6" />
@@ -417,9 +404,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           <button
             type="button"
             onClick={() => setActivePage("admin_logs")}
-            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${
-              theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-slate-700" : "bg-white border-slate-200 hover:border-slate-300"
-            }`}
+            className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-start gap-4 ${theme === "dark" ? "bg-slate-900 border-slate-800 hover:border-slate-700" : "bg-white border-slate-200 hover:border-slate-300"
+              }`}
           >
             <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
               <Activity className="w-6 h-6" />
@@ -442,9 +428,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
       {/* 4. FILIAL SVETAFOR REYTINQI BLOKI */}
       <div
-        className={`rounded-3xl border shadow-sm p-6 ${
-          theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-        }`}
+        className={`rounded-3xl border shadow-sm p-6 ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+          }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>

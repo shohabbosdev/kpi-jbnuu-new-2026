@@ -2493,7 +2493,7 @@ export default function KpiEnterpriseApp() {
               />
             </div>
             <h1 className="text-xl font-bold text-white tracking-tight">
-              Oʻzbekiston Milliy Universiteti
+              Oʻzbekiston Milliy universitetining
             </h1>
             <p className="text-sm font-semibold text-blue-400 mt-0.5">
               Jizzax filiali KPI axborot tizimi
@@ -2644,7 +2644,7 @@ export default function KpiEnterpriseApp() {
 
           {/* Footer note */}
           <div className="text-center mt-6 text-xs text-slate-400">
-            Oʻzbekiston Milliy universiteti Jizzax filiali axborot xavfsizligi xizmati nazorati ostida
+            Oʻzbekiston Milliy universitetining Jizzax filiali axborot xavfsizligi xizmati nazorati ostida
           </div>
         </div>
       </div>
@@ -5374,7 +5374,7 @@ export default function KpiEnterpriseApp() {
                               Fakultet dekanati
                             </span>
                             <span className="text-xs text-slate-400 font-medium">
-                              Oʻzbekiston Milliy universiteti Jizzax filiali
+                              Oʻzbekiston Milliy universitetining Jizzax filiali
                             </span>
                           </div>
                           <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
