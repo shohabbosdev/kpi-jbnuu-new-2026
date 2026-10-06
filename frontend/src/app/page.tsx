@@ -2574,6 +2574,7 @@ export default function KpiEnterpriseApp() {
                     <input
                       type="text"
                       required
+                      autoComplete="username"
                       value={loginUsername}
                       onChange={(e) => setLoginUsername(e.target.value)}
                       placeholder="Masalan: 3082312087 yoki admin"
@@ -2594,6 +2595,7 @@ export default function KpiEnterpriseApp() {
                     <input
                       type={showLoginPassword ? "text" : "password"}
                       required
+                      autoComplete="current-password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="HEMIS ID yoki shaxsiy parol"

@@ -139,6 +139,15 @@ export class EimzoService {
       });
     }
 
+    if (data && !data.success) {
+      if (data.reason && (data.reason.includes("API-kalit") || data.reason.includes("API-key") || data.status === -1022)) {
+        throw new Error(
+          `E-IMZO: ${data.reason}. Kompyuteringizdagi E-IMZO dasturi menyusida "Разработка" -> "Режим разработчика" ni yoqing (yoki jbnuu.uz domeniga API-kalit oʻrnating).`
+        );
+      }
+      throw new Error(data.reason || "E-IMZO kalitlarini oʻqib boʻlmadi");
+    }
+
     return [];
   }
 
