@@ -1,6 +1,6 @@
 # OʻzMU Jizzax Filiali — KPI Axborot Tizimi (2026)
 
-Oʻzbekiston Milliy universiteti Jizzax filiali professor-oʻqituvchilari va kafedralari faoliyati samaradorligini baholash (KPI), HEMIS axborot tizimi bilan toʻliq integratsiyalashgan, 41 ta mezon asosida Svetafor usulida tahlil qiluvchi va ustamalarni avtomatlashtirilgan tarzda hisoblovchi yagona platforma.
+Oʻzbekiston Milliy universitetining Jizzax filiali professor-oʻqituvchilari va kafedralari faoliyati samaradorligini baholash (KPI), HEMIS axborot tizimi bilan toʻliq integratsiyalashgan, 41 ta mezon asosida Svetafor usulida tahlil qiluvchi va ustamalarni avtomatlashtirilgan tarzda hisoblovchi yagona platforma.
 
 ---
 

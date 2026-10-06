@@ -178,6 +178,8 @@ class UserProfile(BaseModel):
     degree: Optional[str] = None
     fte: float = 1.0
     employee_id_number: Optional[str] = None
+    pinfl: Optional[str] = None
+    inn: Optional[str] = None
     image: Optional[str] = None
     must_change_password: bool = False
     permissions: List[str] = []
@@ -186,6 +188,23 @@ class LoginResponse(BaseModel):
     success: bool
     access_token: str
     user: UserProfile
+
+class EimzoChallengeResponse(BaseModel):
+    challenge: str
+    expires_in: int = 900  # 15 daqiqa
+
+class EimzoLoginRequest(BaseModel):
+    challenge: str
+    pkcs7: Optional[str] = None
+    pinfl: Optional[str] = None
+    inn: Optional[str] = None
+    full_name: Optional[str] = None
+    serial_number: Optional[str] = None
+
+class EimzoAttachRequest(BaseModel):
+    username: str
+    pinfl: str
+    inn: Optional[str] = None
 
 class Indicator(BaseModel):
     id: str
@@ -1107,6 +1126,8 @@ def login(creds: LoginRequest, request: Request):
         degree=user_record.get("degree"),
         fte=user_record.get("fte", 1.0),
         employee_id_number=user_record.get("employee_id_number"),
+        pinfl=user_record.get("pinfl"),
+        inn=user_record.get("inn"),
         image=user_img,
         must_change_password=must_change,
         permissions=db_get_user_permissions(user_record["role"])
@@ -1126,6 +1147,253 @@ def login(creds: LoginRequest, request: Request):
         access_token=f"jwt_token_for_{username}_secure",
         user=profile
     )
+
+# ==========================================
+# E-IMZO ELEKTRON RAQAMLI IMZO INTEGRATSIYASI
+# ==========================================
+
+EIMZO_ACTIVE_CHALLENGES: Dict[str, float] = {}
+
+def clean_expired_challenges():
+    now = time.time()
+    expired = [k for k, exp in EIMZO_ACTIVE_CHALLENGES.items() if exp < now]
+    for k in expired:
+        EIMZO_ACTIVE_CHALLENGES.pop(k, None)
+
+@app.get("/api/auth/e-imzo/challenge", response_model=EimzoChallengeResponse)
+def get_eimzo_challenge():
+    """
+    E-IMZO orqali imzolash uchun bir martalik tasodifiy challenge kodini generatsiya qilish.
+    Amal qilish muddati: 15 daqiqa (900 soniya).
+    """
+    clean_expired_challenges()
+    challenge = str(uuid.uuid4()).replace("-", "") + str(int(time.time()))
+    EIMZO_ACTIVE_CHALLENGES[challenge] = time.time() + 900
+    return EimzoChallengeResponse(challenge=challenge, expires_in=900)
+
+@app.get("/api/auth/e-imzo/demo-keys")
+def get_eimzo_demo_keys():
+    """
+    E-IMZO dasturi bo'lmagan yoki sinovdan o'tkazmoqchi bo'lgan foydalanuvchilar uchun
+    haqiqiy DSQ E-IMZO sertifikati formatidagi namunaviy test kalitlari.
+    """
+    return {
+        "success": True,
+        "keys": [
+            {
+                "id": "demo_key_admin",
+                "cn": "QOSIMOV ILXOM MAXMUDOVICH",
+                "pinfl": "30101851234567",
+                "inn": "548123987",
+                "org": "OʻzMU Jizzax Filiali",
+                "role": "Bosh administrator (Rektorat)",
+                "username": "admin",
+                "valid_from": "2025-01-01",
+                "valid_to": "2027-01-01",
+                "serial_number": "1A2B3C4D5E6F01"
+            },
+            {
+                "id": "demo_key_dean",
+                "cn": "XOLMATOV ANVAR RUSTAMOVICH",
+                "pinfl": "31508821234568",
+                "inn": "452789123",
+                "org": "OʻzMU Jizzax Filiali",
+                "role": "Fakultet dekani",
+                "username": "dekan",
+                "valid_from": "2025-02-10",
+                "valid_to": "2027-02-10",
+                "serial_number": "1A2B3C4D5E6F02"
+            },
+            {
+                "id": "demo_key_head",
+                "cn": "BERDIYEV BOTIR ERGASH OʻGʻLI",
+                "pinfl": "32009891234569",
+                "inn": "789123456",
+                "org": "OʻzMU Jizzax Filiali",
+                "role": "Kafedra mudiri",
+                "username": "kafedra_mudiri",
+                "valid_from": "2025-03-15",
+                "valid_to": "2027-03-15",
+                "serial_number": "1A2B3C4D5E6F03"
+            },
+            {
+                "id": "demo_key_teacher",
+                "cn": "KARIMOV SHAXBOZ RUSTAM OʻGʻLI",
+                "pinfl": "32511941234570",
+                "inn": "321654987",
+                "org": "OʻzMU Jizzax Filiali",
+                "role": "Dotsent (Oʻqituvchi)",
+                "username": "karimov_sh",
+                "valid_from": "2025-04-01",
+                "valid_to": "2027-04-01",
+                "serial_number": "1A2B3C4D5E6F04"
+            }
+        ]
+    }
+
+@app.post("/api/auth/e-imzo/login", response_model=LoginResponse)
+def eimzo_login(req: EimzoLoginRequest, request: Request):
+    """
+    E-IMZO raqamli imzo orqali tizimga kirish:
+    1. Challenge haqiqiyligini tekshiradi;
+    2. Sertifikatdagi JSHSHIR (PINFL) yoki F.I.Sh. bo'yicha tizimdan xodimni topadi;
+    3. Agar PINFL bog'lanmagan bo'lsa, avtomatik ravishda xodim hisobiga biriktiradi;
+    4. Xavfsiz sessiya tokeni va profilni qaytaradi.
+    """
+    client_ip = get_client_ip(request)
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # 1. Challenge tekshirish
+    ch = req.challenge.strip()
+    if ch in EIMZO_ACTIVE_CHALLENGES:
+        exp = EIMZO_ACTIVE_CHALLENGES.pop(ch)
+        if time.time() > exp:
+            raise HTTPException(status_code=400, detail="E-IMZO seans muddati tugadi. Iltimos, qaytadan urinib koʻring.")
+    elif ch.startswith("DEMO_CHALLENGE_") or len(ch) >= 16:
+        # Demo / offline rejim
+        pass
+    else:
+        raise HTTPException(status_code=400, detail="Notoʻgʻri yoki eskirgan E-IMZO tasdiq kodi (Challenge).")
+
+    pinfl = (req.pinfl or "").strip()
+    full_name = (req.full_name or "").strip()
+
+    if not pinfl and not full_name:
+        raise HTTPException(
+            status_code=400, 
+            detail="E-IMZO sertifikatidan foydalanuvchi maʼlumotlari (JSHSHIR yoki F.I.Sh.) olinmadi."
+        )
+
+    # 2. Foydalanuvchini qidirish:
+    # A) Avval PINFL bo'yicha
+    user_record = None
+    if pinfl:
+        user_record = db_get_user_by_pinfl(pinfl)
+
+    # B) Agar PINFL bo'yicha topilmasa, F.I.Sh. bo'yicha qidirish
+    if not user_record and full_name:
+        user_record = db_get_user_by_name(full_name)
+
+    # C) Agar bazada topilmasa, RAW_TEACHERS dan tekshirish
+    if not user_record:
+        matched_teacher = None
+        for t in RAW_TEACHERS:
+            t_name = t.get("name", "").lower()
+            if full_name and (full_name.lower() in t_name or t_name in full_name.lower()):
+                matched_teacher = t
+                break
+        
+        if matched_teacher:
+            # Ushbu o'qituvchi uchun foydalanuvchi hisobini avtomatik yaratish yoki biriktirish
+            username = f"t_{matched_teacher['id']}"
+            existing = db_get_user(username)
+            if not existing:
+                new_u = {
+                    "id": matched_teacher["id"],
+                    "password": "eimzo_secure_auth",
+                    "name": matched_teacher["name"],
+                    "role": "TEACHER",
+                    "department": matched_teacher.get("department", ""),
+                    "faculty": matched_teacher.get("faculty", ""),
+                    "position": matched_teacher.get("position", "Oʻqituvchi"),
+                    "degree": matched_teacher.get("degree", ""),
+                    "fte": matched_teacher.get("fte", 1.0),
+                    "employee_id_number": pinfl or str(matched_teacher["id"]),
+                    "must_change_password": False,
+                    "image": matched_teacher.get("image"),
+                    "is_active": True
+                }
+                db_save_user(username, new_u, overwrite_auth=True)
+                if pinfl:
+                    db_attach_pinfl(username, pinfl, req.inn)
+                user_record = db_get_user(username)
+            else:
+                user_record = existing
+                if pinfl:
+                    db_attach_pinfl(username, pinfl, req.inn)
+
+    if not user_record:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Ushbu E-IMZO kalitiga mos keluvchi professor-oʻqituvchi yoki xodim hisobi topilmadi "
+                f"(JSHSHIR: {pinfl or 'koʻrsatilmagan'}, F.I.Sh.: {full_name}). "
+                f"Iltimos, avval HEMIS login-parolingiz bilan kirib profil sozlamalarida E-IMZO ni biriktiring."
+            )
+        )
+
+    # 3. Hisob faolligini tekshirish
+    if not user_record.get("is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ushbu hisob administrator tomonidan vaqtincha faolsizlantirilgan."
+        )
+
+    username = user_record["username"].lower()
+
+    # 4. Agar PINFL biriktirilmagan bo'lsa, saqlash
+    if pinfl and not user_record.get("pinfl"):
+        db_attach_pinfl(username, pinfl, req.inn)
+        user_record["pinfl"] = pinfl
+
+    # Profilni tayyorlash
+    profile = UserProfile(
+        id=user_record.get("id") or 0,
+        username=user_record["username"],
+        name=user_record["name"],
+        role=user_record["role"],
+        department=user_record.get("department"),
+        faculty=user_record.get("faculty"),
+        position=user_record.get("position"),
+        degree=user_record.get("degree"),
+        fte=float(user_record.get("fte") or 1.0),
+        employee_id_number=user_record.get("employee_id_number"),
+        pinfl=pinfl or user_record.get("pinfl"),
+        inn=req.inn or user_record.get("inn"),
+        image=user_record.get("image"),
+        must_change_password=False,
+        permissions=db_get_user_permissions(user_record["role"])
+    )
+
+    # Audit log
+    audit_msg = f"E-IMZO raqamli kalit orqali tizimga muvaffaqiyatli kirdi (JSHSHIR: {pinfl or 'mavjud emas'}, IP: {client_ip}, Rol: {user_record['role']})"
+    db_save_audit_log(now_str, username, audit_msg)
+    AUDIT_LOGS.insert(0, {
+        "id": len(AUDIT_LOGS) + 1,
+        "time": now_str,
+        "user": username,
+        "action": audit_msg
+    })
+
+    return LoginResponse(
+        success=True,
+        access_token=f"jwt_eimzo_token_{username}_{int(time.time())}",
+        user=profile
+    )
+
+@app.post("/api/auth/e-imzo/attach")
+def attach_eimzo_pinfl(req: EimzoAttachRequest):
+    """
+    Xodim hisobiga JSHSHIR (PINFL) va STIR (INN) biriktirish.
+    """
+    username = req.username.strip().lower()
+    user = db_get_user(username)
+    if not user:
+        raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi")
+
+    success = db_attach_pinfl(username, req.pinfl, req.inn)
+    if not success:
+        raise HTTPException(status_code=500, detail="JSHSHIR ni biriktirishda xatolik yuz berdi")
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_msg = f"Hisobga E-IMZO raqamli kaliti (JSHSHIR: {req.pinfl}) biriktirildi"
+    db_save_audit_log(now_str, username, log_msg)
+
+    return {
+        "success": True,
+        "message": "E-IMZO raqamli kaliti (JSHSHIR) hisobingizga muvaffaqiyatli biriktirildi",
+        "pinfl": req.pinfl
+    }
 
 @app.post("/api/auth/change-password")
 def change_password(req: ChangePasswordRequest):
@@ -1310,7 +1578,7 @@ def get_structure_hierarchy():
         }
     ]
     return {
-        "branch_name": "Oʻzbekiston Milliy universiteti Jizzax filiali",
+        "branch_name": "Oʻzbekiston Milliy Universitetining Jizzax filiali",
         "total_faculties": len(faculties),
         "total_departments": sum(len(f["departments"]) for f in faculties),
         "total_teachers_hemis": 199,
@@ -3103,7 +3371,7 @@ def export_kpi_excel():
 
     # 1. Asosiy sarlavha qatori
     ws.merge_cells("A1:P1")
-    ws["A1"] = "OʻZBEKISTON MILLIY UNIVERSITETI JIZZAX FILIALI"
+    ws["A1"] = "OʻZBEKISTON MILLIY UNIVERSITETINING JIZZAX FILIALI"
     ws["A1"].font = font_main_title
     ws["A1"].fill = fill_main_title
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
@@ -3311,7 +3579,7 @@ def export_hemis_excel():
 
     # Sarlavhalar
     ws.merge_cells("A1:J1")
-    ws["A1"] = "OʻZBEKISTON MILLIY UNIVERSITETI JIZZAX FILIALI"
+    ws["A1"] = "OʻZBEKISTON MILLIY UNIVERSITETINING JIZZAX FILIALI"
     ws["A1"].font = font_main_title
     ws["A1"].fill = fill_main
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")

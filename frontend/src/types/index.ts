@@ -122,6 +122,22 @@ export interface AuthUser {
   image?: string;
   must_change_password?: boolean;
   permissions?: string[];
+  pinfl?: string;
+  inn?: string;
+}
+
+export interface EimzoKeyItem {
+  id: string;
+  cn: string;
+  pinfl: string;
+  inn?: string;
+  org?: string;
+  role?: string;
+  username?: string;
+  valid_from: string;
+  valid_to: string;
+  serial_number: string;
+  is_demo?: boolean;
 }
 
 export interface RbacPermission {

@@ -46,6 +46,14 @@ def init_db():
         cursor.execute("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1;")
     except Exception:
         pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN pinfl TEXT;")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN inn TEXT;")
+    except Exception:
+        pass
     
     # 2. Submissions / Applications table
     cursor.execute("""
@@ -632,6 +640,61 @@ def db_get_user(username: str) -> Optional[Dict[str, Any]]:
     d["must_change_password"] = bool(d.get("must_change_password", 0))
     d["is_active"] = bool(d.get("is_active", 1))
     return d
+
+def db_get_user_by_pinfl(pinfl: str) -> Optional[Dict[str, Any]]:
+    if not pinfl or len(pinfl.strip()) < 5:
+        return None
+    clean_p = pinfl.strip()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE pinfl = ? OR employee_id_number = ?", (clean_p, clean_p))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["must_change_password"] = bool(d.get("must_change_password", 0))
+    d["is_active"] = bool(d.get("is_active", 1))
+    return d
+
+def db_get_user_by_name(full_name: str) -> Optional[Dict[str, Any]]:
+    if not full_name or len(full_name.strip()) < 3:
+        return None
+    clean_n = full_name.strip()
+    conn = get_connection()
+    cursor = conn.cursor()
+    # To'liq moslik yoki LIKE orqali qidirish
+    cursor.execute("SELECT * FROM users WHERE LOWER(name) = LOWER(?)", (clean_n,))
+    row = cursor.fetchone()
+    if not row:
+        # F.I.Sh. qismlari bo'yicha qidirib ko'rish
+        parts = [p for p in clean_n.split() if len(p) >= 3]
+        if len(parts) >= 2:
+            query = "SELECT * FROM users WHERE LOWER(name) LIKE ? AND LOWER(name) LIKE ?"
+            cursor.execute(query, (f"%{parts[0].lower()}%", f"%{parts[1].lower()}%"))
+            row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["must_change_password"] = bool(d.get("must_change_password", 0))
+    d["is_active"] = bool(d.get("is_active", 1))
+    return d
+
+def db_attach_pinfl(username: str, pinfl: str, inn: Optional[str] = None) -> bool:
+    if not username or not pinfl:
+        return False
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE users 
+        SET pinfl = ?, inn = COALESCE(?, inn)
+        WHERE LOWER(username) = LOWER(?)
+    """, (pinfl.strip(), inn.strip() if inn else None, username.strip()))
+    affected = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return affected
 
 def db_save_user(username: str, data: Dict[str, Any], overwrite_auth: bool = False):
     conn = get_connection()

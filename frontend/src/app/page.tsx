@@ -108,6 +108,7 @@ import { SearchableTeacherSelect } from "@/components/SearchableTeacherSelect";
 import { AdminDashboardView } from "@/components/AdminDashboardView";
 import { RbacRolesPanel } from "@/components/RbacRolesPanel";
 import { RoleSwitcherDropdown } from "@/components/RoleSwitcherDropdown";
+import { EimzoLoginPanel } from "@/components/EimzoLoginPanel";
 import { IconUser } from "@/components/AppCustomIcons";
 import { hasPermission } from "@/utils/rbac";
 
@@ -119,6 +120,7 @@ export default function KpiEnterpriseApp() {
   const [showLoginPassword, setShowLoginPassword] = useState<boolean>(false);
   const [loginError, setLoginError] = useState<string>("");
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+  const [loginMethod, setLoginMethod] = useState<"PASSWORD" | "EIMZO">("PASSWORD");
 
   // Active Role and Navigation
   const [activeRole, setActiveRole] = useState<"ADMIN" | "DEAN" | "HEAD_OF_DEPT" | "TEACHER" | "RECTORATE">("ADMIN");
@@ -1746,6 +1748,27 @@ export default function KpiEnterpriseApp() {
     }
   }, [activePage, hemisEmployeeType]);
 
+  const applyUserSession = (user: AuthUser, passwordUsed?: string) => {
+    setCurrentUser(user);
+    setActiveRole(user.role);
+    localStorage.setItem("kpi_session_user", JSON.stringify(user));
+    localStorage.setItem("kpi_active_role", user.role);
+
+    // Agar oʻqituvchi yoki kafedra mudiri boʻlsa, filtrlarni oʻziga moslab mustahkamlaymiz
+    if (user.role === "TEACHER") {
+      setSelectedTeacherId(user.id);
+      setSelectedDeptFilter(user.department || "ALL");
+    } else if (user.role === "HEAD_OF_DEPT") {
+      setSelectedDeptFilter(user.department || "ALL");
+    }
+
+    setActivePage("dashboard");
+
+    if (user.must_change_password && passwordUsed) {
+      setCurrentPasswordInput(passwordUsed);
+    }
+  };
+
   // Handle Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1770,24 +1793,7 @@ export default function KpiEnterpriseApp() {
       }
 
       const user: AuthUser = data.user;
-      setCurrentUser(user);
-      setActiveRole(user.role);
-      localStorage.setItem("kpi_session_user", JSON.stringify(user));
-      localStorage.setItem("kpi_active_role", user.role);
-
-      // Agar oʻqituvchi yoki kafedra mudiri boʻlsa, filtrlarni oʻziga moslab mustahkamlaymiz
-      if (user.role === "TEACHER") {
-        setSelectedTeacherId(user.id);
-        setSelectedDeptFilter(user.department || "ALL");
-      } else if (user.role === "HEAD_OF_DEPT") {
-        setSelectedDeptFilter(user.department || "ALL");
-      }
-
-      setActivePage("dashboard");
-
-      if (user.must_change_password) {
-        setCurrentPasswordInput(loginPassword.trim());
-      }
+      applyUserSession(user, loginPassword.trim());
     } catch {
       setLoginError("Backend server bilan aloqa oʻrnatilmadi. Qayta urinib koʻring.");
     } finally {
@@ -2509,6 +2515,40 @@ export default function KpiEnterpriseApp() {
               </span>
             </div>
 
+            {/* Kirish usuli tablari: Login/Parol yoki E-IMZO */}
+            <div className="flex rounded-xl bg-slate-900/90 p-1 mb-5 border border-slate-700/80">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod("PASSWORD");
+                  setLoginError("");
+                }}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  loginMethod === "PASSWORD"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>HEMIS / Parol</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod("EIMZO");
+                  setLoginError("");
+                }}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  loginMethod === "EIMZO"
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
+                <span>E-IMZO (ERI)</span>
+              </button>
+            </div>
+
             {sessionTimeoutNotice && (
               <div className="mb-5 p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-in fade-in">
                 <Clock className="w-4 h-4 flex-shrink-0 text-amber-400 mt-0.5" />
@@ -2523,75 +2563,83 @@ export default function KpiEnterpriseApp() {
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Foydalanuvchi logini (HEMIS ID yoki login)
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    required
-                    value={loginUsername}
-                    onChange={(e) => setLoginUsername(e.target.value)}
-                    placeholder="Masalan: 3082312087 yoki admin"
-                    className="w-full pl-9 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Maxfiy parol
+            {loginMethod === "PASSWORD" ? (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Foydalanuvchi logini (HEMIS ID yoki login)
                   </label>
-                  <span className="text-[10px] text-blue-400">Birlamchi parol = HEMIS ID</span>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      placeholder="Masalan: 3082312087 yoki admin"
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                  </div>
                 </div>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type={showLoginPassword ? "text" : "password"}
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="HEMIS ID yoki shaxsiy parol"
-                    className="w-full pl-9 pr-10 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors p-1"
-                    title={showLoginPassword ? "Parolni yashirish" : "Parolni koʻrish"}
-                    aria-label={showLoginPassword ? "Parolni yashirish" : "Parolni koʻrish"}
-                  >
-                    {showLoginPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={isLoggingIn}
-                className="w-full mt-2 py-3 px-4 bg-blue-700 hover:bg-blue-600 disabled:bg-blue-900 text-white font-semibold rounded-xl text-sm shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2"
-              >
-                {isLoggingIn ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Tekshirilmoqda...</span>
-                  </>
-                ) : (
-                  <>
-                    <UserCheck className="w-4 h-4" />
-                    <span>Tizimga kirish</span>
-                  </>
-                )}
-              </button>
-            </form>
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Maxfiy parol
+                    </label>
+                    <span className="text-[10px] text-blue-400">Birlamchi parol = HEMIS ID</span>
+                  </div>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type={showLoginPassword ? "text" : "password"}
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="HEMIS ID yoki shaxsiy parol"
+                      className="w-full pl-9 pr-10 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors p-1"
+                      title={showLoginPassword ? "Parolni yashirish" : "Parolni koʻrish"}
+                      aria-label={showLoginPassword ? "Parolni yashirish" : "Parolni koʻrish"}
+                    >
+                      {showLoginPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  className="w-full mt-2 py-3 px-4 bg-blue-700 hover:bg-blue-600 disabled:bg-blue-900 text-white font-semibold rounded-xl text-sm shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2"
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Tekshirilmoqda...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="w-4 h-4" />
+                      <span>Tizimga kirish</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            ) : (
+              <EimzoLoginPanel
+                apiBase={API_BASE}
+                onLoginSuccess={(user) => applyUserSession(user)}
+                onError={(msg) => setLoginError(msg)}
+              />
+            )}
           </div>
 
           {/* Footer note */}
@@ -4360,6 +4408,25 @@ export default function KpiEnterpriseApp() {
                         <span className="font-semibold text-slate-700 dark:text-slate-300">
                           {currentUser.fte || 1.0} stavka
                         </span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 sm:col-span-2 flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">E-IMZO raqamli kaliti (JSHSHIR):</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 text-sm font-mono">
+                            {currentUser.pinfl ? currentUser.pinfl : "Biriktirilmagan"}
+                          </span>
+                        </div>
+                        {currentUser.pinfl ? (
+                          <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-500 rounded-lg text-xs font-bold border border-emerald-500/20 flex items-center gap-1.5">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Faol biriktirilgan
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-amber-500/10 text-amber-500 rounded-lg text-xs font-bold border border-amber-500/20">
+                            E-IMZO bilan birinchi marta kirganda avtomatik ulanadi
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
