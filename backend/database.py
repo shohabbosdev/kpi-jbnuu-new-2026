@@ -5,6 +5,7 @@ Server qayta yuklanganda ham barcha o'zgarishlar, arizalar, sozlamalar va paroll
 
 import sqlite3
 import os
+import json
 from typing import List, Dict, Any, Optional
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "kpi_system.db")
