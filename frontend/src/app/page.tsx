@@ -4414,15 +4414,21 @@ export default function KpiEnterpriseApp() {
 
                       <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 sm:col-span-2 flex items-center justify-between flex-wrap gap-2">
                         <div>
-                          <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">E-IMZO raqamli kaliti (JSHSHIR):</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200 text-sm font-mono">
-                            {currentUser.pinfl ? currentUser.pinfl : "Biriktirilmagan"}
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">E-IMZO raqamli kaliti:</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 text-sm font-mono flex items-center gap-2">
+                            {currentUser.pinfl ? (
+                              currentUser.pinfl.length >= 8
+                                ? `${currentUser.pinfl.slice(0, 4)}••••••${currentUser.pinfl.slice(-4)}`
+                                : "••••••••••••••"
+                            ) : (
+                              "Biriktirilmagan"
+                            )}
                           </span>
                         </div>
                         {currentUser.pinfl ? (
                           <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-500 rounded-lg text-xs font-bold border border-emerald-500/20 flex items-center gap-1.5">
                             <CheckCircle className="w-3.5 h-3.5" />
-                            Faol biriktirilgan
+                            ERI kalit tasdiqlangan
                           </span>
                         ) : (
                           <span className="px-2.5 py-1 bg-amber-500/10 text-amber-500 rounded-lg text-xs font-bold border border-amber-500/20">
