@@ -576,6 +576,25 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_notif_dept ON notifications(department);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_notif_is_read ON notifications(is_read);")
 
+    # 18. Audit Trail (Tizim harakatlari va xavfsizlik jurnali)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            user_name TEXT,
+            user_role TEXT,
+            action TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT,
+            details TEXT,
+            ip_address TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_username ON audit_logs(username);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);")
+
     conn.commit()
     conn.close()
 
@@ -1686,6 +1705,14 @@ def db_get_publication_by_token(token: str) -> Optional[Dict[str, Any]]:
     conn.close()
     return dict(row) if row else None
 
+def db_get_publication_by_id(pub_id: int) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM publication_recommendations WHERE id = ?", (pub_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 def db_delete_publication(pub_id: int):
     conn = get_connection()
     cursor = conn.cursor()
@@ -2323,6 +2350,54 @@ def db_mark_all_notifications_read(
         conn.commit()
         conn.close()
     return True
+
+def db_log_audit(
+    username: str,
+    action: str,
+    entity_type: str,
+    entity_id: Optional[str] = None,
+    user_name: Optional[str] = None,
+    user_role: Optional[str] = None,
+    details: Optional[str] = None,
+    ip_address: Optional[str] = None
+) -> int:
+    """Tizim harakatlari va xavfsizlik amallarini o'zgarmas jurnalga qayd qilish (Immutable Audit Log)"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO audit_logs (username, user_name, user_role, action, entity_type, entity_id, details, ip_address)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (username, user_name or "", user_role or "", action, entity_type, str(entity_id or ""), details or "", ip_address or ""))
+        conn.commit()
+        log_id = cursor.lastrowid
+        conn.close()
+        return log_id
+    except Exception as e:
+        print(f"[AUDIT LOG ERROR] {e}")
+        return 0
+
+def db_get_audit_logs(limit: int = 100, offset: int = 0, action: Optional[str] = None, username: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Tizim auditi jurnali yozuvlarini olish"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM audit_logs"
+    params = []
+    conditions = []
+    if action:
+        conditions.append("action = ?")
+        params.append(action)
+    if username:
+        conditions.append("username = ?")
+        params.append(username)
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+    query += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    cursor.execute(query, params)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
 
 # Bazani ishga tushirish
 init_db()

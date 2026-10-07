@@ -9,6 +9,7 @@ import {
   Download,
   GraduationCap,
   Plus,
+  Printer,
   RefreshCw,
   Search,
   Trash2,
@@ -25,6 +26,7 @@ import {
   PublicationRecommendation,
   SystemSettings
 } from "@/types";
+import { CouncilExtractModal } from "./CouncilExtractModal";
 
 interface WorkflowSubjectInfo {
   subject_name: string;
@@ -161,6 +163,10 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
   const [myGovAppNum, setMyGovAppNum] = useState("");
   const [ministryGrifNum, setMinistryGrifNum] = useState("");
   const [ministryCertFile, setMinistryCertFile] = useState<File | null>(null);
+
+  // Rasmiy Kengash Bayonnomasi Koʻchirmasi State
+  const [isCouncilExtractOpen, setIsCouncilExtractOpen] = useState(false);
+  const [selectedExtractData, setSelectedExtractData] = useState<any>(null);
   const [isMyGovSaving, setIsMyGovSaving] = useState(false);
 
   if (!isOpen || !selectedSubject) return null;
@@ -1484,6 +1490,37 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
                             </a>
                           )}
 
+                          {/* Rasmiy Kengash Bayonnomasi Ko'chirmasi */}
+                          {(pub.kafedra_status === "APPROVED" || pub.fakultet_status === "APPROVED" || pub.council_status === "APPROVED") && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedExtractData({
+                                  id: pub.id,
+                                  university_name: "Oʻzbekiston Milliy universiteti Jizzax filiali",
+                                  protocol_number: pub.council_protocol_num || pub.fakultet_protocol_num || pub.kafedra_protocol_num || "—",
+                                  protocol_date: pub.council_protocol_date || pub.fakultet_protocol_date || pub.kafedra_protocol_date || "",
+                                  stage_level: pub.council_status === "APPROVED" ? "Filial Ilmiy Kengashi" : (pub.fakultet_status === "APPROVED" ? "Fakultet Ilmiy-uslubiy Kengashi" : "Kafedra yigʻilishi"),
+                                  publication_title: pub.title,
+                                  pub_type: pub.pub_type,
+                                  authors: pub.authors,
+                                  co_authors: pub.co_authors,
+                                  department: pub.department_name || selectedSubject?.department_name || "Kafedra",
+                                  antiplagiarism_score: pub.antiplagiarism_score,
+                                  verification_token: pub.verification_token,
+                                  verification_url: `https://jbnuu.uz/kpi/verify?token=${pub.verification_token || ""}`,
+                                  is_recommended: true
+                                });
+                                setIsCouncilExtractOpen(true);
+                              }}
+                              className="px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                              title="Rasmiy Kengash qarori koʻchirmasini koʻrish va chop etish"
+                            >
+                              <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                              <span>Koʻchirma</span>
+                            </button>
+                          )}
+
                           {isPubAuthorOrAdmin(pub) && (
                             pub.kafedra_status === "APPROVED" && currentUser?.role !== "ADMIN" ? (
                               <span
@@ -2026,6 +2063,13 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
           </div>
         </div>
       )}
+
+      {/* Rasmiy Kengash Bayonnomasi Koʻchirmasi Modali */}
+      <CouncilExtractModal
+        isOpen={isCouncilExtractOpen}
+        onClose={() => setIsCouncilExtractOpen(false)}
+        extract={selectedExtractData}
+      />
     </>
   );
 };

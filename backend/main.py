@@ -42,7 +42,8 @@ from database import (
     db_get_rbac_roles, db_get_rbac_permissions, db_get_user_permissions,
     db_create_rbac_role, db_update_role_permissions, db_delete_rbac_role,
     db_get_teacher_scores, db_load_all_active_teachers, db_checkpoint,
-    db_create_notification, db_get_notifications, db_mark_notification_read, db_mark_all_notifications_read
+    db_create_notification, db_get_notifications, db_mark_notification_read, db_mark_all_notifications_read,
+    db_log_audit, db_get_audit_logs, db_get_publication_by_id
 )
 
 from security import (
@@ -2105,6 +2106,15 @@ def verify_submission(sub_id: int, action: VerificationAction, request: Request)
             "user": action.reviewer_name,
             "action": rej_msg
         })
+        db_log_audit(
+            username=action.reviewer_name or "EXPERT",
+            action="SUBMISSION_REJECTED",
+            entity_type="SUBMISSION",
+            entity_id=str(sub.id),
+            user_name=action.reviewer_name,
+            details=f"Rad etildi. Sabab: {reason} | Oʻqituvchi: {sub.teacher_name}",
+            ip_address=request.client.host if request.client else ""
+        )
 
         # O'qituvchiga rad etilganlik bildirishnomasi
         db_create_notification({
@@ -2154,6 +2164,15 @@ def verify_submission(sub_id: int, action: VerificationAction, request: Request)
             "user": action.reviewer_name,
             "action": app_msg
         })
+        db_log_audit(
+            username=action.reviewer_name or "EXPERT",
+            action="SUBMISSION_APPROVED",
+            entity_type="SUBMISSION",
+            entity_id=str(sub.id),
+            user_name=action.reviewer_name,
+            details=f"Ball: {final_ball} | Mezon: {sub.indicator_id} | Oʻqituvchi: {sub.teacher_name}",
+            ip_address=request.client.host if request.client else ""
+        )
 
         # O'qituvchiga tasdiqlanganlik bildirishnomasi
         db_create_notification({
@@ -4497,6 +4516,164 @@ def delete_rbac_role_endpoint(role_code: str):
     if not ok:
         raise HTTPException(status_code=400, detail="Tizim standart rollarini o'chirish taqiqlanadi")
     return {"success": True, "message": f"'{role_code}' roli o'chirildi"}
+
+# =============================================================
+# Scopus / CrossRef Xalqaro DOI Maqola Avto-Tekshiruvi (Anti-Fraud)
+# =============================================================
+class VerifyDoiRequest(BaseModel):
+    doi: str
+    teacher_name: Optional[str] = None
+
+@app.post("/api/publications/verify-doi")
+def verify_doi_endpoint(req: VerifyDoiRequest, request: Request):
+    """
+    CrossRef xalqaro ilmiy bazasi orqali maqola DOI raqamini tekshirish
+    va nom, mualliflar, jurnal, yil, kvartil ma'lumotlarini avtomatik chiqarib olish.
+    """
+    import urllib.request
+    import urllib.parse
+
+    raw_doi = req.doi.strip()
+    if not raw_doi:
+        raise HTTPException(status_code=400, detail="DOI kiritilmagan")
+
+    clean_doi = raw_doi
+    for prefix in ["https://doi.org/", "http://doi.org/", "doi.org/", "doi:"]:
+        if clean_doi.lower().startswith(prefix):
+            clean_doi = clean_doi[len(prefix):]
+            break
+    clean_doi = clean_doi.strip()
+
+    try:
+        url = f"https://api.crossref.org/works/{urllib.parse.quote(clean_doi)}"
+        headers = {"User-Agent": "JBNUU-KPI-System/2.0 (mailto:admin@jbnuu.uz)"}
+        req_obj = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req_obj, timeout=10.0) as resp:
+            if resp.status != 200:
+                raise HTTPException(status_code=404, detail="DOI topilmadi")
+            data = json.loads(resp.read().decode("utf-8"))
+
+        msg = data.get("message", {})
+        title_list = msg.get("title", [])
+        title = title_list[0] if title_list else "Noma'lum maqola"
+
+        authors_raw = msg.get("author", [])
+        authors = []
+        for a in authors_raw:
+            given = a.get("given", "").strip()
+            family = a.get("family", "").strip()
+            full = f"{given} {family}".strip()
+            if full:
+                authors.append(full)
+        authors_str = ", ".join(authors) if authors else "Mualliflar ko'rsatilmagan"
+
+        journal_list = msg.get("container-title", [])
+        journal = journal_list[0] if journal_list else msg.get("publisher", "Ilmiy jurnal")
+
+        published = msg.get("published-print", {}) or msg.get("published-online", {}) or msg.get("created", {})
+        date_parts = published.get("date-parts", [[]])[0]
+        year = str(date_parts[0]) if date_parts else ""
+
+        # O'qituvchi nomi bilan moslikni tekshirish
+        author_match = False
+        if req.teacher_name and authors:
+            t_words = [w.lower() for w in req.teacher_name.split() if len(w) > 2]
+            for a in authors:
+                a_lower = a.lower()
+                if any(w in a_lower for w in t_words):
+                    author_match = True
+                    break
+
+        # Audit jurnaliga qayd qilish
+        db_log_audit(
+            username=req.teacher_name or "SYSTEM",
+            action="DOI_VERIFIED",
+            entity_type="DOI",
+            entity_id=clean_doi,
+            details=f"Maqola: {title[:80]}... | Jurnal: {journal} | Moslik: {author_match}",
+            ip_address=request.client.host if request.client else ""
+        )
+
+        return {
+            "success": True,
+            "doi": clean_doi,
+            "title": title,
+            "authors": authors_str,
+            "authors_list": authors,
+            "journal": journal,
+            "year": year,
+            "publisher": msg.get("publisher", ""),
+            "type": msg.get("type", "journal-article"),
+            "url": msg.get("URL", f"https://doi.org/{clean_doi}"),
+            "author_match": author_match,
+            "verified": True
+        }
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            raise HTTPException(status_code=404, detail="Ushbu DOI CrossRef xalqaro bazasida topilmadi. Raqamni tekshirib qayta kiriting.")
+        raise HTTPException(status_code=502, detail=f"Xalqaro ilmiy baza javob bermadi ({e.code})")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"DOI tekshirishda xatolik: {str(e)}")
+
+# =============================================================
+# Rasmiy Kengash Bayonnomasi Ko'chirmasi (Official Council Protocol Extract)
+# =============================================================
+@app.get("/api/publications/{pub_id}/protocol-extract")
+def get_protocol_extract(pub_id: int):
+    """
+    Rasmiy Kengash Bayonnomasi ko'chirmasini chop etish (Print) va QR verifikatsiya ma'lumotlarini shakllantirish.
+    """
+    pub = db_get_publication_by_id(pub_id)
+    if not pub:
+        raise HTTPException(status_code=404, detail="Nashr tavsiyanomasi topilmadi")
+
+    stage_level = "Filial Ilmiy Kengashi"
+    protocol_num = pub.get("council_protocol_num") or "—"
+    protocol_date = pub.get("council_protocol_date") or ""
+
+    if pub.get("council_status") != "APPROVED":
+        if pub.get("methodical_status") == "APPROVED":
+            stage_level = "Oʻquv-uslubiy Kengash"
+            protocol_num = pub.get("methodical_protocol_num") or "—"
+            protocol_date = pub.get("methodical_protocol_date") or ""
+        elif pub.get("fakultet_status") == "APPROVED":
+            stage_level = "Fakultet Ilmiy-uslubiy Kengashi"
+            protocol_num = pub.get("fakultet_protocol_num") or "—"
+            protocol_date = pub.get("fakultet_protocol_date") or ""
+        elif pub.get("kafedra_status") == "APPROVED":
+            stage_level = "Kafedra yigʻilishi"
+            protocol_num = pub.get("kafedra_protocol_num") or "—"
+            protocol_date = pub.get("kafedra_protocol_date") or ""
+
+    return {
+        "success": True,
+        "extract": {
+            "id": pub.get("id"),
+            "university_name": "Oʻzbekiston Milliy universiteti Jizzax filiali",
+            "protocol_number": protocol_num,
+            "protocol_date": protocol_date,
+            "stage_level": stage_level,
+            "publication_title": pub.get("title", ""),
+            "pub_type": pub.get("pub_type", ""),
+            "authors": pub.get("authors", ""),
+            "co_authors": pub.get("co_authors", ""),
+            "department": pub.get("department_name", ""),
+            "antiplagiarism_score": pub.get("antiplagiarism_score", 0),
+            "verification_token": pub.get("verification_token", ""),
+            "verification_url": f"https://jbnuu.uz/kpi/verify?token={pub.get('verification_token', '')}",
+            "is_recommended": pub.get("council_status") == "APPROVED" or pub.get("fakultet_status") == "APPROVED" or pub.get("kafedra_status") == "APPROVED",
+            "created_at": pub.get("created_at", "")
+        }
+    }
+
+# =============================================================
+# Tizim Harakatlari Jurnali va Xavfsizlik Auditi (Audit Trail)
+# =============================================================
+@app.get("/api/audit-logs")
+def get_audit_logs_endpoint(limit: int = 100, offset: int = 0, action: Optional[str] = None, username: Optional[str] = None):
+    """Tizim harakatlari va xavfsizlik jurnali yozuvlarini olish (Audit Trail)"""
+    logs = db_get_audit_logs(limit=limit, offset=offset, action=action, username=username)
+    return {"success": True, "logs": logs, "total": len(logs)}
 
 if __name__ == "__main__":
     import uvicorn

@@ -113,6 +113,8 @@ import { AdminDashboardView } from "@/components/AdminDashboardView";
 import { RbacRolesPanel } from "@/components/RbacRolesPanel";
 import { RoleSwitcherDropdown, RoleType } from "@/components/RoleSwitcherDropdown";
 import { EimzoLoginPanel } from "@/components/EimzoLoginPanel";
+import { DoiVerifyModal } from "@/components/DoiVerifyModal";
+import { SalarySimulatorModal } from "@/components/SalarySimulatorModal";
 import { hasPermission } from "@/utils/rbac";
 
 const apiFetch = (url: string, init: RequestInit = {}) => {
@@ -267,6 +269,10 @@ export default function KpiEnterpriseApp() {
   const [notificationsList, setNotificationsList] = useState<NotificationItem[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState<number>(0);
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState<boolean>(false);
+
+  // DOI Tekshiruvi va Ustama Simulyatori modallari
+  const [isDoiVerifyOpen, setIsDoiVerifyOpen] = useState<boolean>(false);
+  const [isSalarySimulatorOpen, setIsSalarySimulatorOpen] = useState<boolean>(false);
 
   // Editing Submission State (Baholanmagan arizani tahrirlash uchun)
   const [editingSubmission, setEditingSubmission] = useState<Submission | null>(null);
@@ -3754,6 +3760,28 @@ export default function KpiEnterpriseApp() {
                 )}
               </div>
             ) : null}
+
+            {/* Tezkor vositalar: DOI Tekshiruvi & Ustama Kalkulyatori */}
+            <div className="hidden md:flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIsDoiVerifyOpen(true)}
+                className="px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Scopus va CrossRef xalqaro DOI maqolasini tekshirish"
+              >
+                <Search className="w-3.5 h-3.5 text-indigo-500" />
+                <span>DOI Tekshiruvi</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSalarySimulatorOpen(true)}
+                className="px-2.5 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Oylik ustama va karyera simulyatori"
+              >
+                <Calculator className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Ustama Kalkulyatori</span>
+              </button>
+            </div>
 
             {/* Bildirishnomalar markazi (Notification Center Dropdown) */}
             <div className="relative">
@@ -9032,6 +9060,37 @@ export default function KpiEnterpriseApp() {
       <ConfirmModal
         confirmModal={confirmModal}
         onClose={() => setConfirmModal(null)}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: SCOPUS / CROSSREF DOI AVTO-TEKSHIRUVI (ANTI-FRAUD) */}
+      {/* ========================================================================= */}
+      <DoiVerifyModal
+        isOpen={isDoiVerifyOpen}
+        onClose={() => setIsDoiVerifyOpen(false)}
+        teacherName={currentUser?.name || ""}
+        API_BASE={API_BASE}
+        showAlert={showAlert}
+        onApplyToSubmission={(data) => {
+          setModalTitle(data.title);
+          setModalDescription(data.description);
+          if (data.fileUrl) setModalUploadedFileName(data.fileUrl);
+          setIsAddModalOpen(true);
+        }}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: OYLIK USTAMA VA KARYERA SIMULYATORI */}
+      {/* ========================================================================= */}
+      <SalarySimulatorModal
+        isOpen={isSalarySimulatorOpen}
+        onClose={() => setIsSalarySimulatorOpen(false)}
+        currentScore={(() => {
+          const t = teachers.find(t => t.name === currentUser?.name);
+          return t?.scores?.normalized_score || 0;
+        })()}
+        teacherName={currentUser?.name || "Oʻqituvchi"}
+        fte={currentUser?.fte || 1.0}
       />
 
     </div>

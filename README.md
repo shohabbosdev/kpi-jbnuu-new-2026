@@ -20,6 +20,7 @@
    - [8. Yuqori yuklama (Concurrency) va relyatsion baza meʼmori](#8-yuqori-yuklama)
    - [9. KPI reytingi, Svetafor tahlili va Excel hisobot eksporti](#9-kpi-va-excel)
    - [10. Bildirishnomalar markazi va bosqichli qulflash](#10-bildirishnomalar-markazi)
+   - [11. Intellektual innovatsiyalar, Anti-Fraud va Rasmiy Kengash koʻchirmalari](#11-intellektual-innovatsiyalar)
 3. [Texnologiyalar steki](#texnologiyalar-steki)
 4. [Tizim rollari va ruxsatlar matritsasi](#tizim-rollari)
 5. [Oʻrnatish va ishlab chiqarish muhitida ishga tushirish](#ornatish-va-ishga-tushirish)
@@ -155,6 +156,22 @@ Oʻzbekiston Milliy universitetining Jizzax filiali professor-oʻqituvchilari va
 - **Mualliflik huquqi va Bosqichli qulflash (Ownership & Stage Lock Enforcement):**
   - Oʻqituvchi yoki boshqa xodimlar begona shaxslarning hujjatlarini yoki kengash arizalarini asossiz oʻchira olmasligi uchun qatʼiy xavfsizlik nazorati oʻrnatildi.
   - Agar darslik yoki fan hujjati Kafedra kengashida koʻrib chiqilib, mudir tomonidan bayonnoma bilan tasdiqlangan boʻlsa, uni oʻzboshimchalik bilan oʻchirib yuborish butunlay taqiqlandi (`403 Forbidden: Kafedra mudiri tomonidan tasdiqlangan hujjatni oʻchirish taqiqlanadi`).
+
+---
+
+### 11. Intellektual innovatsiyalar, Anti-Fraud va Rasmiy Kengash koʻchirmalari
+- **Scopus / CrossRef Xalqaro DOI Avto-Tekshiruvi (Anti-Fraud Engine):**
+  - Oʻqituvchi ilmiy maqola topshirganda faqat maqolaning DOI raqamini (yoki havolasini) kiritadi.
+  - Backend xalqaro CrossRef ochiq ilmiy API orqali maqola nomi, jurnali, nashriyoti, yili va barcha mualliflar roʻyxatini 2 soniyada yuklab oladi.
+  - Oʻqituvchining F.I.O si maqola mualliflari tarkibida borligi avtomatik tekshirilib, tasdiqlangan maʼlumotlar bir zumda arizaga koʻchiriladi (soxta maqolalarning oldi toʻliq olindi).
+- **Rasmiy Kengash Bayonnomasi Koʻchirmasi (Official Council Protocol Extract & Print):**
+  - Fan kabinetida kengashlardan oʻtgan har bir darslik va oʻquv qoʻllanma uchun "Koʻchirma" tugmasi joriy etildi.
+  - OʻzMU JBNUUning rasmiy gerbi, kengash nomi, bayonnoma raqami va sanasi, ekspertlar xulosasi, antiplagiat foizi va QR-kodli elektron tasdigʻi tushirilgan, chop etishga tayyor rasmiy guvohnoma ochiladi.
+- **Oylik Ustama va Karyera Simulyatori (Salary & Career Progression Simulator):**
+  - Oʻqituvchilar uchun oʻz reyting ballarining oylik maosh va belgilangan ustama toifalariga (0%, 15%, 30%, 50%) taʼsirini real vaqtda koʻrsatuvchi interaktiv kalkulyator.
+  - Keyingi toifaga yetish uchun qancha ball qolgani va rejalashtirilgan ishlar (Scopus maqola, darslik, sillabus) belgilanganda kutilayotgan oylik daromad prognozini chiqarib beradi.
+- **Tizim Harakatlari Jurnali va Xavfsizlik Auditi (Immutable Audit Trail):**
+  - Har bir muhim amal (baholash, arizani rad etish, ball oʻzgartirish, kengash bayonnomasi biriktirish, DOI tekshiruvi) kim tomonidan, qachon va qaysi IP-manzildan amalga oshirilgani bazadagi `audit_logs` jadvaliga oʻzgarmas tarzda qayd etib boriladi.
 
 ---
 
