@@ -578,7 +578,7 @@ def init_db():
 
     # 18. Audit Trail (Tizim harakatlari va xavfsizlik jurnali)
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS audit_logs (
+        CREATE TABLE IF NOT EXISTS system_audit_trail (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             user_name TEXT,
@@ -591,9 +591,9 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_username ON audit_logs(username);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_username ON system_audit_trail(username);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON system_audit_trail(action);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_created ON system_audit_trail(created_at);")
 
     conn.commit()
     conn.close()
@@ -2366,7 +2366,7 @@ def db_log_audit(
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO audit_logs (username, user_name, user_role, action, entity_type, entity_id, details, ip_address)
+            INSERT INTO system_audit_trail (username, user_name, user_role, action, entity_type, entity_id, details, ip_address)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (username, user_name or "", user_role or "", action, entity_type, str(entity_id or ""), details or "", ip_address or ""))
         conn.commit()
@@ -2381,7 +2381,7 @@ def db_get_audit_logs(limit: int = 100, offset: int = 0, action: Optional[str] =
     """Tizim auditi jurnali yozuvlarini olish"""
     conn = get_connection()
     cursor = conn.cursor()
-    query = "SELECT * FROM audit_logs"
+    query = "SELECT * FROM system_audit_trail"
     params = []
     conditions = []
     if action:
