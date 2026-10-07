@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { EimzoKeyItem, AuthUser } from "@/types";
 import { EimzoService } from "@/services/eimzoService";
 
 interface EimzoLoginPanelProps {
   apiBase: string;
-  onLoginSuccess: (user: AuthUser, token: string) => void;
+  onLoginSuccess: (user: AuthUser, token?: string) => void;
   onError: (msg: string) => void;
 }
 
@@ -15,17 +15,38 @@ export function EimzoLoginPanel({ apiBase, onLoginSuccess, onError }: EimzoLogin
   const [agentAvailable, setAgentAvailable] = useState<boolean>(false);
   const [keys, setKeys] = useState<EimzoKeyItem[]>([]);
   const [selectedKey, setSelectedKey] = useState<EimzoKeyItem | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [localError, setLocalError] = useState<string>("");
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     checkAgentAndLoadKeys();
   }, []);
 
+  // Tashqariga bosilganda dropdownni yopish
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
   const checkAgentAndLoadKeys = async () => {
     setIsChecking(true);
     setLocalError("");
     setSelectedKey(null);
+    setIsDropdownOpen(false);
+    setSearchQuery("");
 
     try {
       const available = await EimzoService.isAgentAvailable();
@@ -109,6 +130,24 @@ export function EimzoLoginPanel({ apiBase, onLoginSuccess, onError }: EimzoLogin
     }
   };
 
+  // Kalitlarni qidiruv bo'yicha filtrlash
+  const filteredKeys = keys.filter((k) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      (k.cn && k.cn.toLowerCase().includes(q)) ||
+      (k.pinfl && k.pinfl.includes(q)) ||
+      (k.inn && k.inn.includes(q)) ||
+      (k.org && k.org.toLowerCase().includes(q))
+    );
+  });
+
+  const maskPinfl = (p?: string) => {
+    if (!p) return "Mavjud emas";
+    if (p.length >= 8) return `${p.slice(0, 4)}••••${p.slice(-4)}`;
+    return p;
+  };
+
   return (
     <div className="space-y-4">
       {/* E-IMZO Agent holati */}
@@ -148,54 +187,190 @@ export function EimzoLoginPanel({ apiBase, onLoginSuccess, onError }: EimzoLogin
         </div>
       )}
 
-      {/* REAL KALITLAR RO'YXATI */}
+      {/* KALITLAR TANLOVI: Ajoyib ixcham Dropdown Select */}
       {agentAvailable ? (
         keys.length > 0 ? (
-          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-            <div className="text-[11px] text-slate-400 font-semibold px-1">
-              Mavjud E-IMZO kalitlaringiz ({keys.length}):
+          <div className="space-y-3" ref={dropdownRef}>
+            <div className="flex items-center justify-between text-xs">
+              <label className="font-semibold text-slate-300 flex items-center gap-1.5">
+                <span>E-IMZO kalitini tanlang</span>
+                <span className="text-blue-400">*</span>
+              </label>
+              <span className="text-[11px] font-semibold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                {keys.length} ta kalit topildi
+              </span>
             </div>
-            {keys.map((k) => {
-              const isSelected = selectedKey?.id === k.id;
-              return (
-                <div
-                  key={k.id}
-                  onClick={() => {
-                    setSelectedKey(k);
-                    setLocalError("");
-                  }}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                    isSelected
-                      ? "bg-blue-600/15 border-blue-500 shadow-md ring-1 ring-blue-500/30"
-                      : "bg-slate-800/60 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-white truncate">{k.cn}</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-                        <span>
-                          JSHSHIR:{" "}
-                          <strong className="text-slate-200 font-mono tracking-wider">
-                            {k.pinfl && k.pinfl.length >= 8
-                              ? `${k.pinfl.slice(0, 4)}••••${k.pinfl.slice(-4)}`
-                              : k.pinfl || "Mavjud emas"}
-                          </strong>
-                        </span>
-                        {k.inn && <span>STIR: <strong className="text-slate-200 font-mono">{k.inn}</strong></span>}
-                      </div>
-                      {k.org && <div className="text-[10px] text-slate-500 mt-0.5 truncate">{k.org}</div>}
-                    </div>
 
-                    <div className="text-right flex-shrink-0">
-                      <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        {k.valid_to ? `Amal qiladi: ${k.valid_to}` : "Faol"}
-                      </span>
+            {/* Custom Dropdown Trigger */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                  isDropdownOpen
+                    ? "bg-slate-800/90 border-blue-500 ring-2 ring-blue-500/20 shadow-lg shadow-blue-500/10"
+                    : "bg-slate-900/90 border-slate-700/80 hover:border-slate-600 hover:bg-slate-850"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600/25 to-indigo-600/25 border border-blue-500/30 flex items-center justify-center flex-shrink-0 text-blue-400 shadow-inner">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-white truncate leading-tight">
+                      {selectedKey ? selectedKey.cn : "Kalitni tanlang..."}
                     </div>
+                    {selectedKey && (
+                      <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 truncate">
+                        <span>JSHSHIR: <strong className="text-slate-300 font-mono">{maskPinfl(selectedKey.pinfl)}</strong></span>
+                        {selectedKey.inn && (
+                          <>
+                            <span className="text-slate-600">•</span>
+                            <span>STIR: <strong className="text-slate-300 font-mono">{selectedKey.inn}</strong></span>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-              );
-            })}
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className={`transition-transform duration-200 text-slate-400 ${isDropdownOpen ? "rotate-180 text-blue-400" : ""}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </button>
+
+              {/* Ochiluvchi Dropdown Menyusi */}
+              {isDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-slate-900/95 backdrop-blur-2xl border border-slate-700 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                  {/* Qidiruv paneli (agar 3 tadan ko'p kalit bo'lsa) */}
+                  {keys.length > 2 && (
+                    <div className="p-2.5 border-b border-slate-800 bg-slate-950/40">
+                      <div className="relative">
+                        <svg className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="F.I.O, JSHSHIR yoki STIR boʻyicha qidirish..."
+                          className="w-full pl-8 pr-7 py-1.5 bg-slate-900 border border-slate-700/80 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                          autoFocus
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Kalitlar ro'yxati (Max-height cheklangan, ixcham scroll) */}
+                  <div className="max-h-56 overflow-y-auto divide-y divide-slate-800/60 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                    {filteredKeys.length > 0 ? (
+                      filteredKeys.map((k) => {
+                        const isSelected = selectedKey?.id === k.id;
+                        return (
+                          <div
+                            key={k.id}
+                            onClick={() => {
+                              setSelectedKey(k);
+                              setIsDropdownOpen(false);
+                              setLocalError("");
+                            }}
+                            className={`p-2.5 px-3 cursor-pointer transition-all flex items-center justify-between gap-2.5 ${
+                              isSelected
+                                ? "bg-blue-600/20 text-white"
+                                : "hover:bg-slate-800/80 text-slate-300 hover:text-white"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold truncate">{k.cn}</span>
+                                {isSelected && (
+                                  <span className="text-[10px] font-bold text-blue-400 bg-blue-500/20 px-1.5 py-0.2 rounded">
+                                    Tanlangan
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="text-[11px] text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                <span>
+                                  JSHSHIR: <strong className="text-slate-200 font-mono">{maskPinfl(k.pinfl)}</strong>
+                                </span>
+                                {k.inn && (
+                                  <>
+                                    <span className="text-slate-600">•</span>
+                                    <span>STIR: <strong className="text-slate-200 font-mono">{k.inn}</strong></span>
+                                  </>
+                                )}
+                              </div>
+
+                              {k.org && (
+                                <div className="text-[10px] text-slate-500 truncate mt-0.5 flex items-center gap-1">
+                                  <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                  </svg>
+                                  <span>{k.org}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+                                {k.valid_to ? `Muddati: ${k.valid_to}` : "Faol"}
+                              </span>
+                              {isSelected && (
+                                <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        Qidiruv boʻyicha mos E-IMZO kaliti topilmadi
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Tanlangan kalit pasport kartasi (juda ixcham) */}
+            {selectedKey && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 px-3 text-xs flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Tasdiqlovchi sertifikat
+                  </div>
+                  <div className="font-semibold text-slate-200 truncate mt-0.5">
+                    {selectedKey.cn}
+                  </div>
+                </div>
+
+                <div className="text-right flex-shrink-0">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Amal qiladi: {selectedKey.valid_to || "Faol"}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-4 bg-slate-800/40 border border-slate-700/60 rounded-xl text-center text-xs text-slate-400">

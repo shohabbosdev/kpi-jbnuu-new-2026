@@ -2704,7 +2704,7 @@ export default function KpiEnterpriseApp() {
             ) : (
               <EimzoLoginPanel
                 apiBase={API_BASE}
-                onLoginSuccess={(user) => applyUserSession(user)}
+                onLoginSuccess={(user, token) => applyUserSession(user, token)}
                 onError={(msg) => setLoginError(msg)}
               />
             )}
