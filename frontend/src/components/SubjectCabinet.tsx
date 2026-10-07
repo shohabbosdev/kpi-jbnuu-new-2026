@@ -98,6 +98,14 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
   const [hemisResourceSearch, setHemisResourceSearch] = useState("");
   const [hemisResourceFilterType, setHemisResourceFilterType] = useState<string>("ALL");
 
+  const getAuthHeaders = () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("kpi_auth_token") : null;
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    };
+  };
+
   // Course Docs Local Form States
   const [isAddCourseDocFormOpen, setIsAddCourseDocFormOpen] = useState(false);
   const [isCourseDocUploading, setIsCourseDocUploading] = useState(false);
@@ -196,7 +204,7 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
       };
       const res = await fetch(`${API_BASE}/course-docs`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       });
       if (res.ok) {
@@ -226,7 +234,7 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
     try {
       const res = await fetch(`${API_BASE}/course-docs/${activeDocForReview.id}/review`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           role: courseDocReviewRole,
           status: courseDocReviewStatus,
@@ -264,7 +272,10 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
       type: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/course-docs/${doc.id}`, { method: "DELETE" });
+          const res = await fetch(`${API_BASE}/course-docs/${doc.id}`, {
+            method: "DELETE",
+            headers: getAuthHeaders()
+          });
           if (res.ok) {
             showAlert({ title: "Oʻchirildi", message: "Hujjat muvaffaqiyatli oʻchirildi", type: "success" });
             fetchCourseDocs(selectedSubject.subject_name, selectedSubject.teacher_name);
@@ -332,7 +343,7 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
 
       const res = await fetch(`${API_BASE}/publications`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       });
 
@@ -376,7 +387,7 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
       }
       const res = await fetch(`${API_BASE}/publications/${activePubForReview.id}/stage`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           stage: reviewStageName,
           status: reviewDecision,
@@ -426,7 +437,7 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
       }
       const res = await fetch(`${API_BASE}/publications/${activePubForMyGov.id}/mygov`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           mygov_app_num: myGovAppNum.trim(),
           ministry_grif_num: ministryGrifNum.trim(),
@@ -461,7 +472,10 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
       type: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/publications/${pub.id}`, { method: "DELETE" });
+          const res = await fetch(`${API_BASE}/publications/${pub.id}`, {
+            method: "DELETE",
+            headers: getAuthHeaders()
+          });
           if (res.ok) {
             showAlert({ title: "Oʻchirildi", message: "Nashr arizasi muvaffaqiyatli oʻchirildi", type: "success" });
             fetchPublications(selectedSubject.subject_name, selectedSubject.teacher_name);

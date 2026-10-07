@@ -17,7 +17,17 @@ def get_connection():
     conn.execute("PRAGMA busy_timeout=10000;")
     conn.execute("PRAGMA synchronous=NORMAL;")
     conn.execute("PRAGMA foreign_keys=ON;")
+    conn.execute("PRAGMA wal_autocheckpoint=100;")
     return conn
+
+def db_checkpoint():
+    """WAL jurnalidagi barcha tranzaksiyalarni asosiy maʼlumotlar bazasiga toʻliq koʻchiradi (Data Integrity)"""
+    try:
+        conn = get_connection()
+        conn.execute("PRAGMA wal_checkpoint(PASSIVE);")
+        conn.close()
+    except Exception as e:
+        print(f"[DB CHECKPOINT WARNING] {e}")
 
 def init_db():
     conn = get_connection()

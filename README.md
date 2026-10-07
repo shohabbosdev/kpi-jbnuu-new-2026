@@ -95,19 +95,28 @@ Oʻzbekiston Milliy universitetining Jizzax filiali professor-oʻqituvchilari va
 
 ---
 
-### 7. Axborot xavfsizligi, kriptografiya va maʼlumotlar yaxlitligi
+### 7. Axborot xavfsizligi, akademik halollik va maʼlumotlar yaxlitligi
 - **PBKDF2-SHA256 parollar xeshlash tizimi:**
   - Parollar ochiq matn (plaintext) holida saqlanmaydi.
   - Yangi yaratilgan [`backend/security.py`](file:///Users/macbookprom1/Documents/KPI%20JBNUU/backend/security.py) moduli orqali har bir parol 100 000 iteratsiyali PBKDF2-SHA256 va 16 baytli tasodifiy tuz (salt) bilan xeshlanadi.
   - **Shaffof avto-migratsiya:** Tizimga kirgan foydalanuvchilarning eski ochiq parollari tizim toʻxtamasdan, bir zumda avtomatik xeshga aylantiriladi.
+  - Administrator tomonidan parollar tiklanganda yoki yangi xodim qoʻshilganda parollar bazaga darhol PBKDF2 xeshlangan holda yoziladi.
 - **Haqiqiy HMAC-SHA256 (HS256) JWT tokenlar:**
   - Login amalga oshirilganda raqamli imzolangan JWT token beriladi.
-  - Frontend tokenni `localStorage` da saqlaydi va har bir soʻrovda `Authorization: Bearer <token>` sarlavhasida yuboradi.
+  - Frontend tokenni `localStorage` da saqlaydi va barcha interfeys komponentlari (`apiFetch`, `SubjectCabinet`, `RbacRolesPanel`) orqali har bir soʻrovda `Authorization: Bearer <token>` sarlavhasida yuboradi.
 - **IDOR va ruxsatlar nazorati (Server-side RBAC):**
-  - Foydalanuvchi faqat oʻz arizasini oʻchira oladi (`/api/submissions/{id}`). Boshqalarning arizasini oʻchirishga urinish `403 Forbidden` bilan qaytariladi.
-  - Arizalarni tasdiqlash (`/api/submissions/{id}/verify`) faqat vakolatli rollarga (`HEAD_OF_DEPT`, `DEAN`, `ADMIN`, `RECTORATE`) ruxsat etiladi.
-  - Oʻqituvchi ariza topshirishda daʼvo qilayotgan ball mezonning maksimal chegarasidan oshib ketmasligi qatʼiy nazorat qilinadi (`min(claimed, max_ball)`).
-- **Fayl yuklash himoyasi:** Path traversal xurujlarining oldi olindi (`os.path.basename` va belgilarni tozalash), ruxsat etilgan kengaytmalar roʻyxati va 10 MB hajm chegarasi kiritildi.
+  - Foydalanuvchi faqat oʻzi yuklagan arizani tahrirlay (`PUT`) yoki oʻchira (`DELETE`) oladi (`/api/submissions/{id}`). Boshqalarning arizasini oʻzgartirishga urinish `403 Forbidden` bilan rad etiladi.
+  - Barcha tizim sozlamalari (`/api/admin/settings`, `/api/evaluation-period`), mezonlarni boshqarish (`/api/indicators`), rollar biriktirish (`/api/admin/users/...`), ekspertlar tayinlash va HEMIS sinxronizatsiyasi faqat `ADMIN` yoki `RECTORATE` huquqiga ega JWT token orqali amalga oshirilishi server darajasida qatʼiy tekshiriladi (`check_admin_access`).
+- **Akademik halollik va dublikatlarga qarshi himoya (Anti-fraud / Deduplication):**
+  - **Xalqaro DOI boʻyicha qatʼiy nazorat:** Bir xil DOI raqamiga ega ilmiy maqola tizimga qayta topshirilishi mutlaqo taqiqlanadi (boshqa oʻqituvchi yoki ayni muallif tomonidan).
+  - **Takroriy topshirishlar filtri:** Oʻqituvchi ayni bir xil mezon boʻyicha bir xil sarlavhali faoliyat arizasini qayta yuklay olmaydi.
+  - **Avtomatlashtirilgan qabul muddati (Deadline Enforcement):** Hatto administrator tugmani oʻchirishni unutgan taqdirda ham, belgilangan `deadline_date` kalendar sanasi oʻtishi bilan server yangi arizalarni qabul qilishni avtomatik toʻxtatadi.
+- **Apellyatsiyalar tizimi va maʼlumotlar sinxronizatsiyasi:**
+  - Baholanmagan (kutilayotgan) arizalar boʻyicha asossiz apellyatsiya berish taqiqlanadi.
+  - Bitta ariza boʻyicha bir vaqtning oʻzida ikkita faol apellyatsiya koʻrilishi cheklandi.
+  - Apellyatsiya komissiyasi ijobiy qaror chiqarganda (`ACCEPTED`/`PARTIALLY_ACCEPTED`), yangi ball va tasdiq holati bazadagi `submissions` jadvaliga darhol yoziladi (`db_save_submission`), maʼlumotlar yoʻqolishi xavfi 100% bartaraf etildi.
+- **Manfaatlar toʻqnashuvi (Conflict of Interest) himoyasi:** Baholovchi xodim oʻzining shaxsiy arizasini oʻzi tasdiqlashi taqiqlangan; bunday arizalar toʻgʻridan-toʻgʻri Dekan yoki Universitet komissiyasiga yoʻnaltiriladi.
+- **Fayl yuklash xavfsizligi:** `POST /api/upload` endpointiga majburiy autentifikatsiya kiritildi. Path traversal xurujlarining oldi olindi (`os.path.basename` va belgilarni tozalash), ruxsat etilgan kengaytmalar roʻyxati va 10 MB hajm chegarasi kiritildi.
 
 ---
 
@@ -117,9 +126,12 @@ Oʻzbekiston Milliy universitetining Jizzax filiali professor-oʻqituvchilari va
   - `PRAGMA busy_timeout=10000;`
   - `PRAGMA synchronous=NORMAL;`
   - `PRAGMA foreign_keys=ON;`
+  - `PRAGMA wal_autocheckpoint=100;`
   - Bir vaqtning oʻzida yuzlab oʻqituvchilar ariza yuklaganda yoki mudirlar tasdiqlaganda baza qotib qolmaydi (`database is locked` xatoligi bartaraf etildi).
+- **WAL jurnali va avtomatik Checkpoint kafolati (Data Loss Prevention):**
+  - Server toʻxtatilganda yoki qayta ishga tushirilganda (`@app.on_event("shutdown")`) SQLite WAL jurnalidagi barcha tranzaksiyalar `db_checkpoint()` orqali asosiy relyatsion maʼlumotlar bazasiga toʻliq koʻchiriladi.
 - **Arizalar ID sini AUTOINCREMENT qilish:**
-  - Sunʼiy `len()` formulasi oʻrniga SQLite ning tabiiy auto-increment mexanizmiga oʻtildi. Ikki foydalanuvchi bir vaqtda ariza topshirganda arizalar bir-birini ustiga yozilib ketishi (data overwrite) xavfi yoʻqotildi.
+  - Sunʼiy `len()` formulasi oʻrniga SQLite ning tabiiy auto-increment mexanizmiga oʻtildi (`AUTOINCREMENT PRIMARY KEY`). Ikki foydalanuvchi bir vaqtda ariza topshirganda arizalar bir-birini ustiga yozilib ketishi (data overwrite) xavfi butunlay yoʻqotildi.
 
 ---
 

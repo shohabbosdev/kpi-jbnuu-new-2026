@@ -57,13 +57,21 @@ export const RbacRolesPanel: React.FC<RbacRolesPanelProps> = ({
   const [newRoleDescription, setNewRoleDescription] = useState<string>("");
   const [isCreatingRole, setIsCreatingRole] = useState<boolean>(false);
 
+  const getAuthHeaders = () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("kpi_auth_token") : null;
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    };
+  };
+
   // 1. Rollar va Huquqlarni yuklab olish
   const fetchRbacData = async () => {
     setIsLoading(true);
     try {
       const [resRoles, resPerms] = await Promise.all([
-        fetch(`${API_BASE}/rbac/roles`),
-        fetch(`${API_BASE}/rbac/permissions`)
+        fetch(`${API_BASE}/rbac/roles`, { headers: getAuthHeaders() }),
+        fetch(`${API_BASE}/rbac/permissions`, { headers: getAuthHeaders() })
       ]);
 
       const dataRoles = await resRoles.json();
@@ -132,7 +140,7 @@ export const RbacRolesPanel: React.FC<RbacRolesPanelProps> = ({
     try {
       const res = await fetch(`${API_BASE}/rbac/roles/${selectedRoleCode}/permissions`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ permissions: activePermissions })
       });
 
@@ -170,7 +178,7 @@ export const RbacRolesPanel: React.FC<RbacRolesPanelProps> = ({
     try {
       const res = await fetch(`${API_BASE}/rbac/roles`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           code: newRoleCode.trim(),
           name: newRoleName.trim(),
@@ -211,7 +219,8 @@ export const RbacRolesPanel: React.FC<RbacRolesPanelProps> = ({
       onConfirm: async () => {
         try {
           const res = await fetch(`${API_BASE}/rbac/roles/${role.code}`, {
-            method: "DELETE"
+            method: "DELETE",
+            headers: getAuthHeaders()
           });
           const data = await res.json();
           if (!res.ok || !data.success) {

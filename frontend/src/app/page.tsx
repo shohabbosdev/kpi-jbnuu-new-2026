@@ -109,8 +109,16 @@ import { AdminDashboardView } from "@/components/AdminDashboardView";
 import { RbacRolesPanel } from "@/components/RbacRolesPanel";
 import { RoleSwitcherDropdown, RoleType } from "@/components/RoleSwitcherDropdown";
 import { EimzoLoginPanel } from "@/components/EimzoLoginPanel";
-import { IconUser } from "@/components/AppCustomIcons";
 import { hasPermission } from "@/utils/rbac";
+
+const apiFetch = (url: string, init: RequestInit = {}) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("kpi_auth_token") : null;
+  const headers = new Headers(init.headers || {});
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return fetch(url, { ...init, headers });
+};
 
 export default function KpiEnterpriseApp() {
   // Authentication State
@@ -675,7 +683,7 @@ export default function KpiEnterpriseApp() {
 
     setIsProfPasswordSaving(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/change-password`, {
+      const res = await apiFetch(`${API_BASE}/auth/change-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -709,13 +717,13 @@ export default function KpiEnterpriseApp() {
   const fetchInitialData = async () => {
     try {
       const [tRes, iRes, sRes, aRes, hRes, eRes, pRes] = await Promise.all([
-        fetch(`${API_BASE}/teachers`).then(r => r.json()),
-        fetch(`${API_BASE}/indicators`).then(r => r.json()),
-        fetch(`${API_BASE}/submissions`).then(r => r.json()),
-        fetch(`${API_BASE}/appeals`).then(r => r.json()),
-        fetch(`${API_BASE}/structure/hierarchy`).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/evaluators`).then(r => r.json()).catch(() => []),
-        fetch(`${API_BASE}/evaluation-period`).then(r => r.json()).catch(() => null)
+        apiFetch(`${API_BASE}/teachers`).then(r => r.json()),
+        apiFetch(`${API_BASE}/indicators`).then(r => r.json()),
+        apiFetch(`${API_BASE}/submissions`).then(r => r.json()),
+        apiFetch(`${API_BASE}/appeals`).then(r => r.json()),
+        apiFetch(`${API_BASE}/structure/hierarchy`).then(r => r.json()).catch(() => null),
+        apiFetch(`${API_BASE}/evaluators`).then(r => r.json()).catch(() => []),
+        apiFetch(`${API_BASE}/evaluation-period`).then(r => r.json()).catch(() => null)
       ]);
       setTeachers(tRes);
       if (Array.isArray(tRes)) {
@@ -759,7 +767,7 @@ export default function KpiEnterpriseApp() {
   const fetchWorkloads = async () => {
     setIsWorkloadsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/hemis/workloads`);
+      const res = await apiFetch(`${API_BASE}/hemis/workloads`);
       if (res.ok) {
         const data = await res.json();
         setTeacherWorkloads(data.items || []);
@@ -775,7 +783,7 @@ export default function KpiEnterpriseApp() {
   const handleSyncWorkloads = async () => {
     setIsWorkloadsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/hemis/sync-workloads`, { method: "POST" });
+      const res = await apiFetch(`${API_BASE}/hemis/sync-workloads`, { method: "POST" });
       const data = await res.json();
       if (res.ok) {
         setWorkloadsSummary(data.summary || null);
@@ -829,7 +837,7 @@ export default function KpiEnterpriseApp() {
     }
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch(`${API_BASE}/upload`, {
+    const res = await apiFetch(`${API_BASE}/upload`, {
       method: "POST",
       body: formData
     });
@@ -847,7 +855,7 @@ export default function KpiEnterpriseApp() {
       const p = new URLSearchParams();
       if (subjName) p.append("subject_name", subjName);
       if (tName) p.append("teacher_name", tName);
-      const res = await fetch(`${API_BASE}/course-docs?${p.toString()}`);
+      const res = await apiFetch(`${API_BASE}/course-docs?${p.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setCourseDocsList(data.data || []);
@@ -865,7 +873,7 @@ export default function KpiEnterpriseApp() {
       const p = new URLSearchParams();
       if (subjName) p.append("subject_name", subjName);
       if (tName) p.append("teacher_name", tName);
-      const res = await fetch(`${API_BASE}/publications?${p.toString()}`);
+      const res = await apiFetch(`${API_BASE}/publications?${p.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setPublicationsList(data.data || []);
@@ -888,14 +896,14 @@ export default function KpiEnterpriseApp() {
       if (forceRefresh) {
         p.append("force_refresh", "true");
       }
-      const res = await fetch(`${API_BASE}/hemis/subject-resources?${p.toString()}`);
+      const res = await apiFetch(`${API_BASE}/hemis/subject-resources?${p.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setActiveSubjectHemisResources(data.items || []);
       }
       if (subjName) {
         const cleanName = subjName.split("(")[0].trim();
-        const csRes = await fetch(`${API_BASE}/hemis/curriculum-subjects?subject_name=${encodeURIComponent(cleanName)}`);
+        const csRes = await apiFetch(`${API_BASE}/hemis/curriculum-subjects?subject_name=${encodeURIComponent(cleanName)}`);
         if (csRes.ok) {
           const csData = await csRes.json();
           if (csData.items && csData.items.length > 0) {
@@ -915,11 +923,11 @@ export default function KpiEnterpriseApp() {
   const fetchHemisAcademicData = async () => {
     try {
       const [statsRes, currsRes, scienceRes, docsRes, fullStatusRes] = await Promise.all([
-        fetch(`${API_BASE}/hemis/academic-stats`).then(r => r.json()),
-        fetch(`${API_BASE}/hemis/curriculums`).then(r => r.json()),
-        fetch(`${API_BASE}/hemis/scientific-activity`).then(r => r.json()).catch(() => ({ success: false })),
-        fetch(`${API_BASE}/hemis/doctorate-students`).then(r => r.json()).catch(() => ({ success: false })),
-        fetch(`${API_BASE}/hemis/sync-full-status`).then(r => r.json()).catch(() => ({ is_syncing: false }))
+        apiFetch(`${API_BASE}/hemis/academic-stats`).then(r => r.json()),
+        apiFetch(`${API_BASE}/hemis/curriculums`).then(r => r.json()),
+        apiFetch(`${API_BASE}/hemis/scientific-activity`).then(r => r.json()).catch(() => ({ success: false })),
+        apiFetch(`${API_BASE}/hemis/doctorate-students`).then(r => r.json()).catch(() => ({ success: false })),
+        apiFetch(`${API_BASE}/hemis/sync-full-status`).then(r => r.json()).catch(() => ({ is_syncing: false }))
       ]);
       if (statsRes.success) {
         setHemisAcademicStats(statsRes.stats);
@@ -944,7 +952,7 @@ export default function KpiEnterpriseApp() {
   const handleSyncHemisAcademic = async () => {
     setIsHemisAcademicSyncing(true);
     try {
-      const res = await fetch(`${API_BASE}/hemis/sync-academic`, { method: "POST" });
+      const res = await apiFetch(`${API_BASE}/hemis/sync-academic`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
         setHemisAcademicStats(data.stats);
@@ -975,7 +983,7 @@ export default function KpiEnterpriseApp() {
   const handleTriggerFullAcademicSync = async () => {
     setIsFullAcademicSyncing(true);
     try {
-      const res = await fetch(`${API_BASE}/hemis/sync-full-academic`, { method: "POST" });
+      const res = await apiFetch(`${API_BASE}/hemis/sync-full-academic`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
         showAlert({
@@ -1094,7 +1102,7 @@ export default function KpiEnterpriseApp() {
         file_url: fileUrl,
         file_name: newCourseDocFile.name
       };
-      const res = await fetch(`${API_BASE}/course-docs`, {
+      const res = await apiFetch(`${API_BASE}/course-docs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -1124,7 +1132,7 @@ export default function KpiEnterpriseApp() {
     if (!activeDocForReview) return;
     setIsCourseDocReviewing(true);
     try {
-      const res = await fetch(`${API_BASE}/course-docs/${activeDocForReview.id}/review`, {
+      const res = await apiFetch(`${API_BASE}/course-docs/${activeDocForReview.id}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1164,7 +1172,7 @@ export default function KpiEnterpriseApp() {
       type: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/course-docs/${doc.id}`, { method: "DELETE" });
+          const res = await apiFetch(`${API_BASE}/course-docs/${doc.id}`, { method: "DELETE" });
           if (res.ok) {
             showAlert({ title: "Oʻchirildi", message: "Hujjat muvaffaqiyatli oʻchirildi", type: "success" });
             fetchCourseDocs(selectedWorkflowSubject?.subject_name, selectedWorkflowSubject?.teacher_name);
@@ -1230,7 +1238,7 @@ export default function KpiEnterpriseApp() {
         workload_extract_file: workloadUrl
       };
 
-      const res = await fetch(`${API_BASE}/publications`, {
+      const res = await apiFetch(`${API_BASE}/publications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -1274,7 +1282,7 @@ export default function KpiEnterpriseApp() {
       if (reviewProtocolFile) {
         protocolFileUrl = await uploadSingleFile(reviewProtocolFile);
       }
-      const res = await fetch(`${API_BASE}/publications/${activePubForReview.id}/stage`, {
+      const res = await apiFetch(`${API_BASE}/publications/${activePubForReview.id}/stage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1324,7 +1332,7 @@ export default function KpiEnterpriseApp() {
       if (ministryCertFile) {
         certUrl = await uploadSingleFile(ministryCertFile);
       }
-      const res = await fetch(`${API_BASE}/publications/${activePubForMyGov.id}/mygov`, {
+      const res = await apiFetch(`${API_BASE}/publications/${activePubForMyGov.id}/mygov`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1361,7 +1369,7 @@ export default function KpiEnterpriseApp() {
       type: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/publications/${pub.id}`, { method: "DELETE" });
+          const res = await apiFetch(`${API_BASE}/publications/${pub.id}`, { method: "DELETE" });
           if (res.ok) {
             showAlert({ title: "Oʻchirildi", message: "Nashr arizasi muvaffaqiyatli oʻchirildi", type: "success" });
             fetchPublications(selectedWorkflowSubject?.subject_name, selectedWorkflowSubject?.teacher_name);
@@ -1376,9 +1384,9 @@ export default function KpiEnterpriseApp() {
   const fetchAdminData = async () => {
     try {
       const [settingsRes, usersRes, logsRes] = await Promise.all([
-        fetch(`${API_BASE}/admin/settings`).then(r => r.json()),
-        fetch(`${API_BASE}/admin/users?q=${encodeURIComponent(adminUsersSearchText)}&role=${adminUsersFilterRole}`).then(r => r.json()),
-        fetch(`${API_BASE}/admin/logs`).then(r => r.json())
+        apiFetch(`${API_BASE}/admin/settings`).then(r => r.json()),
+        apiFetch(`${API_BASE}/admin/users?q=${encodeURIComponent(adminUsersSearchText)}&role=${adminUsersFilterRole}`).then(r => r.json()),
+        apiFetch(`${API_BASE}/admin/logs`).then(r => r.json())
       ]);
       setSystemSettings(settingsRes);
       if (usersRes.items) {
@@ -1396,7 +1404,7 @@ export default function KpiEnterpriseApp() {
   const handleUpdateUserRoles = async (username: string, primaryRole: string, roles: string[]) => {
     setIsSavingUserRoles(true);
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${username}/role`, {
+      const res = await apiFetch(`${API_BASE}/admin/users/${username}/role`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: primaryRole, roles: roles })
@@ -1420,7 +1428,7 @@ export default function KpiEnterpriseApp() {
 
   const handleUpdateUserRole = async (username: string, newRole: string) => {
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${username}/role`, {
+      const res = await apiFetch(`${API_BASE}/admin/users/${username}/role`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole })
@@ -1448,7 +1456,7 @@ export default function KpiEnterpriseApp() {
       type: "warning",
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/admin/users/${username}/reset-password`, {
+          const res = await apiFetch(`${API_BASE}/admin/users/${username}/reset-password`, {
             method: "POST"
           });
           const data = await res.json();
@@ -1481,7 +1489,7 @@ export default function KpiEnterpriseApp() {
       type: willBlock ? "danger" : "success",
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/admin/users/${username}/toggle-status`, {
+          const res = await apiFetch(`${API_BASE}/admin/users/${username}/toggle-status`, {
             method: "POST"
           });
           const data = await res.json();
@@ -1505,7 +1513,7 @@ export default function KpiEnterpriseApp() {
     }
     try {
       if (editingIndicator) {
-        const res = await fetch(`${API_BASE}/indicators/${editingIndicator.id}`, {
+        const res = await apiFetch(`${API_BASE}/indicators/${editingIndicator.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1519,7 +1527,7 @@ export default function KpiEnterpriseApp() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Tahrirlashda xatolik");
       } else {
-        const res = await fetch(`${API_BASE}/indicators`, {
+        const res = await apiFetch(`${API_BASE}/indicators`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1553,7 +1561,7 @@ export default function KpiEnterpriseApp() {
       type: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/indicators/${indId}`, {
+          const res = await apiFetch(`${API_BASE}/indicators/${indId}`, {
             method: "DELETE"
           });
           const data = await res.json();
@@ -1576,9 +1584,9 @@ export default function KpiEnterpriseApp() {
     setIsHemisLoading(true);
     try {
       const [statusRes, deptsRes, empsRes] = await Promise.all([
-        fetch(`${API_BASE}/hemis/status`).then(r => r.json()),
-        fetch(`${API_BASE}/hemis/departments`).then(r => r.json()),
-        fetch(`${API_BASE}/hemis/employees?type=${hemisEmployeeType}&limit=300`).then(r => r.json())
+        apiFetch(`${API_BASE}/hemis/status`).then(r => r.json()),
+        apiFetch(`${API_BASE}/hemis/departments`).then(r => r.json()),
+        apiFetch(`${API_BASE}/hemis/employees?type=${hemisEmployeeType}&limit=300`).then(r => r.json())
       ]);
       setHemisStatus(statusRes);
       setHemisDepartments(deptsRes.items || []);
@@ -1609,7 +1617,7 @@ export default function KpiEnterpriseApp() {
     }
     setIsEvaluatorSaving(true);
     try {
-      const res = await fetch(`${API_BASE}/evaluators`, {
+      const res = await apiFetch(`${API_BASE}/evaluators`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1650,7 +1658,7 @@ export default function KpiEnterpriseApp() {
       type: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/evaluators/${evalId}`, { method: "DELETE" });
+          const res = await apiFetch(`${API_BASE}/evaluators/${evalId}`, { method: "DELETE" });
           if (!res.ok) throw new Error("Oʻchirishda xatolik");
           setEvaluators(prev => prev.filter(e => e.id !== evalId));
           showAlert({ title: "Oʻchirildi", message: "Baholovchi muvaffaqiyatli roʻyxatdan chiqarildi.", type: "success" });
@@ -1665,7 +1673,7 @@ export default function KpiEnterpriseApp() {
     e.preventDefault();
     setIsSavingSettings(true);
     try {
-      const res = await fetch(`${API_BASE}/evaluation-period`, {
+      const res = await apiFetch(`${API_BASE}/evaluation-period`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1714,7 +1722,7 @@ export default function KpiEnterpriseApp() {
     }
     setIsAppealSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/appeals`, {
+      const res = await apiFetch(`${API_BASE}/appeals`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1767,7 +1775,7 @@ export default function KpiEnterpriseApp() {
     }
     setIsAppealReviewing(true);
     try {
-      const res = await fetch(`${API_BASE}/appeals/${selectedAppealForReview.id}/review`, {
+      const res = await apiFetch(`${API_BASE}/appeals/${selectedAppealForReview.id}/review`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1840,7 +1848,7 @@ export default function KpiEnterpriseApp() {
     setIsLoggingIn(true);
 
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const res = await apiFetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1887,7 +1895,7 @@ export default function KpiEnterpriseApp() {
 
     setIsChangingPassword(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/change-password`, {
+      const res = await apiFetch(`${API_BASE}/auth/change-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1939,7 +1947,7 @@ export default function KpiEnterpriseApp() {
     setIsSavingSettings(true);
     setSettingsSaveSuccess(false);
     try {
-      const res = await fetch(`${API_BASE}/admin/settings`, {
+      const res = await apiFetch(`${API_BASE}/admin/settings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(systemSettings)
@@ -1964,7 +1972,7 @@ export default function KpiEnterpriseApp() {
     setIsHemisSyncing(true);
     setHemisSyncMessage("");
     try {
-      const res = await fetch(`${API_BASE}/hemis/sync`, { method: "POST" });
+      const res = await apiFetch(`${API_BASE}/hemis/sync`, { method: "POST" });
       const data = await res.json();
       if (res.ok) {
         setHemisSyncMessage(data.message);
@@ -2054,7 +2062,7 @@ export default function KpiEnterpriseApp() {
     setIsDoiLoading(true);
     setModalNotification(null);
     try {
-      const res = await fetch(`${API_BASE}/doi/lookup`, {
+      const res = await apiFetch(`${API_BASE}/doi/lookup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ doi: doiInput.trim() })
@@ -2120,7 +2128,7 @@ export default function KpiEnterpriseApp() {
         try {
           const formData = new FormData();
           formData.append("file", modalUploadedFile);
-          const upRes = await fetch(`${API_BASE}/upload`, {
+          const upRes = await apiFetch(`${API_BASE}/upload`, {
             method: "POST",
             body: formData
           });
@@ -2135,7 +2143,7 @@ export default function KpiEnterpriseApp() {
 
       let res;
       if (editingSubmission) {
-        res = await fetch(`${API_BASE}/submissions/${editingSubmission.id}`, {
+        res = await apiFetch(`${API_BASE}/submissions/${editingSubmission.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2149,7 +2157,7 @@ export default function KpiEnterpriseApp() {
           })
         });
       } else {
-        res = await fetch(`${API_BASE}/submissions`, {
+        res = await apiFetch(`${API_BASE}/submissions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2229,7 +2237,7 @@ export default function KpiEnterpriseApp() {
       type: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/submissions/${sub.id}`, {
+          const res = await apiFetch(`${API_BASE}/submissions/${sub.id}`, {
             method: "DELETE"
           });
           const data = await res.json();
@@ -2279,7 +2287,7 @@ export default function KpiEnterpriseApp() {
     const reviewerName = currentUser ? currentUser.name : (currentTeacher?.name || "Mudir");
 
     try {
-      const res = await fetch(`${API_BASE}/submissions/${selectedSubForReview.id}/verify`, {
+      const res = await apiFetch(`${API_BASE}/submissions/${selectedSubForReview.id}/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2324,7 +2332,7 @@ export default function KpiEnterpriseApp() {
     e.preventDefault();
     if (!currentTeacher) return;
     try {
-      const res = await fetch(`${API_BASE}/appeals`, {
+      const res = await apiFetch(`${API_BASE}/appeals`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3531,7 +3539,7 @@ export default function KpiEnterpriseApp() {
                 <div className="text-xs font-bold truncate leading-tight">{currentUser.name}</div>
                 <div className={`text-[10px] font-medium truncate flex items-center gap-1 mt-0.5 ${activePage === "profile" ? "text-blue-200" : "text-blue-500"
                   }`}>
-                  <IconUser size={12} className="shrink-0" />
+                  <User size={12} className="shrink-0" />
                   <span>Mening profilim</span>
                 </div>
               </div>
@@ -4027,7 +4035,7 @@ export default function KpiEnterpriseApp() {
                         value={adminUsersSearchText}
                         onChange={(e) => {
                           setAdminUsersSearchText(e.target.value);
-                          fetch(`${API_BASE}/admin/users?q=${encodeURIComponent(e.target.value)}&role=${adminUsersFilterRole}`)
+                          apiFetch(`${API_BASE}/admin/users?q=${encodeURIComponent(e.target.value)}&role=${adminUsersFilterRole}`)
                             .then(r => r.json())
                             .then(d => { if (d.items) setAdminUsers(d.items); });
                         }}
@@ -4054,7 +4062,7 @@ export default function KpiEnterpriseApp() {
                       key={tab.id}
                       onClick={() => {
                         setAdminUsersFilterRole(tab.id);
-                        fetch(`${API_BASE}/admin/users?q=${encodeURIComponent(adminUsersSearchText)}&role=${tab.id}`)
+                        apiFetch(`${API_BASE}/admin/users?q=${encodeURIComponent(adminUsersSearchText)}&role=${tab.id}`)
                           .then(r => r.json())
                           .then(d => { if (d.items) setAdminUsers(d.items); });
                       }}

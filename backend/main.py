@@ -41,7 +41,7 @@ from database import (
     db_get_hemis_academic_stats,
     db_get_rbac_roles, db_get_rbac_permissions, db_get_user_permissions,
     db_create_rbac_role, db_update_role_permissions, db_delete_rbac_role,
-    db_get_teacher_scores, db_load_all_active_teachers
+    db_get_teacher_scores, db_load_all_active_teachers, db_checkpoint
 )
 
 from security import (
@@ -75,6 +75,18 @@ ATTEMPT_WINDOW_MINUTES = 10        # 10 daqiqa ichidagi xatolar hisobga olinadi
 
 # In-memory tracking: { "ip:X.X.X.X": {...}, "user:username": {...} }
 FAILED_LOGIN_TRACKER: Dict[str, Dict[str, Any]] = {}
+
+def check_admin_access(request: Request) -> Dict[str, Any]:
+    """Administrator yoki Rektorat vakolatini qat'iy tekshiradi"""
+    user = require_authenticated_user(request)
+    u_role = user.get("role", "")
+    u_roles = user.get("roles", [u_role])
+    if not require_roles_any(u_roles, ["ADMIN", "RECTORATE"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ushbu amalni bajarish uchun faqat Administrator yoki Rektorat vakolati talab qilinadi!"
+        )
+    return user
 
 def get_client_ip(request: Request) -> str:
     """Klientning real IP manzilini xavfsiz aniqlash"""
@@ -1001,7 +1013,11 @@ async def upload_file(file: UploadFile = File(...), request: Request = None):
     """
     KPI daliliy hujjatlarini xavfsiz qabul qilish va diskka saqlash.
     Maksimal hajm: 10 MB. Ruxsat etilgan formatlar: PDF, DOCX, ZIP, PNG, JPG.
+    Faqat tizimga kirgan foydalanuvchilar fayl yuklashi mumkin.
     """
+    if request:
+        require_authenticated_user(request)
+
     clean_base = os.path.basename(file.filename or "file")
     safe_base = "".join(c for c in clean_base if c.isalnum() or c in "._- ")
     ext = os.path.splitext(safe_base)[1].lower()
@@ -1573,7 +1589,8 @@ def get_indicators(block: Optional[str] = None, include_inactive: bool = False):
     return res
 
 @app.post("/api/indicators", response_model=Indicator)
-def create_indicator(item: IndicatorCreate):
+def create_indicator(item: IndicatorCreate, request: Request):
+    check_admin_access(request)
     global INDICATORS_DB
     exists = any(ind.id.strip().lower() == item.id.strip().lower() for ind in INDICATORS_DB)
     if exists:
@@ -1600,7 +1617,8 @@ def create_indicator(item: IndicatorCreate):
     return new_ind
 
 @app.put("/api/indicators/{indicator_id}", response_model=Indicator)
-def update_indicator(indicator_id: str, update: IndicatorUpdate):
+def update_indicator(indicator_id: str, update: IndicatorUpdate, request: Request):
+    check_admin_access(request)
     global INDICATORS_DB
     ind = next((i for i in INDICATORS_DB if i.id.strip().lower() == indicator_id.strip().lower()), None)
     if not ind:
@@ -1623,7 +1641,8 @@ def update_indicator(indicator_id: str, update: IndicatorUpdate):
     return ind
 
 @app.delete("/api/indicators/{indicator_id}")
-def delete_indicator(indicator_id: str):
+def delete_indicator(indicator_id: str, request: Request):
+    check_admin_access(request)
     global INDICATORS_DB
     ind = next((i for i in INDICATORS_DB if i.id.strip().lower() == indicator_id.strip().lower()), None)
     if not ind:
@@ -1641,7 +1660,8 @@ def delete_indicator(indicator_id: str):
     return {"success": True, "message": f"'{ind.id}' mezoni muvaffaqiyatli arxivlandi (nofaol holatga oʻtkazildi)"}
 
 @app.post("/api/indicators/reset-council")
-def reset_to_council_indicators():
+def reset_to_council_indicators(request: Request):
+    check_admin_access(request)
     """OTM Kengashi tomonidan tasdiqlangan rasmiy 20 ta mezon tizimiga qayta tiklash"""
     global INDICATORS_DB
     # Boshlang'ich 20 ta mezonga qaytarish
@@ -1784,6 +1804,18 @@ def create_submission(sub_in: SubmissionCreate, request: Request):
             detail=f"Hozirda KPI hujjatlarini qabul qilish muddati yakunlangan yoki administrator tomonidan vaqtincha yopilgan. Belgilangan muddat: {SYSTEM_SETTINGS.deadline_date}"
         )
 
+    # 1. Muddat sanasini avtomatik tekshirish
+    if SYSTEM_SETTINGS.deadline_date:
+        try:
+            dl_date = datetime.strptime(SYSTEM_SETTINGS.deadline_date, "%Y-%m-%d").date()
+            if datetime.now().date() > dl_date:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"KPI hujjatlarini qabul qilish muddati ({SYSTEM_SETTINGS.deadline_date}) rasman yakunlangan! Qoʻshimcha maʼlumot uchun Administratsiyaga murojaat qiling."
+                )
+        except ValueError:
+            pass
+
     auth_user = get_current_user_from_request(request)
 
     teacher = next((t for t in RAW_TEACHERS if t["id"] == sub_in.teacher_id), None)
@@ -1804,6 +1836,28 @@ def create_submission(sub_in: SubmissionCreate, request: Request):
         req_id = str(sub_in.teacher_id)
         if auth_id != req_id and auth_user.get("username") != str(teacher.get("username", "")).lower():
             raise HTTPException(status_code=403, detail="Siz faqat oʻz nomingizdan KPI arizasi topshirishingiz mumkin!")
+
+    # 2. Akademik halollik va dublikatlarga qarshi qat'iy tekshiruv (Anti-fraud / Deduplication)
+    clean_title = sub_in.title.strip().lower()
+    clean_doi = sub_in.doi.strip().lower() if sub_in.doi else None
+
+    for existing in SUBMISSIONS_DB:
+        if existing.status == "rejected":
+            continue
+        # DOI xalqaro unikal identifikator - bir xil DOI bo'yicha qayta topshirish taqiqlanadi
+        if clean_doi and existing.doi and existing.doi.strip().lower() == clean_doi:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Ushbu DOI ({sub_in.doi}) boʻyicha maqola tizimga allaqachon kiritilgan (#{existing.id}, Muallif: {existing.teacher_name})!"
+            )
+        # Aynan shu o'qituvchi ayni bir xil mezon va nom bilan qayta topshirishining oldini olish
+        if (existing.teacher_id == sub_in.teacher_id or existing.teacher_name.strip().lower() == teacher["name"].strip().lower()) \
+           and existing.indicator_id == sub_in.indicator_id \
+           and existing.title.strip().lower() == clean_title:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Siz ushbu mezon boʻyicha aynan shunday sarlavhali faoliyat arizasini allaqachon topshirgansiz (#{existing.id})!"
+            )
 
     ind = next((i for i in INDICATORS_DB if i.id == sub_in.indicator_id), None)
     max_allowed = float(ind.max_ball) if ind else 2.0
@@ -1852,7 +1906,7 @@ def create_submission(sub_in: SubmissionCreate, request: Request):
     return new_sub
 
 @app.put("/api/submissions/{sub_id}", response_model=Submission)
-def update_submission(sub_id: int, update_data: SubmissionUpdate):
+def update_submission(sub_id: int, update_data: SubmissionUpdate, request: Request):
     sub = next((s for s in SUBMISSIONS_DB if s.id == sub_id), None)
     if not sub:
         raise HTTPException(status_code=404, detail="Ariza topilmadi")
@@ -1861,6 +1915,21 @@ def update_submission(sub_id: int, update_data: SubmissionUpdate):
             status_code=400,
             detail="Faqat baholanmagan (kutilayotgan) holatdagi arizalarni tahrirlash mumkin. Baholangan arizalar boʻyicha apellyatsiya berilishi kerak."
         )
+
+    # IDOR xavfsizlik tekshiruvi: faqat ariza egasi yoki Administrator tahrirlashi mumkin
+    auth_user = get_current_user_from_request(request)
+    if auth_user:
+        u_role = auth_user.get("role", "")
+        u_roles = auth_user.get("roles", [u_role])
+        u_name = auth_user.get("name", "").strip().lower()
+        sub_name = sub.teacher_name.strip().lower()
+        is_admin = any(r in ["ADMIN", "RECTORATE"] for r in u_roles)
+        is_owner = (u_name == sub_name) or (str(auth_user.get("id")) == str(sub.teacher_id))
+        if not is_admin and not is_owner:
+            raise HTTPException(
+                status_code=403,
+                detail="Siz faqat oʻzingiz yuklagan arizani tahrirlash huquqiga egasiz!"
+            )
 
     if update_data.indicator_id is not None:
         sub.indicator_id = update_data.indicator_id
@@ -2101,17 +2170,40 @@ def get_appeals(teacher_id: Optional[int] = None):
     return all_appeals
 
 @app.post("/api/appeals", response_model=Appeal)
-def create_appeal(appeal_in: AppealCreate):
+def create_appeal(appeal_in: AppealCreate, request: Request = None):
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     appeal_id = f"AP-2026-{uuid.uuid4().hex[:6].upper()}"
-    
-    # Ariza ma'lumotlarini qidirish
+
+    if request:
+        auth_user = get_current_user_from_request(request)
+        if auth_user and auth_user.get("role") == "TEACHER":
+            auth_id = str(auth_user.get("id"))
+            req_id = str(appeal_in.teacher_id)
+            if auth_id != req_id and auth_user.get("name", "").strip().lower() != appeal_in.teacher_name.strip().lower():
+                raise HTTPException(
+                    status_code=403,
+                    detail="Siz faqat oʻz arizalaringiz boʻyicha apellyatsiya topshirishingiz mumkin!"
+                )
+
+    # Ariza ma'lumotlarini qidirish va qat'iy mantiqiy tekshiruvlar
     sub_title = appeal_in.title or ""
     claimed = appeal_in.claimed_ball or 0.0
     reviewed = appeal_in.reviewed_ball or 0.0
     if appeal_in.submission_id:
         sub = next((s for s in SUBMISSIONS_DB if s.id == appeal_in.submission_id), None)
+        if not sub:
+            all_subs = db_load_submissions()
+            sub_d = next((s for s in all_subs if s["id"] == appeal_in.submission_id), None)
+            if sub_d:
+                sub = Submission(**sub_d)
+
         if sub:
+            # Kutilayotgan (hali baholanmagan) ariza bo'yicha apellyatsiya berish taqiqlanadi
+            if sub.status == "pending":
+                raise HTTPException(
+                    status_code=400,
+                    detail="Ushbu ariza hali komissiya tomonidan baholanmagan (kutilmoqda). Faqat baholangan yoki rad etilgan arizalar boʻyicha apellyatsiya berilishi mumkin."
+                )
             sub_title = sub_title or sub.title
             claimed = claimed or sub.claimed_ball
             reviewed = reviewed or sub.ball
@@ -2119,6 +2211,14 @@ def create_appeal(appeal_in: AppealCreate):
                 appeal_in.initial_reviewer = sub.reviewer_name or "Kafedra mudiri"
             if not appeal_in.initial_rejection_reason:
                 appeal_in.initial_rejection_reason = sub.rejection_reason or sub.reviewer_comment
+
+        # Bir vaqtning o'zida ayni bir ariza bo'yicha ikkita faol apellyatsiya bo'lishini oldini olish
+        active_appeal = next((a for a in APPEALS_DB if a.submission_id == appeal_in.submission_id and a.status == "Jarayonda"), None)
+        if active_appeal:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Ushbu ariza boʻyicha hozirda faol apellyatsiya (#{active_appeal.id}) koʻrib chiqilmoqda. Yangi shikoyat yuborishdan avval avvalgi natija kutilishi kerak."
+            )
 
     new_appeal_data = {
         "id": appeal_id,
@@ -2158,8 +2258,22 @@ def create_appeal(appeal_in: AppealCreate):
     return created_obj
 
 @app.put("/api/appeals/{appeal_id}/review", response_model=Appeal)
-def review_appeal(appeal_id: str, review_in: AppealReviewRequest):
+def review_appeal(appeal_id: str, review_in: AppealReviewRequest, request: Request = None):
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    # Huquq tekshiruvi: faqat vakolatli xodimlar apellyatsiyani ko'rib chiqishi mumkin
+    if request:
+        auth_user = get_current_user_from_request(request)
+        if auth_user:
+            u_role = auth_user.get("role", "")
+            u_roles = auth_user.get("roles", [u_role])
+            if not require_roles_any(u_roles, ["ADMIN", "RECTORATE", "DEAN", "COMMISSION", "HEAD_OF_DEPT"]):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Apellyatsiyani koʻrib chiqish vakolati faqat Apellyatsiya komissiyasi, Dekan yoki Rektoratga berilgan!"
+                )
+            if not review_in.commission_member:
+                review_in.commission_member = auth_user.get("name")
     
     # Status konvertatsiyasi
     status_map = {
@@ -2191,7 +2305,7 @@ def review_appeal(appeal_id: str, review_in: AppealReviewRequest):
             a.decision = review_in.commission_comment
             break
 
-    # Agar qanoatlantirilgan bo'lsa, submissions xotirasini ham sinxronlash
+    # Agar qanoatlantirilgan bo'lsa, arizalar bazasiga ham qat'iy yozib saqlash (Data integrity)
     if review_in.status.upper() in ["ACCEPTED", "PARTIALLY_ACCEPTED"]:
         sub_id = updated.get("submission_id")
         if sub_id:
@@ -2200,6 +2314,7 @@ def review_appeal(appeal_id: str, review_in: AppealReviewRequest):
                 sub.status = "approved"
                 sub.ball = float(review_in.awarded_ball or 0.0)
                 sub.reviewer_comment = f"Apellyatsiya komissiyasi qarori: {review_in.commission_comment}"
+                db_save_submission(sub.dict())
 
     audit_msg = f"Apellyatsiya koʻrib chiqildi ({appeal_id}, Holati: {disp_status}, Qoʻyilgan ball: {review_in.awarded_ball})"
     db_save_audit_log(current_time_str, review_in.commission_member or "Komissiya", audit_msg)
@@ -2223,7 +2338,8 @@ def get_evaluators():
     return EVALUATORS_DB
 
 @app.post("/api/evaluators", response_model=Evaluator)
-def add_evaluator(eval_in: EvaluatorCreate):
+def add_evaluator(eval_in: EvaluatorCreate, request: Request):
+    check_admin_access(request)
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     eval_dict = eval_in.dict()
     saved = db_add_evaluator(eval_dict)
@@ -2241,7 +2357,8 @@ def add_evaluator(eval_in: EvaluatorCreate):
     return eval_obj
 
 @app.delete("/api/evaluators/{eval_id}")
-def delete_evaluator_endpoint(eval_id: int):
+def delete_evaluator_endpoint(eval_id: int, request: Request):
+    check_admin_access(request)
     global EVALUATORS_DB
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     db_delete_evaluator(eval_id)
@@ -2275,7 +2392,8 @@ def get_evaluation_period():
     }
 
 @app.put("/api/evaluation-period")
-def update_evaluation_period(period_in: EvaluationPeriodUpdate):
+def update_evaluation_period(period_in: EvaluationPeriodUpdate, request: Request):
+    check_admin_access(request)
     global SYSTEM_SETTINGS
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     current = db_load_settings() or SYSTEM_SETTINGS.dict()
@@ -2309,7 +2427,8 @@ def get_system_settings():
     return SYSTEM_SETTINGS
 
 @app.post("/api/admin/settings", response_model=SystemSettings)
-def update_system_settings(new_settings: SystemSettings):
+def update_system_settings(new_settings: SystemSettings, request: Request):
+    check_admin_access(request)
     global SYSTEM_SETTINGS
     SYSTEM_SETTINGS = new_settings
     db_save_settings(new_settings.dict())
@@ -2371,8 +2490,9 @@ def get_admin_users(q: Optional[str] = None, role: Optional[str] = None):
     }
 
 @app.put("/api/admin/users/{username}/role")
-def update_user_role(username: str, body: AdminUserRoleUpdate):
+def update_user_role(username: str, body: AdminUserRoleUpdate, request: Request):
     """Foydalanuvchining tizimdagi rolini oʻzgartirish"""
+    check_admin_access(request)
     u_key = username.strip().lower()
     user = USERS_DB.get(u_key)
     if not user:
@@ -2400,21 +2520,23 @@ def update_user_role(username: str, body: AdminUserRoleUpdate):
     return {"success": True, "message": f"Foydalanuvchi roli '{user['role']}' deb muvaffaqiyatli yangilandi", "user": user}
 
 @app.post("/api/admin/users/{username}/reset-password")
-def reset_user_password(username: str):
+def reset_user_password(username: str, request: Request):
     """
     Foydalanuvchining parolini dastlabki HEMIS ID ga qaytarish:
     - Oʻqituvchi parolini unutganda administrator bitta tugma bilan tiklab beradi;
     - Tizimga qayta kirganda yana majburiy yangi parol soʻraladi.
     """
+    check_admin_access(request)
     u_key = username.strip().lower()
     user = USERS_DB.get(u_key)
     if not user:
         raise HTTPException(status_code=404, detail="Foydalanuvchi hisobi topilmadi")
 
     initial_pass = user.get("employee_id_number") or u_key
-    user["password"] = initial_pass
+    hashed_pass = hash_password(initial_pass)
+    user["password"] = hashed_pass
     user["must_change_password"] = True
-    db_reset_user_password(u_key, initial_pass)
+    db_reset_user_password(u_key, hashed_pass)
 
     AUDIT_LOGS.insert(0, {
         "id": len(AUDIT_LOGS) + 1,
@@ -2425,8 +2547,9 @@ def reset_user_password(username: str):
     return {"success": True, "message": f"{user.get('name', username)} xodimining paroli birlamchi HEMIS ID ga tiklandi"}
 
 @app.post("/api/admin/users/{username}/toggle-status")
-def toggle_user_status(username: str):
+def toggle_user_status(username: str, request: Request):
     """Foydalanuvchi hisobini vaqtincha bloklash yoki qayta faollashtirish"""
+    check_admin_access(request)
     u_key = username.strip().lower()
     user = USERS_DB.get(u_key)
     if not user:
@@ -2446,13 +2569,15 @@ def toggle_user_status(username: str):
     return {"success": True, "is_active": user["is_active"], "message": f"Foydalanuvchi hisobi muvaffaqiyatli {status_name}"}
 
 @app.post("/api/admin/users")
-def create_admin_user(data: AdminUserCreate):
+def create_admin_user(data: AdminUserCreate, request: Request):
     """Administrator tomonidan yangi foydalanuvchi qoʻshish"""
+    check_admin_access(request)
     u_key = data.username.strip().lower()
     if u_key in USERS_DB:
         raise HTTPException(status_code=400, detail="Ushbu loginli foydalanuvchi allaqachon mavjud")
 
-    init_pass = data.password.strip() if data.password else u_key
+    raw_pass = data.password.strip() if data.password else u_key
+    hashed_pass = hash_password(raw_pass)
     USERS_DB[u_key] = {
         "id": len(USERS_DB) + 1000,
         "username": u_key,
@@ -2461,7 +2586,7 @@ def create_admin_user(data: AdminUserCreate):
         "department": data.department.strip() if data.department else "Kafedra koʻrsatilmagan",
         "position": data.position.strip() if data.position else "Xodim",
         "fte": data.fte,
-        "password": init_pass,
+        "password": hashed_pass,
         "must_change_password": True,
         "is_active": True,
         "employee_id_number": u_key
@@ -2798,7 +2923,7 @@ def get_hemis_employees(type: str = "teacher", page: int = 1, limit: int = 50):
         raise HTTPException(status_code=500, detail=f"HEMIS xodimlar tahlili xatoligi: {str(e)}")
 
 @app.post("/api/hemis/sync")
-def sync_hemis_teachers():
+def sync_hemis_teachers(request: Request):
     """
     HEMIS dan faol professor-oʻqituvchilarni KPI tizimiga import qilish va sinxronlashtirish:
     - Dublikatlar toʻliq tozalanadi;
@@ -2806,6 +2931,7 @@ def sync_hemis_teachers():
     - Bir nechta faol stavkalar jamlanadi ($K_{shtat}$ hisobida);
     - Faqat faol ishlayotgan noyob oʻqituvchilar saqlanadi.
     """
+    check_admin_access(request)
     global RAW_TEACHERS, AUDIT_LOGS
     try:
         raw_items = fetch_all_hemis_raw_employees(employee_type="teacher")
@@ -2965,8 +3091,9 @@ def get_hemis_workloads(employee_id: Optional[int] = None, employee_name: Option
 _last_workload_sync_timestamp = 0
 
 @app.post("/api/hemis/sync-workloads")
-def sync_hemis_workloads():
+def sync_hemis_workloads(request: Request):
     """HEMIS dan o'quv yuklamalarini majburiy qayta sinxronlashtirish (Anti-spam himoyasi bilan)"""
+    check_admin_access(request)
     global _last_workload_sync_timestamp
     import time
     now = time.time()
@@ -3222,10 +3349,11 @@ def _run_full_academic_background_sync():
         _is_full_academic_syncing = False
 
 @app.post("/api/hemis/sync-academic")
-def sync_hemis_academic_data():
+def sync_hemis_academic_data(request: Request):
     """
     HEMIS dan o'quv rejalar, fanlar, elektron resurslar va o'qituvchi biriktiruvlarini sinxronlash (Tezkor rejim).
     """
+    check_admin_access(request)
     global _last_academic_sync_timestamp
     import time
     now = time.time()
@@ -3271,8 +3399,9 @@ def sync_hemis_academic_data():
         raise HTTPException(status_code=500, detail=f"HEMIS oʻquv maʼlumotlarini sinxronlashda xatolik: {str(e)}")
 
 @app.post("/api/hemis/sync-full-academic")
-def trigger_full_academic_sync(background_tasks: BackgroundTasks):
+def trigger_full_academic_sync(background_tasks: BackgroundTasks, request: Request):
     """Barcha 7200+ fan va 14500+ dars biriktiruvlarini fonda to'liq sinxronlashtirish"""
+    check_admin_access(request)
     global _is_full_academic_syncing
     if _is_full_academic_syncing:
         return {
@@ -3415,6 +3544,12 @@ def init_hemis_teachers_on_startup():
         print(f"[STARTUP] HEMIS dan {dedup_result['total_unique_active']} nafar pedagog yuklandi. Jami foydalanuvchilar: {len(USERS_DB)}")
     except Exception as e:
         print(f"[STARTUP WARNING] HEMIS yuklashda xatolik: {e}")
+
+@app.on_event("shutdown")
+def on_shutdown():
+    """Server toʻxtatilganda barcha WAL maʼlumotlarini asosiy bazaga toʻliq yozish (Data Loss Prevention)"""
+    db_checkpoint()
+    print("[SHUTDOWN] SQLite WAL jurnali asosiy bazaga muvaffaqiyatli saqlandi.")
 
 @app.get("/api/download/nizom")
 def download_nizom():
