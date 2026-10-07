@@ -19,6 +19,7 @@
    - [7. Axborot xavfsizligi, kriptografiya va maʼlumotlar yaxlitligi](#7-axborot-xavfsizligi)
    - [8. Yuqori yuklama (Concurrency) va relyatsion baza meʼmori](#8-yuqori-yuklama)
    - [9. KPI reytingi, Svetafor tahlili va Excel hisobot eksporti](#9-kpi-va-excel)
+   - [10. Bildirishnomalar markazi va bosqichli qulflash](#10-bildirishnomalar-markazi)
 3. [Texnologiyalar steki](#texnologiyalar-steki)
 4. [Tizim rollari va ruxsatlar matritsasi](#tizim-rollari)
 5. [Oʻrnatish va ishlab chiqarish muhitida ishga tushirish](#ornatish-va-ishga-tushirish)
@@ -139,6 +140,21 @@ Oʻzbekiston Milliy universitetining Jizzax filiali professor-oʻqituvchilari va
 - **Jonli ballar agregatsiyasi:** Oʻqituvchilar yuklagan va tasdiqlangan arizalar 4 ta Nizom blokiga jamlanib, har bir oʻqituvchining sof va normallashtirilgan KPI ballari real vaqt rejimida hisoblab boriladi.
 - **Barcha 197 nafar xodim reytingda:** Eski 12 ta mock oʻqituvchi oʻrniga filialning barcha haqiqiy pedagog xodimlari asosiy jadvalda oʻz kafedralari va stavkalari bilan chiqadi.
 - **Professional formatlangan Excel eksport:** `/api/export/kpi-excel` endpointi orqali barcha 197 nafar xodimning reyting jadvali, svetafor ranglari (Yashil, Sariq, Qizil) va belgilangan oylik ustamalari koʻrsatilgan rasmiy shakldagi `.xlsx` hujjati yuklab olinadi.
+
+---
+
+### 10. Bildirishnomalar markazi (Universal Notification Engine) va Bosqichli qulflash (Stage Lock)
+- **Real-time Bildirishnomalar arxitekturasi:** 
+  - Butun tizim zanjirida hodisalar (ariza topshirilishi, baholanishi, kengash tavsiyanomasi, apellyatsiya) yuz berganda avtomatik tarzda maqsadli roldagi masʼul shaxslar (Kafedra mudiri, Dekan, Filial rahbariyati, Oʻqituvchi) uchun real vaqtli bildirishnomalar shakllanadi.
+  - Navbar Header qismida dinamik qoʻngʻiroqcha (Bell) indikatori, oʻqilmagan xabarlar hisoblagichi va interaktiv dropdown oynasi joriy etildi.
+  - Bitta klik orqali bildirishnomani oʻqilgan qilish va tegishli boʻlimga toʻgʻridan-toʻgʻri oʻtish imkoniyati.
+- **Tasdiqlash navbatidagi ishlar portfeli (Pending Approvals & Council Inbox):**
+  - Kafedra mudiri dashboardida 3 ta maxsus hisoblagich: Tasdiqlash kutilayotgan KPI arizalari, Fan sillabuslari va Kafedra kengashi bayonnomasini kutayotgan adabiyotlar.
+  - Fakultet dekani dashboardida Fakultet Ilmiy-uslubiy kengashi tavsiyanomasini kutayotgan barcha darslik va monografiyalar hamda dekan tasdigʻidagi sillabuslar.
+  - Sidebar menyusidagi "Fanlar va yuklama" tugmasida tasdiqlash navbatidagi ishlar soni real vaqtda jonli indikator (badge) sifatida aks etadi.
+- **Mualliflik huquqi va Bosqichli qulflash (Ownership & Stage Lock Enforcement):**
+  - Oʻqituvchi yoki boshqa xodimlar begona shaxslarning hujjatlarini yoki kengash arizalarini asossiz oʻchira olmasligi uchun qatʼiy xavfsizlik nazorati oʻrnatildi.
+  - Agar darslik yoki fan hujjati Kafedra kengashida koʻrib chiqilib, mudir tomonidan bayonnoma bilan tasdiqlangan boʻlsa, uni oʻzboshimchalik bilan oʻchirib yuborish butunlay taqiqlandi (`403 Forbidden: Kafedra mudiri tomonidan tasdiqlangan hujjatni oʻchirish taqiqlanadi`).
 
 ---
 

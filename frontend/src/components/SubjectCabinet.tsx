@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  LockKeyhole,
   Upload,
   X,
   XCircle
@@ -264,7 +265,41 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
     }
   };
 
+  const isDocAuthorOrAdmin = (doc: CourseSyllabusDoc) => {
+    if (!currentUser) return false;
+    if (currentUser.role === "ADMIN") return true;
+    const myName = (currentUser.name || "").toLowerCase().trim();
+    const docTeacher = (doc.teacher_name || "").toLowerCase().trim();
+    return docTeacher === myName || docTeacher.includes(myName) || myName.includes(docTeacher);
+  };
+
+  const isPubAuthorOrAdmin = (pub: PublicationRecommendation) => {
+    if (!currentUser) return false;
+    if (currentUser.role === "ADMIN") return true;
+    const myName = (currentUser.name || "").toLowerCase().trim();
+    const pubTeacher = (pub.teacher_name || "").toLowerCase().trim();
+    const pubAuthors = (pub.authors || "").toLowerCase().trim();
+    const isSubmittedBy = Boolean(pub.submitted_by_username && currentUser.username && pub.submitted_by_username.toLowerCase() === currentUser.username.toLowerCase());
+    return isSubmittedBy || pubTeacher === myName || pubTeacher.includes(myName) || pubAuthors.includes(myName);
+  };
+
   const handleDeleteCourseDocConfirm = (doc: CourseSyllabusDoc) => {
+    if (!isDocAuthorOrAdmin(doc)) {
+      showAlert({
+        title: "Ruxsat berilmagan",
+        message: "Siz faqat oʻzingiz yuklagan fan hujjatlarini oʻchirish huquqiga egasiz!",
+        type: "warning"
+      });
+      return;
+    }
+    if (doc.mudir_status === "APPROVED" && currentUser?.role !== "ADMIN") {
+      showAlert({
+        title: "Oʻchirish taqiqlangan",
+        message: "Kafedra mudiri tomonidan tasdiqlangan rasmiy hujjatni oʻchirib boʻlmaydi!",
+        type: "warning"
+      });
+      return;
+    }
     showConfirm({
       title: "Hujjatni oʻchirish",
       message: `Haqiqatan ham "${doc.title}" hujjatini oʻchirmoqchimisiz?`,
@@ -278,10 +313,13 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
           });
           if (res.ok) {
             showAlert({ title: "Oʻchirildi", message: "Hujjat muvaffaqiyatli oʻchirildi", type: "success" });
-            fetchCourseDocs(selectedSubject.subject_name, selectedSubject.teacher_name);
+            fetchCourseDocs(selectedSubject?.subject_name, selectedSubject?.teacher_name);
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            showAlert({ title: "Oʻchirilmadi", message: errData.detail || "Hujjatni oʻchirish taqiqlandi", type: "danger" });
           }
         } catch {
-          showAlert({ title: "Xatolik", message: "Oʻchirishda xatolik", type: "danger" });
+          showAlert({ title: "Xatolik", message: "Oʻchirishda server xatoligi", type: "danger" });
         }
       }
     });
@@ -465,6 +503,22 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
   };
 
   const handleDeletePublicationConfirm = (pub: PublicationRecommendation) => {
+    if (!isPubAuthorOrAdmin(pub)) {
+      showAlert({
+        title: "Ruxsat berilmagan",
+        message: "Siz faqat oʻzingiz taqdim etgan darslik va nashr arizalarini oʻchirish huquqiga egasiz!",
+        type: "warning"
+      });
+      return;
+    }
+    if (pub.kafedra_status === "APPROVED" && currentUser?.role !== "ADMIN") {
+      showAlert({
+        title: "Oʻchirish taqiqlangan",
+        message: "Kafedra kengashida tasdiqlangan va bayonnoma biriktirilgan nashr arizasini oʻchirib boʻlmaydi!",
+        type: "warning"
+      });
+      return;
+    }
     showConfirm({
       title: "Nashr arizasini oʻchirish",
       message: `Haqiqatan ham "${pub.title}" adabiyotining barcha kengash yozuvlarini oʻchirmoqchimisiz?`,
@@ -478,10 +532,13 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
           });
           if (res.ok) {
             showAlert({ title: "Oʻchirildi", message: "Nashr arizasi muvaffaqiyatli oʻchirildi", type: "success" });
-            fetchPublications(selectedSubject.subject_name, selectedSubject.teacher_name);
+            fetchPublications(selectedSubject?.subject_name, selectedSubject?.teacher_name);
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            showAlert({ title: "Oʻchirilmadi", message: errData.detail || "Nashr arizasini oʻchirish taqiqlandi", type: "danger" });
           }
         } catch {
-          showAlert({ title: "Xatolik", message: "Oʻchirishda xatolik", type: "danger" });
+          showAlert({ title: "Xatolik", message: "Oʻchirishda server xatoligi", type: "danger" });
         }
       }
     });
@@ -1149,14 +1206,25 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
                               </a>
                             )}
 
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteCourseDocConfirm(doc)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                              title="Oʻchirish"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {isDocAuthorOrAdmin(doc) && (
+                              doc.mudir_status === "APPROVED" && currentUser?.role !== "ADMIN" ? (
+                                <span
+                                  className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 cursor-not-allowed flex items-center"
+                                  title="Kafedra mudiri tasdiqlagan! Tasdiqlangan rasmiy hujjatni oʻchirib boʻlmaydi."
+                                >
+                                  <LockKeyhole className="w-4 h-4" />
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteCourseDocConfirm(doc)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                  title="Oʻchirish"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )
+                            )}
                           </div>
                         </div>
                       );
@@ -1416,14 +1484,25 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
                             </a>
                           )}
 
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePublicationConfirm(pub)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                            title="Oʻchirish"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {isPubAuthorOrAdmin(pub) && (
+                            pub.kafedra_status === "APPROVED" && currentUser?.role !== "ADMIN" ? (
+                              <span
+                                className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 cursor-not-allowed flex items-center"
+                                title="Kafedra kengashida tasdiqlangan va bayonnoma biriktirilgan! Kengashlar zanjiridagi rasmiy ishni oʻchirib boʻlmaydi."
+                              >
+                                <LockKeyhole className="w-4 h-4" />
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePublicationConfirm(pub)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                title="Oʻchirish"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )
+                          )}
                         </div>
                       </div>
                     ))}

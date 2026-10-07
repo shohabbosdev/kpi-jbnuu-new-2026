@@ -362,6 +362,7 @@ export interface PublicationRecommendation {
   mygov_app_num?: string;
   ministry_grif_num?: string;
   ministry_certificate_file?: string;
+  submitted_by_username?: string;
   overall_status: "AT_KAFEDRA" | "AT_FAKULTET" | "AT_METHODICAL" | "AT_COUNCIL" | "COUNCIL_RECOMMENDED" | "SUBMITTED_TO_MYGOV" | "MINISTRY_APPROVED" | "KAFEDRA_REJECTED" | "FAKULTET_REJECTED" | "METHODICAL_REJECTED" | "COUNCIL_REJECTED";
   verification_token?: string;
   created_at?: string;
@@ -486,3 +487,19 @@ export interface UniversalPaginationProps {
   itemLabel?: string;
   theme: "light" | "dark";
 }
+
+export interface NotificationItem {
+  id: number;
+  recipient_role?: string;
+  recipient_username?: string;
+  recipient_id?: number;
+  department?: string;
+  faculty?: string;
+  title: string;
+  message: string;
+  type: "submission" | "appeal" | "course_doc" | "publication" | "system";
+  link?: string;
+  is_read: boolean;
+  created_at: string;
+}
+

@@ -41,7 +41,8 @@ from database import (
     db_get_hemis_academic_stats,
     db_get_rbac_roles, db_get_rbac_permissions, db_get_user_permissions,
     db_create_rbac_role, db_update_role_permissions, db_delete_rbac_role,
-    db_get_teacher_scores, db_load_all_active_teachers, db_checkpoint
+    db_get_teacher_scores, db_load_all_active_teachers, db_checkpoint,
+    db_create_notification, db_get_notifications, db_mark_notification_read, db_mark_all_notifications_read
 )
 
 from security import (
@@ -1903,6 +1904,19 @@ def create_submission(sub_in: SubmissionCreate, request: Request):
         "action": audit_msg
     })
 
+    # Kafedra mudiriga yangi ariza haqida bildirishnoma
+    db_create_notification({
+        "recipient_role": "HEAD_OF_DEPT",
+        "department": teacher.get("department") or (ind.dept if ind else None),
+        "sender_name": teacher["name"],
+        "sender_role": "TEACHER",
+        "title": "Yangi KPI arizasi kelib tushdi",
+        "message": f"{teacher['name']} yangi faoliyat natijasini yukladi (#{new_sub.id}, «{new_sub.title}», Mezon: {new_sub.indicator_id}). Koʻrib chiqishingiz kutilmoqda.",
+        "type": "SUBMISSION_NEW",
+        "link_tab": "ranking",
+        "item_id": new_sub.id
+    })
+
     return new_sub
 
 @app.put("/api/submissions/{sub_id}", response_model=Submission)
@@ -2091,6 +2105,20 @@ def verify_submission(sub_id: int, action: VerificationAction, request: Request)
             "user": action.reviewer_name,
             "action": rej_msg
         })
+
+        # O'qituvchiga rad etilganlik bildirishnomasi
+        db_create_notification({
+            "recipient_role": "TEACHER",
+            "recipient_id": sub.teacher_id,
+            "sender_name": action.reviewer_name,
+            "sender_role": "REVIEWER",
+            "title": f"KPI arizangiz #{sub.id} rad etildi",
+            "message": f"«{sub.title}» sarlavhali arizangiz {action.reviewer_name} tomonidan rad etildi. Sababi: «{reason}». Agar norozi boʻlsangiz, Apellyatsiya berishingiz mumkin.",
+            "type": "SUBMISSION_VERIFIED",
+            "link_tab": "cabinet",
+            "item_id": sub.id
+        })
+
         return {
             "success": True,
             "message": f"Ariza muvaffaqiyatli rad etildi. Sababi oʻqituvchi profilida koʻrsatiladi.",
@@ -2126,6 +2154,20 @@ def verify_submission(sub_id: int, action: VerificationAction, request: Request)
             "user": action.reviewer_name,
             "action": app_msg
         })
+
+        # O'qituvchiga tasdiqlanganlik bildirishnomasi
+        db_create_notification({
+            "recipient_role": "TEACHER",
+            "recipient_id": sub.teacher_id,
+            "sender_name": action.reviewer_name,
+            "sender_role": "REVIEWER",
+            "title": f"KPI arizangiz #{sub.id} tasdiqlandi",
+            "message": f"«{sub.title}» sarlavhali faoliyat natijangiz {action.reviewer_name} tomonidan tasdiqlandi va {final_ball} ball berildi.",
+            "type": "SUBMISSION_VERIFIED",
+            "link_tab": "cabinet",
+            "item_id": sub.id
+        })
+
         return {
             "success": True,
             "message": f"Ariza tasdiqlandi va {final_ball} ball belgilandi.",
@@ -2255,6 +2297,19 @@ def create_appeal(appeal_in: AppealCreate, request: Request = None):
         "user": appeal_in.teacher_name,
         "action": audit_msg
     })
+
+    # Komissiya va Ma'muriyatga bildirishnoma
+    db_create_notification({
+        "recipient_role": "ADMIN",
+        "sender_name": appeal_in.teacher_name,
+        "sender_role": "TEACHER",
+        "title": "Yangi apellyatsiya arizasi",
+        "message": f"{appeal_in.teacher_name} #{appeal_in.submission_id or 0} arizasi boʻyicha yangi apellyatsiya topshirdi ({appeal_id}).",
+        "type": "APPEAL_NEW",
+        "link_tab": "appeals",
+        "item_id": appeal_id
+    })
+
     return created_obj
 
 @app.put("/api/appeals/{appeal_id}/review", response_model=Appeal)
@@ -2324,7 +2379,70 @@ def review_appeal(appeal_id: str, review_in: AppealReviewRequest, request: Reque
         "user": review_in.commission_member or "Komissiya",
         "action": audit_msg
     })
+
+    # O'qituvchiga qaror bildirishnomasi
+    db_create_notification({
+        "recipient_role": "TEACHER",
+        "recipient_id": updated.get("teacher_id"),
+        "sender_name": review_in.commission_member or "Apellyatsiya Komissiyasi",
+        "sender_role": "COMMISSION",
+        "title": f"Apellyatsiya qarori: #{appeal_id}",
+        "message": f"Apellyatsiyangiz «{disp_status}» deb topildi. Qoʻyilgan ball: {review_in.awarded_ball}. Xulosa: {review_in.commission_comment}",
+        "type": "APPEAL_DECISION",
+        "link_tab": "appeals",
+        "item_id": appeal_id
+    })
+
     return Appeal(**updated)
+
+# ==========================================
+# BILDIRISHNOMALAR (NOTIFICATIONS API)
+# ==========================================
+
+@app.get("/api/notifications")
+def get_notifications_endpoint(request: Request, limit: int = 50):
+    """
+    Foydalanuvchining roli, kafedrasi, fakulteti va shaxsiy hisobiga
+    tegishli barcha yangi bildirishnomalarni va oʻqilmaganlar sonini olish.
+    """
+    auth_user = get_current_user_from_request(request)
+    if not auth_user:
+        return {"items": [], "total_count": 0, "unread_count": 0}
+
+    username = auth_user.get("username", "")
+    role = auth_user.get("role", "TEACHER")
+    roles = auth_user.get("roles", [role])
+    department = auth_user.get("department")
+    faculty = auth_user.get("faculty")
+
+    return db_get_notifications(
+        username=username,
+        role=role,
+        roles=roles,
+        department=department,
+        faculty=faculty,
+        limit=limit
+    )
+
+@app.post("/api/notifications/{notif_id}/read")
+def mark_notification_read_endpoint(notif_id: int):
+    """Bitta bildirishnomani oʻqilgan deb belgilash"""
+    db_mark_notification_read(notif_id)
+    return {"success": True, "id": notif_id}
+
+@app.post("/api/notifications/read-all")
+def mark_all_notifications_read_endpoint(request: Request):
+    """Barcha bildirishnomalarni oʻqilgan deb belgilash"""
+    auth_user = get_current_user_from_request(request)
+    if auth_user:
+        db_mark_all_notifications_read(
+            username=auth_user.get("username"),
+            role=auth_user.get("role"),
+            roles=auth_user.get("roles"),
+            department=auth_user.get("department"),
+            faculty=auth_user.get("faculty")
+        )
+    return {"success": True, "message": "Barcha bildirishnomalar oʻqilgan deb belgilandi"}
 
 # ==========================================
 # BAHOLOVCHILAR VA EKSPERTLAR (EVALUATORS)
@@ -3957,6 +4075,20 @@ class CourseDocReviewRequest(BaseModel):
 def create_course_doc(doc: CourseDocCreate):
     """Fanga tegishli o'quv-uslubiy hujjatni (sillabus, ishchi dastur va h.k.) ro'yxatdan o'tkazish"""
     res = db_save_course_doc(doc.dict())
+
+    # Kafedra mudiriga bildirishnoma
+    db_create_notification({
+        "recipient_role": "HEAD_OF_DEPT",
+        "department": doc.department_name,
+        "sender_name": doc.teacher_name,
+        "sender_role": "TEACHER",
+        "title": f"Yangi fan hujjati ({doc.doc_type})",
+        "message": f"{doc.teacher_name} «{doc.subject_name}» fani boʻyicha yangi hujjat ({doc.title}) yukladi. Koʻrib chiqishingiz kutilmoqda.",
+        "type": "COURSE_DOC_NEW",
+        "link_tab": "hierarchy",
+        "item_id": res.get("id") if isinstance(res, dict) else None
+    })
+
     return {"success": True, "data": res}
 
 @app.get("/api/course-docs")
@@ -3984,13 +4116,72 @@ def review_course_doc(doc_id: int, review: CourseDocReviewRequest):
     )
     if not updated:
         raise HTTPException(status_code=404, detail="Hujjat topilmadi yoki rol noto'g'ri ko'rsatilgan")
+
+    # O'qituvchiga natija bildirishnomasi
+    t_name = updated.get("teacher_name", "")
+    role_label = "Kafedra mudiri" if review.role == "mudir" else "Fakultet dekani"
+    status_label = "maʼqullandi" if review.status == "APPROVED" else f"qaytarildi (Sabab: {review.comment})"
+    db_create_notification({
+        "recipient_role": "TEACHER",
+        "sender_name": role_label,
+        "sender_role": review.role.upper(),
+        "title": f"Fan hujjati {status_label.split()[0]}",
+        "message": f"«{updated.get('subject_name')}» fani hujjati ({updated.get('title')}) {role_label} tomonidan {status_label}.",
+        "type": "COURSE_DOC_VERIFIED",
+        "link_tab": "hierarchy",
+        "item_id": doc_id
+    })
+
+    # Agar kafedra mudiri ma'qullasa, Fakultet Dekaniga bildirishnoma
+    if review.role == "mudir" and review.status == "APPROVED":
+        db_create_notification({
+            "recipient_role": "DEAN",
+            "department": updated.get("department_name"),
+            "sender_name": "Kafedra mudiri",
+            "sender_role": "HEAD_OF_DEPT",
+            "title": "Dekanat tasdigʻiga yangi fan hujjati keldi",
+            "message": f"{t_name}ning «{updated.get('subject_name')}» fani hujjati kafedra tomonidan maʼqullandi va dekanat tasdigʻiga yoʻnaltirildi.",
+            "type": "COURSE_DOC_NEW",
+            "link_tab": "hierarchy",
+            "item_id": doc_id
+        })
+
     return {"success": True, "data": updated}
 
 @app.delete("/api/course-docs/{doc_id}")
-def delete_course_doc_endpoint(doc_id: int):
-    """Fan hujjatini o'chirish"""
+def delete_course_doc_endpoint(doc_id: int, request: Request):
+    """
+    Fan hujjatini xavfsiz oʻchirish:
+    - Faqat hujjat muallifi yoki Administrator oʻchira oladi;
+    - Agar Kafedra mudiri allaqachon tasdiqlagan boʻlsa (mudir_status == APPROVED), oʻchirish taqiqlanadi!
+    """
+    auth_user = get_current_user_from_request(request)
+    docs = db_get_course_docs()
+    target_doc = next((d for d in docs if d["id"] == doc_id), None)
+    if not target_doc:
+        raise HTTPException(status_code=404, detail="Fan hujjati topilmadi")
+
+    if auth_user:
+        u_role = auth_user.get("role", "")
+        u_roles = auth_user.get("roles", [u_role])
+        u_name = auth_user.get("name", "").strip().lower()
+        doc_author = (target_doc.get("teacher_name") or "").strip().lower()
+        is_admin = any(r in ["ADMIN", "RECTORATE"] for r in u_roles)
+        is_owner = (u_name == doc_author) or (str(auth_user.get("id")) == str(target_doc.get("teacher_id")))
+        if not is_admin and not is_owner:
+            raise HTTPException(
+                status_code=403,
+                detail="Siz faqat oʻzingiz yuklagan fan hujjatlarini oʻchirish huquqiga egasiz!"
+            )
+
+    if target_doc.get("mudir_status") == "APPROVED":
+        raise HTTPException(
+            status_code=400,
+            detail="Ushbu fan hujjati kafedra mudiri tomonidan tasdiqlangan va rasmiy roʻyxatga olingan. Uni oʻchirish taqiqlanadi!"
+        )
+
     db_delete_course_doc(doc_id)
-    return {"success": True, "message": "Hujjat o'chirildi"}
+    return {"success": True, "message": "Fan hujjati muvaffaqiyatli oʻchirildi"}
 
 @app.get("/api/verify/course-doc/{token}")
 def verify_course_doc(token: str):
@@ -4049,6 +4240,20 @@ def create_publication_recommendation(pub: PublicationCreate):
     Barcha majburiy hujjatlar (ichki/tashqi taqriz, o'quv dasturi, antiplagiat xulosasi va foizi) bilan.
     """
     res = db_save_publication(pub.dict())
+
+    # Kafedra mudiriga 1-bosqich bildirishnomasi
+    db_create_notification({
+        "recipient_role": "HEAD_OF_DEPT",
+        "department": pub.department_name,
+        "sender_name": pub.teacher_name,
+        "sender_role": "TEACHER",
+        "title": f"Yangi adabiyot tavsiyasi ({pub.pub_type})",
+        "message": f"{pub.teacher_name} «{pub.title}» boʻyicha Kafedra yigʻilishi muhokamasiga toʻliq hujjatlar toʻplamini topshirdi. 1-bosqich koʻrib chiqilishi kutilmoqda.",
+        "type": "PUBLICATION_NEW",
+        "link_tab": "hierarchy",
+        "item_id": res.get("id") if isinstance(res, dict) else None
+    })
+
     return {"success": True, "data": res}
 
 @app.get("/api/publications")
@@ -4082,6 +4287,107 @@ def review_publication_stage(pub_id: int, review: PublicationStageReview):
     )
     if not updated:
         raise HTTPException(status_code=404, detail="Nashr tavsiyanomasi topilmadi yoki bosqich nomi noto'g'ri")
+
+    # Kengashlar zanjiri bo'ylab avtomatik bildirishnomalar tarqatish
+    pub_title = updated.get("title", "Adabiyot")
+    t_name = updated.get("teacher_name", "")
+    p_num = review.protocol_num or "—"
+
+    if review.status == "REJECTED":
+        db_create_notification({
+            "recipient_role": "TEACHER",
+            "sender_name": "Kengash ekspertizasi",
+            "sender_role": review.stage.upper(),
+            "title": f"Adabiyot qaytarildi ({review.stage})",
+            "message": f"«{pub_title}» adabiyotingiz {review.stage} bosqichida rad etildi/qaytarildi. Sabab: {review.comment}",
+            "type": "PUBLICATION_STAGE",
+            "link_tab": "hierarchy",
+            "item_id": pub_id
+        })
+    elif review.status == "APPROVED":
+        if review.stage == "kafedra":
+            # O'qituvchiga xabar
+            db_create_notification({
+                "recipient_role": "TEACHER",
+                "sender_name": "Kafedra mudiri",
+                "sender_role": "HEAD_OF_DEPT",
+                "title": "Kafedra yigʻilishi maʼqulladi",
+                "message": f"«{pub_title}» kafedra yigʻilishida maʼqullandi va Fakultet Ilmiy-uslubiy kengashiga uzatildi (Bayonnoma №{p_num}).",
+                "type": "PUBLICATION_STAGE",
+                "link_tab": "hierarchy",
+                "item_id": pub_id
+            })
+            # Fakultet Dekaniga 2-bosqich bildirishnomasi
+            db_create_notification({
+                "recipient_role": "DEAN",
+                "department": updated.get("department_name"),
+                "sender_name": "Kafedra mudiri",
+                "sender_role": "HEAD_OF_DEPT",
+                "title": "Fakultet kengashi tasdigʻiga yangi adabiyot keldi",
+                "message": f"Kafedra yigʻilishi {t_name}ning «{pub_title}» asarini maʼqulladi. Fakultet Ilmiy-uslubiy kengashi koʻrib chiqishi kutilmoqda.",
+                "type": "PUBLICATION_NEW",
+                "link_tab": "hierarchy",
+                "item_id": pub_id
+            })
+        elif review.stage == "fakultet":
+            # O'qituvchiga xabar
+            db_create_notification({
+                "recipient_role": "TEACHER",
+                "sender_name": "Fakultet dekani",
+                "sender_role": "DEAN",
+                "title": "Fakultet kengashi maʼqulladi",
+                "message": f"«{pub_title}» Fakultet kengashida tasdiqlandi va Filial Oʻquv-uslubiy boshqarmasi ekspertizasiga uzatildi (Bayonnoma №{p_num}).",
+                "type": "PUBLICATION_STAGE",
+                "link_tab": "hierarchy",
+                "item_id": pub_id
+            })
+            # O'quv-uslubiy boshqarma / Rektoratga 3-bosqich bildirishnomasi
+            db_create_notification({
+                "recipient_role": "RECTORATE",
+                "sender_name": "Fakultet dekani",
+                "sender_role": "DEAN",
+                "title": "Oʻquv-uslubiy boshqarmaga yangi adabiyot keldi",
+                "message": f"Fakultet kengashida maʼqullangan «{pub_title}» (Muallif: {t_name}) Oʻquv-uslubiy boshqarma ekspertizasiga kelib tushdi.",
+                "type": "PUBLICATION_NEW",
+                "link_tab": "hierarchy",
+                "item_id": pub_id
+            })
+        elif review.stage == "methodical":
+            # O'qituvchiga xabar
+            db_create_notification({
+                "recipient_role": "TEACHER",
+                "sender_name": "Oʻquv-uslubiy boshqarma",
+                "sender_role": "RECTORATE",
+                "title": "Oʻquv-uslubiy boshqarma maʼqulladi",
+                "message": f"«{pub_title}» Oʻquv-uslubiy boshqarma ekspertizasidan muvaffaqiyatli oʻtdi va Filial Kengashiga yoʻnaltirildi (№{p_num}).",
+                "type": "PUBLICATION_STAGE",
+                "link_tab": "hierarchy",
+                "item_id": pub_id
+            })
+            # Filial Kengashiga 4-bosqich bildirishnomasi
+            db_create_notification({
+                "recipient_role": "RECTORATE",
+                "sender_name": "Oʻquv-uslubiy boshqarma",
+                "sender_role": "RECTORATE",
+                "title": "Filial Kengashi yakuniy tasdigʻiga adabiyot tayyor",
+                "message": f"«{pub_title}» Filial Kengashi kun tartibiga kiritish uchun toʻliq tayyorlandi.",
+                "type": "PUBLICATION_NEW",
+                "link_tab": "hierarchy",
+                "item_id": pub_id
+            })
+        elif review.stage == "council":
+            # O'qituvchiga tabrik va yakuniy xabar
+            db_create_notification({
+                "recipient_role": "TEACHER",
+                "sender_name": "Filial Kengashi",
+                "sender_role": "RECTORATE",
+                "title": "🎉 Filial Kengashi qarori: Nashrga tavsiya etildi!",
+                "message": f"TABRIKLAYMIZ! «{pub_title}» Filial Kengashi tomonidan rasman nashrga tavsiya etildi (Bayonnoma №{p_num}). Endi my.gov.uz va Vazirlik Grifi arizasini kiritishingiz mumkin!",
+                "type": "PUBLICATION_STAGE",
+                "link_tab": "hierarchy",
+                "item_id": pub_id
+            })
+
     return {"success": True, "data": updated}
 
 @app.post("/api/publications/{pub_id}/mygov")
@@ -4098,10 +4404,39 @@ def update_publication_mygov_info(pub_id: int, data: PublicationMyGovUpdate):
     return {"success": True, "data": updated}
 
 @app.delete("/api/publications/{pub_id}")
-def delete_publication_endpoint(pub_id: int):
-    """Nashr arizasini o'chirish"""
+def delete_publication_endpoint(pub_id: int, request: Request):
+    """
+    Nashr tavsiyanomasini xavfsiz oʻchirish:
+    - Faqat nashr muallifi yoki Administrator oʻchira oladi;
+    - Agar Kafedra yigʻilishi allaqachon maʼqullagan boʻlsa (kafedra_status == APPROVED), rasmiy kengash zanjiridagi hujjatni oʻchirish taqiqlanadi!
+    """
+    auth_user = get_current_user_from_request(request)
+    pubs = db_get_publications()
+    target_pub = next((p for p in pubs if p["id"] == pub_id), None)
+    if not target_pub:
+        raise HTTPException(status_code=404, detail="Nashr tavsiyanomasi topilmadi")
+
+    if auth_user:
+        u_role = auth_user.get("role", "")
+        u_roles = auth_user.get("roles", [u_role])
+        u_name = auth_user.get("name", "").strip().lower()
+        pub_author = (target_pub.get("teacher_name") or "").strip().lower()
+        is_admin = any(r in ["ADMIN", "RECTORATE"] for r in u_roles)
+        is_owner = (u_name == pub_author) or (str(auth_user.get("id")) == str(target_pub.get("teacher_id")))
+        if not is_admin and not is_owner:
+            raise HTTPException(
+                status_code=403,
+                detail="Siz faqat oʻzingiz taqdim etgan adabiyot tavsiyanomasini oʻchirish huquqiga egasiz!"
+            )
+
+    if target_pub.get("kafedra_status") == "APPROVED":
+        raise HTTPException(
+            status_code=400,
+            detail="Ushbu adabiyot kafedra yigʻilishida koʻrib chiqilib, maʼqullangan va rasmiy kengash zanjiriga kiritilgan. Uni oʻchirish taqiqlanadi!"
+        )
+
     db_delete_publication(pub_id)
-    return {"success": True, "message": "Nashr arizasi o'chirildi"}
+    return {"success": True, "message": "Adabiyot tavsiyanomasi muvaffaqiyatli oʻchirildi"}
 
 @app.get("/api/verify/publication/{token}")
 def verify_publication(token: str):

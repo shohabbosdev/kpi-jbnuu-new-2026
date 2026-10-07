@@ -551,6 +551,31 @@ def init_db():
                 VALUES (?, ?)
             """, (r_code, p_code))
 
+    # 17. Universal Notifications table (Bildirishnomalar tizimi)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            recipient_role TEXT,
+            recipient_username TEXT,
+            recipient_id INTEGER,
+            department TEXT,
+            faculty TEXT,
+            sender_name TEXT,
+            sender_role TEXT,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            type TEXT NOT NULL,
+            link_tab TEXT,
+            item_id TEXT,
+            is_read INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_notif_recipient_role ON notifications(recipient_role);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_notif_recipient_username ON notifications(recipient_username);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_notif_dept ON notifications(department);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_notif_is_read ON notifications(is_read);")
+
     conn.commit()
     conn.close()
 
@@ -2163,6 +2188,141 @@ def db_get_hemis_academic_stats() -> Dict[str, Any]:
         "scientific_activities_count": sa_count,
         "doctorate_students_count": doc_count
     }
+
+# =============================================================
+# BILDIRISHNOMALAR (NOTIFICATIONS ENGINE) METODLARI
+# =============================================================
+
+def db_create_notification(data: Dict[str, Any]) -> int:
+    """Yangi bildirishnoma yaratish va saqlash"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO notifications (
+            recipient_role, recipient_username, recipient_id,
+            department, faculty, sender_name, sender_role,
+            title, message, type, link_tab, item_id, is_read
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    """, (
+        data.get("recipient_role"),
+        data.get("recipient_username"),
+        data.get("recipient_id"),
+        data.get("department"),
+        data.get("faculty"),
+        data.get("sender_name", "Tizim"),
+        data.get("sender_role", "SYSTEM"),
+        data.get("title", ""),
+        data.get("message", ""),
+        data.get("type", "SYSTEM"),
+        data.get("link_tab"),
+        str(data.get("item_id", "")) if data.get("item_id") is not None else None
+    ))
+    notif_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return notif_id
+
+def db_get_notifications(
+    username: Optional[str] = None,
+    role: Optional[str] = None,
+    roles: Optional[List[str]] = None,
+    department: Optional[str] = None,
+    faculty: Optional[str] = None,
+    limit: int = 50
+) -> Dict[str, Any]:
+    """
+    Foydalanuvchining shaxsiyati, faol rollari, kafedrasi yoki fakultetiga
+    tegishli barcha bildirishnomalarni va o'qilmaganlar sonini olish.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    active_roles = set()
+    if role:
+        active_roles.add(role.upper())
+    if roles:
+        for r in roles:
+            active_roles.add(r.upper())
+
+    clean_user = (username or "").strip().lower()
+    clean_dept = (department or "").strip().lower()
+    clean_fac = (faculty or "").strip().lower()
+
+    # Barcha so'nggi 200 ta bildirishnomalarni olib, moslik bo'yicha saralash
+    cursor.execute("SELECT * FROM notifications ORDER BY created_at DESC, id DESC LIMIT 200")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    matched = []
+    unread_count = 0
+
+    for item in rows:
+        r_user = (item.get("recipient_username") or "").strip().lower()
+        r_role = (item.get("recipient_role") or "").strip().upper()
+        r_dept = (item.get("department") or "").strip().lower()
+        r_fac = (item.get("faculty") or "").strip().lower()
+
+        is_for_me = False
+
+        # 1. Bevosita shu foydalanuvchiga yuborilgan
+        if r_user and clean_user and r_user == clean_user:
+            is_for_me = True
+        # 2. Barchaga yuborilgan
+        elif r_role == "ALL":
+            is_for_me = True
+        # 3. Rol va bo'lim mosligi
+        elif r_role in active_roles:
+            dept_matches = not r_dept or (clean_dept and (r_dept in clean_dept or clean_dept in r_dept))
+            fac_matches = not r_fac or (clean_fac and (r_fac in clean_fac or clean_fac in r_fac))
+
+            if r_role in ["ADMIN", "RECTORATE"]:
+                is_for_me = True  # Rahbariyat va adminga filial bo'yicha hamma tegishli
+            elif r_role == "DEAN" and fac_matches:
+                is_for_me = True
+            elif r_role == "HEAD_OF_DEPT" and dept_matches:
+                is_for_me = True
+            elif r_role == "TEACHER" and (not r_user or r_user == clean_user):
+                is_for_me = True
+
+        if is_for_me:
+            matched.append(item)
+            if not item.get("is_read"):
+                unread_count += 1
+
+    limited_items = matched[:limit]
+    return {
+        "items": limited_items,
+        "total_count": len(matched),
+        "unread_count": unread_count
+    }
+
+def db_mark_notification_read(notification_id: int) -> bool:
+    """Bitta bildirishnomani o'qilgan deb belgilash"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE notifications SET is_read = 1 WHERE id = ?", (notification_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+def db_mark_all_notifications_read(
+    username: Optional[str] = None,
+    role: Optional[str] = None,
+    roles: Optional[List[str]] = None,
+    department: Optional[str] = None,
+    faculty: Optional[str] = None
+) -> bool:
+    """Foydalanuvchiga tegishli barcha bildirishnomalarni o'qilgan holatga o'tkazish"""
+    res = db_get_notifications(username=username, role=role, roles=roles, department=department, faculty=faculty, limit=200)
+    ids = [item["id"] for item in res.get("items", []) if not item.get("is_read")]
+    if ids:
+        conn = get_connection()
+        cursor = conn.cursor()
+        placeholders = ",".join("?" for _ in ids)
+        cursor.execute(f"UPDATE notifications SET is_read = 1 WHERE id IN ({placeholders})", ids)
+        conn.commit()
+        conn.close()
+    return True
 
 # Bazani ishga tushirish
 init_db()

@@ -60,7 +60,10 @@ import {
   Trash2,
   BookOpen,
   LayoutGrid,
-  List
+  List,
+  Bell,
+  BellRing,
+  CheckCheck
 } from "lucide-react";
 
 
@@ -88,6 +91,7 @@ import {
   ConfirmDialogState,
   CourseSyllabusDoc,
   PublicationRecommendation,
+  NotificationItem,
   HemisCurriculum,
   HemisCurriculumSubject,
   HemisSubjectResource,
@@ -258,6 +262,11 @@ export default function KpiEnterpriseApp() {
   // QR kod va ko'chirma chop etish / tekshirish modali
   const [qrVerifyModalOpen, setQrVerifyModalOpen] = useState(false);
   const [verifyItemData, setVerifyItemData] = useState<{ type: "doc" | "pub"; data: any } | null>(null);
+
+  // Bildirishnomalar markazi (Universal Notification System)
+  const [notificationsList, setNotificationsList] = useState<NotificationItem[]>([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState<number>(0);
+  const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState<boolean>(false);
 
   // Editing Submission State (Baholanmagan arizani tahrirlash uchun)
   const [editingSubmission, setEditingSubmission] = useState<Submission | null>(null);
@@ -1003,6 +1012,59 @@ export default function KpiEnterpriseApp() {
         type: "danger"
       });
       setIsFullAcademicSyncing(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await apiFetch(`${API_BASE}/notifications`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotificationsList(data.notifications || []);
+        setUnreadNotifCount(data.unread_count || 0);
+      }
+    } catch (err) {
+      console.error("Bildirishnomalarni yuklashda xatolik:", err);
+    }
+  };
+
+  const markNotificationAsRead = async (notif: NotificationItem) => {
+    try {
+      if (!notif.is_read) {
+        await apiFetch(`${API_BASE}/notifications/${notif.id}/read`, { method: "POST" });
+        setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n));
+        setUnreadNotifCount(prev => Math.max(0, prev - 1));
+      }
+      setIsNotifDropdownOpen(false);
+      if (notif.link) {
+        if (notif.link.includes("page=subjects")) {
+          setActivePage("subjects");
+          if (notif.link.includes("tab=publications")) {
+            setWorkflowSubTab("publications");
+          } else if (notif.link.includes("tab=course_docs")) {
+            setWorkflowSubTab("docs");
+          }
+        } else if (notif.link.includes("page=appeals")) {
+          setActivePage("appeals");
+        } else if (notif.link.includes("page=dashboard")) {
+          setActivePage("dashboard");
+        }
+      }
+    } catch (err) {
+      console.error("Bildirishnomani o'qilgan qilishda xatolik:", err);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      const res = await apiFetch(`${API_BASE}/notifications/read-all`, { method: "POST" });
+      if (res.ok) {
+        setNotificationsList(prev => prev.map(n => ({ ...n, is_read: true })));
+        setUnreadNotifCount(0);
+      }
+    } catch (err) {
+      console.error("Barcha bildirishnomalarni o'qilgan qilishda xatolik:", err);
     }
   };
 
@@ -1809,6 +1871,20 @@ export default function KpiEnterpriseApp() {
       fetchAdminData();
     }
   }, [currentUser?.role, activeRole]);
+
+  // Bildirishnomalarni va tasdiqlash zanjiridagi ishlarni davriy yangilab borish (Real-time Notification & Workflow Polling)
+  useEffect(() => {
+    if (!currentUser) return;
+    fetchNotifications();
+    fetchCourseDocs();
+    fetchPublications();
+    const interval = setInterval(() => {
+      fetchNotifications();
+      fetchCourseDocs();
+      fetchPublications();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   useEffect(() => {
     if (activePage === "admin_hemis") {
@@ -3112,14 +3188,26 @@ export default function KpiEnterpriseApp() {
                   <BookOpen className="w-4 h-4 flex-shrink-0 text-emerald-400" />
                   {!sidebarCollapsed && <span className="truncate">Fanlar va yuklama</span>}
                 </div>
-                {!sidebarCollapsed && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${activePage === "subjects"
-                    ? "bg-blue-800 text-emerald-300"
-                    : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                    }`}>
-                    HEMIS
-                  </span>
-                )}
+                {!sidebarCollapsed && (() => {
+                  const myDept = (currentUser?.department || "").toLowerCase().trim();
+                  const pendingCount = courseDocsList.filter(d => (!myDept || (d.department_name && d.department_name.toLowerCase().includes(myDept))) && d.mudir_status === "PENDING").length
+                    + publicationsList.filter(p => (!myDept || (p.department_name && p.department_name.toLowerCase().includes(myDept))) && p.kafedra_status === "PENDING").length;
+                  if (pendingCount > 0) {
+                    return (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-500 text-white animate-pulse">
+                        {pendingCount} yangi
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${activePage === "subjects"
+                      ? "bg-blue-800 text-emerald-300"
+                      : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                      }`}>
+                      HEMIS
+                    </span>
+                  );
+                })()}
               </button>
               <button
                 onClick={() => setActivePage("svetafor")}
@@ -3207,16 +3295,37 @@ export default function KpiEnterpriseApp() {
                   setActivePage("subjects");
                   setMobileMenuOpen(false);
                 }}
-                title="Fakultet oʻqituvchilari oʻquv yuklamalari"
-                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "subjects"
+                title="Fakultet oʻqituvchilari oʻquv yuklamalari va ilmiy ishlari"
+                className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"} rounded-lg text-xs font-semibold transition-colors ${activePage === "subjects"
                   ? "bg-blue-900 text-white shadow-sm"
                   : theme === "dark"
                     ? "text-slate-300 hover:bg-slate-800"
                     : "text-slate-600 hover:bg-slate-100"
                   }`}
               >
-                <BookOpen className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                {!sidebarCollapsed && <span>Oʻquv yuklamalari</span>}
+                <div className="flex items-center gap-3 min-w-0">
+                  <BookOpen className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="truncate">Oʻquv yuklamalari</span>}
+                </div>
+                {!sidebarCollapsed && (() => {
+                  const facultyDeptNames = (structureHierarchy?.faculties.find(f =>
+                    currentUser?.faculty ? f.name.toLowerCase().includes(currentUser.faculty.toLowerCase()) : false
+                  )?.departments || []).map(d => d.name.toLowerCase().trim());
+                  const pendingCount = courseDocsList.filter(d => d.mudir_status === "APPROVED" && d.dean_status === "PENDING" && (!facultyDeptNames.length || facultyDeptNames.some(fn => (d.department_name || "").toLowerCase().includes(fn)))).length
+                    + publicationsList.filter(p => p.kafedra_status === "APPROVED" && p.fakultet_status === "PENDING" && (!facultyDeptNames.length || facultyDeptNames.some(fn => (p.department_name || "").toLowerCase().includes(fn)))).length;
+                  if (pendingCount > 0) {
+                    return (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-500 text-white animate-pulse">
+                        {pendingCount} yangi
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      HEMIS
+                    </span>
+                  );
+                })()}
               </button>
               <button
                 onClick={() => setActivePage("svetafor")}
@@ -3645,6 +3754,125 @@ export default function KpiEnterpriseApp() {
                 )}
               </div>
             ) : null}
+
+            {/* Bildirishnomalar markazi (Notification Center Dropdown) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsNotifDropdownOpen(prev => !prev)}
+                className={`relative p-2 rounded-lg border transition-colors cursor-pointer flex items-center justify-center ${
+                  theme === "dark"
+                    ? "bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-700"
+                    : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
+                }`}
+                title="Bildirishnomalar markazi"
+              >
+                {unreadNotifCount > 0 ? (
+                  <BellRing className="w-4 h-4 text-amber-500 animate-bounce" />
+                ) : (
+                  <Bell className="w-4 h-4" />
+                )}
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-red-600 text-white rounded-full text-[10px] font-bold shadow-xs animate-pulse">
+                    {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Bildirishnomalar Dropdown oynasi */}
+              {isNotifDropdownOpen && (
+                <div
+                  className={`absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl shadow-2xl border z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 ${
+                    theme === "dark" ? "bg-slate-900 border-slate-800 text-slate-100" : "bg-white border-slate-200 text-slate-900"
+                  }`}
+                >
+                  <div className={`p-3.5 border-b flex items-center justify-between ${theme === "dark" ? "border-slate-800 bg-slate-800/40" : "border-slate-100 bg-slate-50"}`}>
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-blue-900 dark:text-blue-400" />
+                      <span className="font-bold text-xs sm:text-sm">Bildirishnomalar</span>
+                      {unreadNotifCount > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                          {unreadNotifCount} yangi
+                        </span>
+                      )}
+                    </div>
+                    {unreadNotifCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={markAllNotificationsAsRead}
+                        className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        Oʻqilgan qilish
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {notificationsList.length === 0 ? (
+                      <div className="p-8 text-center text-slate-400">
+                        <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                        <p className="text-xs">Hozircha yangi bildirishnomalar yoʻq</p>
+                      </div>
+                    ) : (
+                      notificationsList.slice(0, 30).map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => markNotificationAsRead(n)}
+                          className={`p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer flex gap-3 ${
+                            !n.is_read ? (theme === "dark" ? "bg-blue-950/20" : "bg-blue-50/50") : ""
+                          }`}
+                        >
+                          <div className="flex-shrink-0 mt-0.5">
+                            {n.type === "publication" && (
+                              <span className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">
+                                📚
+                              </span>
+                            )}
+                            {n.type === "course_doc" && (
+                              <span className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs">
+                                📑
+                              </span>
+                            )}
+                            {n.type === "submission" && (
+                              <span className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs">
+                                🎯
+                              </span>
+                            )}
+                            {n.type === "appeal" && (
+                              <span className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs">
+                                ⚖️
+                              </span>
+                            )}
+                            {n.type === "system" && (
+                              <span className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center text-xs">
+                                🔔
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <h4 className={`text-xs font-bold truncate ${!n.is_read ? "text-blue-900 dark:text-blue-400" : "text-slate-800 dark:text-slate-200"}`}>
+                                {n.title}
+                              </h4>
+                              {!n.is_read && (
+                                <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0"></span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                              {n.message}
+                            </p>
+                            <span className="text-[9px] text-slate-400 mt-1 block">
+                              {new Date(n.created_at).toLocaleDateString("uz-UZ", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Quick KPI Submission button for teachers and department heads */}
             {(activeRole === "TEACHER" || activeRole === "HEAD_OF_DEPT") && (
@@ -5481,6 +5709,144 @@ export default function KpiEnterpriseApp() {
                       </div>
                     </div>
 
+                    {/* TASDIQLASH KUTILAYOTGAN ISHLAR PORTFELI (APPROVALS INBOX) */}
+                    {(() => {
+                      const myDept = (currentUser?.department || "").toLowerCase().trim();
+                      const pendingDocs = courseDocsList.filter(d => 
+                        (!myDept || (d.department_name && d.department_name.toLowerCase().includes(myDept))) && 
+                        d.mudir_status === "PENDING"
+                      );
+                      const pendingPubs = publicationsList.filter(p => 
+                        (!myDept || (p.department_name && p.department_name.toLowerCase().includes(myDept))) && 
+                        p.kafedra_status === "PENDING"
+                      );
+
+                      return (
+                        <div className="space-y-4 mb-7">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {/* 1. KPI arizalari */}
+                            <div className={`p-4 rounded-xl border transition-all ${
+                              reviewSubmissionsList.length > 0 
+                                ? "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40" 
+                                : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800"
+                            }`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">🎯 KPI Arizalari</span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                  reviewSubmissionsList.length > 0
+                                    ? "bg-amber-500 text-white animate-pulse"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                }`}>
+                                  {reviewSubmissionsList.length} ta
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                Kafedra aʼzolarining ekspert tekshiruvini kutayotgan ball daʼvolari
+                              </p>
+                            </div>
+
+                            {/* 2. Sillabus va fan hujjatlari */}
+                            <div 
+                              onClick={() => {
+                                setActivePage("subjects");
+                                setWorkflowSubTab("docs");
+                              }}
+                              className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+                              pendingDocs.length > 0 
+                                ? "bg-blue-50/60 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:border-blue-400" 
+                                : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800"
+                            }`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                  📑 Fan Sillabuslari
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                  pendingDocs.length > 0
+                                    ? "bg-blue-600 text-white animate-pulse"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                }`}>
+                                  {pendingDocs.length} ta
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                                Mudir tasdigʻini kutayotgan oʻquv-uslubiy hujjatlar va dasturlar
+                              </p>
+                              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                Hujjatlarni koʻrish →
+                              </span>
+                            </div>
+
+                            {/* 3. Darslik va adabiyotlar (Kengash bayonnomasi) */}
+                            <div 
+                              onClick={() => {
+                                setActivePage("subjects");
+                                setWorkflowSubTab("publications");
+                              }}
+                              className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+                              pendingPubs.length > 0 
+                                ? "bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 hover:border-emerald-400" 
+                                : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800"
+                            }`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                  📚 Kengash Adabiyotlari
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                  pendingPubs.length > 0
+                                    ? "bg-emerald-600 text-white animate-pulse"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                }`}>
+                                  {pendingPubs.length} ta
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                                Kafedra kengashi bayonnomasi kutilayotgan darslik va qoʻllanmalar
+                              </p>
+                              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                Nashr arizalariga oʻtish →
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Agar kutayotgan nashr arizalari bo'lsa, darhol tezkor ko'rish bloki */}
+                          {pendingPubs.length > 0 && (
+                            <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20">
+                              <h5 className="text-xs font-bold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <span>📚 Kafedra Kengashi qarori kutilayotgan yangi nashrlar ({pendingPubs.length} ta)</span>
+                              </h5>
+                              <div className="divide-y divide-emerald-200 dark:divide-emerald-900/40">
+                                {pendingPubs.map(pub => (
+                                  <div key={pub.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
+                                          {pub.pub_type}
+                                        </span>
+                                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">{pub.title}</span>
+                                      </div>
+                                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                        Muallif(lar): <b className="text-slate-700 dark:text-slate-300">{pub.authors}</b> • Fan: {pub.subject_name} • Antiplagiat: <b>{pub.antiplagiarism_score}%</b>
+                                      </p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActivePage("subjects");
+                                        setWorkflowSubTab("publications");
+                                      }}
+                                      className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold self-start sm:self-auto cursor-pointer"
+                                    >
+                                      Kengash bayonnomasini biriktirish
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3">
                       Kafedra aʼzolarining tasdiqlash kutilayotgan arizalari (Ekspert tekshiruvi)
                     </h4>
@@ -5754,6 +6120,126 @@ export default function KpiEnterpriseApp() {
                         </div>
                       </div>
                     </div>
+
+                    {/* FAKULTET KENGASHI VA DEKAN TASDIQLASH NAVBATI (FACULTY APPROVALS INBOX) */}
+                    {(() => {
+                      const facultyDeptNames = facultyDepts.map(d => d.name.toLowerCase().trim());
+                      const pendingDeanDocs = courseDocsList.filter(d => 
+                        d.mudir_status === "APPROVED" && d.dean_status === "PENDING" &&
+                        (!facultyDeptNames.length || facultyDeptNames.some(fn => (d.department_name || "").toLowerCase().includes(fn)))
+                      );
+                      const pendingFacultyPubs = publicationsList.filter(p => 
+                        p.kafedra_status === "APPROVED" && p.fakultet_status === "PENDING" &&
+                        (!facultyDeptNames.length || facultyDeptNames.some(fn => (p.department_name || "").toLowerCase().includes(fn)))
+                      );
+
+                      return (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* 1. Fakultet Kengashi bayonnomasi kutayotgan darslik va adabiyotlar */}
+                            <div 
+                              onClick={() => {
+                                setActivePage("subjects");
+                                setWorkflowSubTab("publications");
+                              }}
+                              className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+                              pendingFacultyPubs.length > 0 
+                                ? "bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 hover:border-emerald-500" 
+                                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                            }`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                  📚 Fakultet Kengashi Adabiyotlari
+                                </span>
+                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                  pendingFacultyPubs.length > 0
+                                    ? "bg-emerald-600 text-white animate-pulse"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                }`}>
+                                  {pendingFacultyPubs.length} ta nashr navbatda
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                                Kafedralar tomonidan tasdiqlangan va Fakultet Ilmiy-uslubiy kengashi qarori kutilayotgan nashrlar
+                              </p>
+                              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                Kengash tavsiyanomalariga oʻtish →
+                              </span>
+                            </div>
+
+                            {/* 2. Dekan tasdig'ini kutayotgan Sillabuslar */}
+                            <div 
+                              onClick={() => {
+                                setActivePage("subjects");
+                                setWorkflowSubTab("docs");
+                              }}
+                              className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+                              pendingDeanDocs.length > 0 
+                                ? "bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 hover:border-blue-500" 
+                                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                            }`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                  📑 Dekan Tasdigʻidagi Sillabuslar
+                                </span>
+                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                  pendingDeanDocs.length > 0
+                                    ? "bg-blue-600 text-white animate-pulse"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                }`}>
+                                  {pendingDeanDocs.length} ta hujjat
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                                Kafedra mudiri maʻqullagan va fakultet dekani yakuniy tasdigʻini kutayotgan oʻquv hujjatlari
+                              </p>
+                              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                Sillabuslarni tasdiqlash →
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Agar kutayotgan nashrlar bo'lsa, tezkor ko'rish bloki */}
+                          {pendingFacultyPubs.length > 0 && (
+                            <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
+                              <h5 className="text-xs font-bold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <span>📚 Fakultet Kengashiga kelib tushgan adabiyotlar ({pendingFacultyPubs.length} ta)</span>
+                              </h5>
+                              <div className="divide-y divide-emerald-200 dark:divide-emerald-900/40">
+                                {pendingFacultyPubs.map(pub => (
+                                  <div key={pub.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
+                                          {pub.pub_type}
+                                        </span>
+                                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">{pub.title}</span>
+                                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-100/60 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded">
+                                          ✓ Kafedra tasdiqlagan (№{pub.kafedra_protocol_num})
+                                        </span>
+                                      </div>
+                                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                        Muallif(lar): <b className="text-slate-700 dark:text-slate-300">{pub.authors}</b> • Kafedra: {pub.department_name} • Antiplagiat: <b>{pub.antiplagiarism_score}%</b>
+                                      </p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActivePage("subjects");
+                                        setWorkflowSubTab("publications");
+                                      }}
+                                      className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold self-start sm:self-auto cursor-pointer"
+                                    >
+                                      Fakultet bayonnomasini biriktirish
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                   {/* Faculty Teachers Table with FTE Filter */}
                   <div className={`p-6 rounded-2xl border transition-all ${theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
