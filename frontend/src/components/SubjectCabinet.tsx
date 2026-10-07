@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ArrowLeft,
   BookOpen,
@@ -100,6 +100,83 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
   // Local filter and search
   const [hemisResourceSearch, setHemisResourceSearch] = useState("");
   const [hemisResourceFilterType, setHemisResourceFilterType] = useState<string>("ALL");
+
+  // HEMIS turini apostrof va tinish belgilarisiz normalizatsiya qilish (masalan Ma'ruza, Ma’ruza, Maʼruza, MAʼRUZA)
+  const normalizeHemisType = (s?: string) =>
+    (s || "")
+      .toLowerCase()
+      .replace(/['’ʼ`ʻ\s\-]/g, "");
+
+  const checkResourceMatchesFilter = (res: HemisSubjectResource, filterId: string) => {
+    if (filterId === "ALL") return true;
+    const normType = normalizeHemisType(res.training_type);
+    const normTitle = normalizeHemisType(res.title);
+
+    if (filterId === "MAʼRUZA" || filterId === "MARUZA") {
+      return (
+        normType.includes("maruza") ||
+        normType.includes("leksiya") ||
+        normType.includes("lektsiya") ||
+        normTitle.includes("maruza") ||
+        normTitle.includes("leksiya") ||
+        normTitle.includes("lektsiya")
+      );
+    }
+    if (filterId === "AMALIY") {
+      return (
+        normType.includes("amaliy") ||
+        normType.includes("praktik") ||
+        normTitle.includes("amaliy") ||
+        normTitle.includes("praktik")
+      );
+    }
+    if (filterId === "LABORATORIYA") {
+      return (
+        normType.includes("laborator") ||
+        normType.includes("lab") ||
+        normTitle.includes("laborator") ||
+        normTitle.includes("lab")
+      );
+    }
+    if (filterId === "SEMINAR") {
+      return (
+        normType.includes("seminar") ||
+        normTitle.includes("seminar")
+      );
+    }
+    return normType.includes(normalizeHemisType(filterId));
+  };
+
+  const filterCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      ALL: activeSubjectHemisResources.length,
+      "MAʼRUZA": 0,
+      AMALIY: 0,
+      LABORATORIYA: 0,
+      SEMINAR: 0,
+    };
+    activeSubjectHemisResources.forEach((res) => {
+      if (checkResourceMatchesFilter(res, "MAʼRUZA")) counts["MAʼRUZA"]++;
+      if (checkResourceMatchesFilter(res, "AMALIY")) counts.AMALIY++;
+      if (checkResourceMatchesFilter(res, "LABORATORIYA")) counts.LABORATORIYA++;
+      if (checkResourceMatchesFilter(res, "SEMINAR")) counts.SEMINAR++;
+    });
+    return counts;
+  }, [activeSubjectHemisResources]);
+
+  const filteredHemisResources = useMemo(() => {
+    return activeSubjectHemisResources.filter((res) => {
+      const term = hemisResourceSearch.toLowerCase().trim();
+      const matchesSearch =
+        !term ||
+        res.title.toLowerCase().includes(term) ||
+        (res.file_name && res.file_name.toLowerCase().includes(term)) ||
+        (res.employee_name && res.employee_name.toLowerCase().includes(term)) ||
+        (res.training_type && res.training_type.toLowerCase().includes(term));
+      const matchesType = checkResourceMatchesFilter(res, hemisResourceFilterType);
+      return matchesSearch && matchesType;
+    });
+  }, [activeSubjectHemisResources, hemisResourceSearch, hemisResourceFilterType]);
 
   const getAuthHeaders = () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("kpi_auth_token") : null;
@@ -774,13 +851,22 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
                       key={f.id}
                       type="button"
                       onClick={() => setHemisResourceFilterType(f.id)}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
                         hemisResourceFilterType === f.id
                           ? "bg-emerald-800 text-white shadow-xs"
                           : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                       }`}
                     >
-                      {f.label}
+                      <span>{f.label}</span>
+                      <span
+                        className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                          hemisResourceFilterType === f.id
+                            ? "bg-emerald-950/60 text-emerald-200"
+                            : "bg-slate-200/80 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                        }`}
+                      >
+                        {filterCounts[f.id] ?? 0}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -794,22 +880,20 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
                   <div className="py-12 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
                     Ushbu fan boʻyicha HEMIS tizimida hali yuklangan rasmiy fayllar topilmadi. "Qayta tekshirish" tugmasini bosing.
                   </div>
+                ) : filteredHemisResources.length === 0 ? (
+                  <div className="py-12 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                    Tanlangan filtr yoki qidiruv soʻrovi boʻyicha hech qanday resurs topilmadi.
+                  </div>
                 ) : (
                   <div className="space-y-2.5">
-                    {activeSubjectHemisResources
-                      .filter((res) => {
-                        const term = hemisResourceSearch.toLowerCase();
-                        const matchesSearch =
-                          !term ||
-                          res.title.toLowerCase().includes(term) ||
-                          (res.file_name && res.file_name.toLowerCase().includes(term)) ||
-                          (res.employee_name && res.employee_name.toLowerCase().includes(term));
-                        const matchesType =
-                          hemisResourceFilterType === "ALL" ||
-                          (res.training_type && res.training_type.toUpperCase().includes(hemisResourceFilterType));
-                        return matchesSearch && matchesType;
-                      })
-                      .map((res) => (
+                    {filteredHemisResources.map((res) => {
+                      const fileExt = (res.file_name || "").split(".").pop()?.toUpperCase() || "FAYL";
+                      // Proxy orqali yuklab olish: non-PDF fayllar 404 bermasligi uchun aqlli backend oqimi
+                      const downloadHref = res.id
+                        ? `${API_BASE}/hemis/resource-file/${res.id}`
+                        : res.file_url;
+
+                      return (
                         <div
                           key={res.id}
                           className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
@@ -827,6 +911,9 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
                                 <span>{res.title}</span>
                                 <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-300 font-medium">
                                   {res.training_type || "Oʻquv materiali"}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 text-[9px] font-mono font-semibold">
+                                  {fileExt}
                                 </span>
                               </h5>
                               <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
@@ -849,17 +936,17 @@ export const SubjectCabinet: React.FC<SubjectCabinetProps> = ({
                           </div>
 
                           <a
-                            href={res.file_url}
+                            href={downloadHref}
                             target="_blank"
                             rel="noreferrer"
-                            download
                             className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors self-start sm:self-center flex-shrink-0 cursor-pointer"
                           >
                             <Download className="w-3.5 h-3.5" />
                             <span>Koʻrish / Yuklash</span>
                           </a>
                         </div>
-                      ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

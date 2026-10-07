@@ -44,7 +44,8 @@ from database import (
     db_create_rbac_role, db_update_role_permissions, db_delete_rbac_role,
     db_get_teacher_scores, db_load_all_active_teachers, db_checkpoint,
     db_create_notification, db_get_notifications, db_mark_notification_read, db_mark_all_notifications_read,
-    db_log_audit, db_get_audit_logs, db_get_publication_by_id
+    db_log_audit, db_get_audit_logs, db_get_publication_by_id,
+    db_get_hemis_resource_by_id, db_update_hemis_resource_url
 )
 
 from security import (
@@ -3669,6 +3670,118 @@ def get_hemis_subject_teachers(employee_name: Optional[str] = None, subject_name
     """Fanlarga biriktirilgan o'qituvchilar va talabalar guruhlari"""
     items = db_get_hemis_subject_teachers(employee_name=employee_name, subject_name=subject_name)
     return {"success": True, "items": items}
+
+@app.get("/api/hemis/resource-file/{resource_id}")
+def stream_hemis_resource_file(
+    resource_id: int,
+    url: Optional[str] = None,
+    name: Optional[str] = None,
+    download: Optional[int] = 0
+):
+    """
+    HEMIS tizimidan yuklangan har qanday faylni (PDF, DOCX, PPTX, RAR va b.)
+    aqlli fallback va self-healing mexanizmi bilan 404 xatoliklarsiz to'g'ridan-to'g'ri yuklab berish.
+    """
+    import urllib.parse
+    import re
+    import mimetypes
+
+    res = db_get_hemis_resource_by_id(resource_id) if resource_id > 0 else None
+    
+    orig_url = (res.get("file_url") if res else None) or url or ""
+    file_name = (res.get("file_name") if res else None) or name or f"resource_{resource_id}"
+
+    if not orig_url:
+        raise HTTPException(status_code=404, detail="Resurs manzili topilmadi")
+
+    # Nomzod URL variantlari (Nginx va HEMIS papkalash qoidalari bo'yicha)
+    candidates = [orig_url]
+
+    # 1. /files/{id}/{num}/... dagi ortiqcha sub-papkani olib tashlash (masalan /files/410/0/ -> /files/410/)
+    clean_path = re.sub(r'(/files/\d+)/\d+/', r'\1/', orig_url)
+    if clean_path != orig_url and clean_path not in candidates:
+        candidates.append(clean_path)
+
+    # 2. Domen nomini student.jbnuu.uz <-> hemis.jbnuu.uz almashtirish
+    if "hemis.jbnuu.uz" in orig_url:
+        candidates.append(orig_url.replace("hemis.jbnuu.uz", "student.jbnuu.uz"))
+        candidates.append(clean_path.replace("hemis.jbnuu.uz", "student.jbnuu.uz"))
+    elif "student.jbnuu.uz" in orig_url:
+        candidates.append(orig_url.replace("student.jbnuu.uz", "hemis.jbnuu.uz"))
+        candidates.append(clean_path.replace("student.jbnuu.uz", "hemis.jbnuu.uz"))
+
+    # 3. URL quote / unquote variantlari
+    try:
+        unquoted = urllib.parse.unquote(orig_url)
+        if unquoted not in candidates:
+            candidates.append(unquoted)
+    except Exception:
+        pass
+
+    working_resp = None
+    working_url = None
+
+    for target_url in candidates:
+        try:
+            r = requests.get(target_url, stream=True, timeout=12, headers={"User-Agent": "Mozilla/5.0"})
+            if r.status_code == 200:
+                working_resp = r
+                working_url = target_url
+                break
+        except Exception:
+            continue
+
+    if not working_resp:
+        raise HTTPException(status_code=404, detail=f"Fayl HEMIS serverida topilmadi: {file_name}")
+
+    if working_url and res and working_url != res.get("file_url"):
+        try:
+            db_update_hemis_resource_url(resource_id, working_url)
+        except Exception:
+            pass
+
+    # MIME-type aniqlash
+    lower_name = file_name.lower()
+    mime_map = {
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".doc": "application/msword",
+        ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ".ppt": "application/vnd.ms-powerpoint",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".xls": "application/vnd.ms-excel",
+        ".pdf": "application/pdf",
+        ".rar": "application/x-rar-compressed",
+        ".zip": "application/zip",
+        ".txt": "text/plain",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png"
+    }
+
+    content_type = working_resp.headers.get("content-type")
+    for ext, mtype in mime_map.items():
+        if lower_name.endswith(ext):
+            content_type = mtype
+            break
+
+    if not content_type or "text/html" in content_type:
+        guessed_type, _ = mimetypes.guess_type(file_name)
+        content_type = guessed_type or "application/octet-stream"
+
+    encoded_filename = urllib.parse.quote(file_name)
+    is_pdf = content_type == "application/pdf"
+    disposition = "inline" if (is_pdf and download != 1) else "attachment"
+
+    headers = {
+        "Content-Disposition": f"{disposition}; filename*=UTF-8''{encoded_filename}",
+        "Access-Control-Expose-Headers": "Content-Disposition"
+    }
+
+    return StreamingResponse(
+        working_resp.iter_content(chunk_size=65536),
+        media_type=content_type,
+        headers=headers
+    )
 
 
 

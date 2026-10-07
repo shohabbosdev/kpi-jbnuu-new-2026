@@ -1979,6 +1979,21 @@ def db_get_hemis_subject_resources(employee_name: Optional[str] = None, subject_
     conn.close()
     return [dict(r) for r in rows]
 
+def db_get_hemis_resource_by_id(resource_id: int) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM hemis_subject_resources WHERE id = ?", (resource_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def db_update_hemis_resource_url(resource_id: int, new_url: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE hemis_subject_resources SET file_url = ? WHERE id = ?", (new_url, resource_id))
+    conn.commit()
+    conn.close()
+
 # -------------------------------------------------------------
 # HEMIS Fanlarga biriktirilgan o'qituvchilar va guruhlar (Subject Teachers)
 # -------------------------------------------------------------
