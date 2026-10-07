@@ -11,8 +11,12 @@ from typing import List, Dict, Any, Optional
 DB_PATH = os.path.join(os.path.dirname(__file__), "kpi_system.db")
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=10000;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+    conn.execute("PRAGMA foreign_keys=ON;")
     return conn
 
 def init_db():
@@ -850,52 +854,172 @@ def db_load_submissions() -> List[Dict[str, Any]]:
     conn.close()
     return [dict(r) for r in rows]
 
-def db_save_submission(data: Dict[str, Any]):
+def db_save_submission(data: Dict[str, Any]) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    sub_id = data.get("id")
+    if sub_id and int(sub_id) > 0:
+        cursor.execute("""
+            INSERT INTO submissions (
+                id, teacher_id, teacher_name, indicator_id, title, doi, authors_count,
+                submitted_date, status, claimed_ball, ball, file_name, dept, description,
+                reviewer_name, reviewed_date, reviewer_comment, rejection_reason
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                indicator_id = excluded.indicator_id,
+                title = excluded.title,
+                doi = excluded.doi,
+                authors_count = excluded.authors_count,
+                claimed_ball = excluded.claimed_ball,
+                ball = excluded.ball,
+                file_name = excluded.file_name,
+                dept = excluded.dept,
+                description = excluded.description,
+                status = excluded.status,
+                reviewer_name = excluded.reviewer_name,
+                reviewed_date = excluded.reviewed_date,
+                reviewer_comment = excluded.reviewer_comment,
+                rejection_reason = excluded.rejection_reason
+        """, (
+            int(sub_id),
+            data.get("teacher_id"),
+            data.get("teacher_name", ""),
+            data.get("indicator_id", ""),
+            data.get("title", ""),
+            data.get("doi"),
+            data.get("authors_count", 1),
+            data.get("submitted_date"),
+            data.get("status", "pending"),
+            data.get("claimed_ball", 0.0),
+            data.get("ball", 0.0),
+            data.get("file_name"),
+            data.get("dept"),
+            data.get("description"),
+            data.get("reviewer_name"),
+            data.get("reviewed_date"),
+            data.get("reviewer_comment"),
+            data.get("rejection_reason")
+        ))
+        conn.commit()
+        conn.close()
+        return int(sub_id)
+    else:
+        cursor.execute("""
+            INSERT INTO submissions (
+                teacher_id, teacher_name, indicator_id, title, doi, authors_count,
+                submitted_date, status, claimed_ball, ball, file_name, dept, description,
+                reviewer_name, reviewed_date, reviewer_comment, rejection_reason
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data.get("teacher_id"),
+            data.get("teacher_name", ""),
+            data.get("indicator_id", ""),
+            data.get("title", ""),
+            data.get("doi"),
+            data.get("authors_count", 1),
+            data.get("submitted_date"),
+            data.get("status", "pending"),
+            data.get("claimed_ball", 0.0),
+            data.get("ball", 0.0),
+            data.get("file_name"),
+            data.get("dept"),
+            data.get("description"),
+            data.get("reviewer_name"),
+            data.get("reviewed_date"),
+            data.get("reviewer_comment"),
+            data.get("rejection_reason")
+        ))
+        generated_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return generated_id
+
+def db_get_teacher_scores() -> Dict[Any, Dict[str, float]]:
+    """
+    Barcha tasdiqlangan (status = 'approved') arizalar bo'yicha
+    o'qituvchilarning 4 ta blok bo'yicha jamlangan haqiqiy ballarini qaytaradi.
+    """
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO submissions (
-            id, teacher_id, teacher_name, indicator_id, title, doi, authors_count,
-            submitted_date, status, claimed_ball, ball, file_name, dept, description,
-            reviewer_name, reviewed_date, reviewer_comment, rejection_reason
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-            indicator_id = excluded.indicator_id,
-            title = excluded.title,
-            doi = excluded.doi,
-            authors_count = excluded.authors_count,
-            claimed_ball = excluded.claimed_ball,
-            ball = excluded.ball,
-            file_name = excluded.file_name,
-            dept = excluded.dept,
-            description = excluded.description,
-            status = excluded.status,
-            reviewer_name = excluded.reviewer_name,
-            reviewed_date = excluded.reviewed_date,
-            reviewer_comment = excluded.reviewer_comment,
-            rejection_reason = excluded.rejection_reason
-    """, (
-        data.get("id"),
-        data.get("teacher_id"),
-        data.get("teacher_name", ""),
-        data.get("indicator_id", ""),
-        data.get("title", ""),
-        data.get("doi"),
-        data.get("authors_count", 1),
-        data.get("submitted_date"),
-        data.get("status", "pending"),
-        data.get("claimed_ball", 0.0),
-        data.get("ball", 0.0),
-        data.get("file_name"),
-        data.get("dept"),
-        data.get("description"),
-        data.get("reviewer_name"),
-        data.get("reviewed_date"),
-        data.get("reviewer_comment"),
-        data.get("rejection_reason")
-    ))
-    conn.commit()
+        SELECT teacher_id, teacher_name, indicator_id, ball
+        FROM submissions
+        WHERE status = 'approved' AND ball > 0
+    """)
+    rows = cursor.fetchall()
     conn.close()
+
+    scores_by_teacher: Dict[Any, Dict[str, float]] = {}
+    for r in rows:
+        t_id = r["teacher_id"]
+        t_name = (r["teacher_name"] or "").strip().lower()
+        ind = str(r["indicator_id"] or "")
+        ball = float(r["ball"] or 0.0)
+
+        block = "ilm"
+        if ind.startswith("1."):
+            block = "oqv"
+        elif ind.startswith("2."):
+            block = "ilm"
+        elif ind.startswith("3."):
+            block = "xal"
+        elif ind.startswith("4."):
+            block = "man"
+
+        for key in [t_id, t_name]:
+            if key not in scores_by_teacher:
+                scores_by_teacher[key] = {"oqv": 0.0, "ilm": 0.0, "xal": 0.0, "man": 0.0}
+            scores_by_teacher[key][block] = round(scores_by_teacher[key][block] + ball, 2)
+
+    return scores_by_teacher
+
+def db_load_all_active_teachers() -> List[Dict[str, Any]]:
+    """
+    users jadvalidan pedagogik faoliyat yurituvchi barcha 200+ xodimni to'liq yuklaydi.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT username, id, name, role, roles, department, faculty,
+               position, degree, fte, image, employee_id_number
+        FROM users
+        WHERE is_active = 1
+        ORDER BY faculty ASC, department ASC, name ASC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    teachers = []
+    for r in rows:
+        d = dict(r)
+        r_role = d.get("role", "TEACHER").upper()
+        roles_list = []
+        if d.get("roles"):
+            try:
+                roles_list = json.loads(d["roles"]) if isinstance(d["roles"], str) else d["roles"]
+            except Exception:
+                roles_list = [r_role]
+        else:
+            roles_list = [r_role]
+
+        is_academic = any(rl in ["TEACHER", "HEAD_OF_DEPT", "DEAN"] for rl in roles_list) or r_role in ["TEACHER", "HEAD_OF_DEPT", "DEAN"]
+        if is_academic or r_role not in ["ADMIN", "RECTORATE"]:
+            teachers.append({
+                "username": d["username"],
+                "id": d["id"] or (abs(hash(d["username"])) % 100000),
+                "name": d["name"],
+                "role": r_role,
+                "roles": roles_list,
+                "department": d.get("department") or "Boshqa",
+                "faculty": d.get("faculty") or "Filial boʻlimi",
+                "position": d.get("position") or "Oʻqituvchi",
+                "degree": d.get("degree") or "Darajasiz",
+                "fte": float(d.get("fte") or 1.0),
+                "image": d.get("image"),
+                "employee_id_number": d.get("employee_id_number")
+            })
+
+    return teachers
 
 def db_delete_submission(sub_id: int):
     conn = get_connection()

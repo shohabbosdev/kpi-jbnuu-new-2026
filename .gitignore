@@ -3,6 +3,8 @@
 .env*
 *.env
 backend/.env
+backend/.jwt_secret
+*.jwt_secret
 frontend/.env.local
 frontend/.env*.local
 !.env.example

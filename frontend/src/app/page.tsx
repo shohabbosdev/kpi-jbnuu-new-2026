@@ -1809,11 +1809,14 @@ export default function KpiEnterpriseApp() {
     }
   }, [activePage, hemisEmployeeType]);
 
-  const applyUserSession = (user: AuthUser, passwordUsed?: string) => {
+  const applyUserSession = (user: AuthUser, token?: string, passwordUsed?: string) => {
     setCurrentUser(user);
     setActiveRole(user.role);
     localStorage.setItem("kpi_session_user", JSON.stringify(user));
     localStorage.setItem("kpi_active_role", user.role);
+    if (token) {
+      localStorage.setItem("kpi_auth_token", token);
+    }
 
     // Agar oʻqituvchi yoki kafedra mudiri boʻlsa, filtrlarni oʻziga moslab mustahkamlaymiz
     if (user.role === "TEACHER") {
@@ -1854,7 +1857,8 @@ export default function KpiEnterpriseApp() {
       }
 
       const user: AuthUser = data.user;
-      applyUserSession(user, loginPassword.trim());
+      const token: string = data.access_token || "";
+      applyUserSession(user, token, loginPassword.trim());
     } catch {
       setLoginError("Backend server bilan aloqa oʻrnatilmadi. Qayta urinib koʻring.");
     } finally {
@@ -1922,6 +1926,7 @@ export default function KpiEnterpriseApp() {
     localStorage.removeItem("kpi_session_user");
     localStorage.removeItem("kpi_active_page");
     localStorage.removeItem("kpi_active_role");
+    localStorage.removeItem("kpi_auth_token");
     setLoginUsername("");
     setLoginPassword("");
     setLoginError("");

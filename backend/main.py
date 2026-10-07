@@ -40,7 +40,14 @@ from database import (
     db_save_hemis_doctorate_students, db_get_hemis_doctorate_students,
     db_get_hemis_academic_stats,
     db_get_rbac_roles, db_get_rbac_permissions, db_get_user_permissions,
-    db_create_rbac_role, db_update_role_permissions, db_delete_rbac_role
+    db_create_rbac_role, db_update_role_permissions, db_delete_rbac_role,
+    db_get_teacher_scores, db_load_all_active_teachers
+)
+
+from security import (
+    hash_password, verify_password, is_password_plain,
+    create_jwt_token, decode_jwt_token,
+    get_current_user_from_request, require_authenticated_user, require_roles_any
 )
 
 
@@ -990,19 +997,21 @@ ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".zip", ".rar", ".png", ".jpg", "
 MAX_FILE_SIZE_MB = 10
 
 @app.post("/api/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), request: Request = None):
     """
     KPI daliliy hujjatlarini xavfsiz qabul qilish va diskka saqlash.
     Maksimal hajm: 10 MB. Ruxsat etilgan formatlar: PDF, DOCX, ZIP, PNG, JPG.
     """
-    ext = os.path.splitext(file.filename)[1].lower()
+    clean_base = os.path.basename(file.filename or "file")
+    safe_base = "".join(c for c in clean_base if c.isalnum() or c in "._- ")
+    ext = os.path.splitext(safe_base)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
             detail=f"Faqat quyidagi formatlardagi fayllarni yuklash mumkin: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     
-    unique_filename = f"{uuid.uuid4().hex[:12]}_{file.filename.replace(' ', '_')}"
+    unique_filename = f"{uuid.uuid4().hex[:12]}_{safe_base.replace(' ', '_')}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
     
     # Hajmni tekshirib oqim orqali yozish
@@ -1066,7 +1075,11 @@ def login(creds: LoginRequest, request: Request):
         )
 
     # 2. Agar foydalanuvchi topilmasa yoki parol noto'g'ri bo'lsa
-    if not user_record or user_record["password"] != creds.password:
+    password_valid = False
+    if user_record:
+        password_valid = verify_password(creds.password, user_record.get("password", ""))
+
+    if not user_record or not password_valid:
         counts = record_failed_login(client_ip, username)
         u_count = counts["user_count"]
         ip_count = counts["ip_count"]
@@ -1110,6 +1123,14 @@ def login(creds: LoginRequest, request: Request):
     # 3. Muvaffaqiyatli kirish - xato urinishlar hisoblagichini tozalash
     reset_failed_login(client_ip, username)
 
+    # Avtomatik parolni xeshlash migratsiyasi (agar hali ochiq matn bo'lsa)
+    if is_password_plain(user_record.get("password", "")):
+        new_hashed = hash_password(creds.password)
+        db_update_password(username, new_hashed)
+        user_record["password"] = new_hashed
+        if username in USERS_DB:
+            USERS_DB[username]["password"] = new_hashed
+
     must_change = user_record.get("must_change_password", False)
 
     user_img = user_record.get("image")
@@ -1118,6 +1139,8 @@ def login(creds: LoginRequest, request: Request):
             if t.get("name") and user_record.get("name") and t["name"].strip().lower() == user_record["name"].strip().lower():
                 user_img = t.get("image")
                 break
+
+    roles_list = user_record.get("roles") or [user_record["role"]]
 
     profile = UserProfile(
         id=user_record["id"],
@@ -1135,7 +1158,7 @@ def login(creds: LoginRequest, request: Request):
         image=user_img,
         must_change_password=must_change,
         permissions=db_get_user_permissions(user_record["role"]),
-        roles=user_record.get("roles") or [user_record["role"]]
+        roles=roles_list
     )
 
     success_msg = f"Tizimga muvaffaqiyatli kirdi (IP: {client_ip}, Rol: {user_record['role']}, Birlamchi parol holati: {'Almashtirish shart' if must_change else 'Faol'})"
@@ -1147,9 +1170,18 @@ def login(creds: LoginRequest, request: Request):
         "action": success_msg
     })
 
+    # Haqiqiy HMAC-SHA256 raqamli imzolangan JWT token
+    access_token_jwt = create_jwt_token({
+        "sub": username,
+        "id": user_record["id"],
+        "name": user_record["name"],
+        "role": user_record["role"],
+        "roles": roles_list
+    })
+
     return LoginResponse(
         success=True,
-        access_token=f"jwt_token_for_{username}_secure",
+        access_token=access_token_jwt,
         user=profile
     )
 
@@ -1353,7 +1385,7 @@ def change_password(req: ChangePasswordRequest):
     if not user_record:
         raise HTTPException(status_code=404, detail="Foydalanuvchi hisobi topilmadi")
 
-    if user_record["password"] != req.current_password:
+    if not verify_password(req.current_password, user_record.get("password", "")):
         raise HTTPException(status_code=400, detail="Joriy (birlamchi) parol notoʻgʻri kiritildi")
 
     if req.new_password != req.confirm_password:
@@ -1365,13 +1397,14 @@ def change_password(req: ChangePasswordRequest):
     if req.new_password == req.current_password or req.new_password == username:
         raise HTTPException(status_code=400, detail="Yangi parol birlamchi HEMIS ID paroli bilan bir xil boʻlishi mumkin emas!")
 
-    # Parolni yangilash (SQLite va xotirada)
-    user_record["password"] = req.new_password
+    # Parolni yangilash (Xesh holatda SQLite va xotirada saqlash)
+    hashed_new_pass = hash_password(req.new_password)
+    user_record["password"] = hashed_new_pass
     user_record["must_change_password"] = False
     if username in USERS_DB:
-        USERS_DB[username]["password"] = req.new_password
+        USERS_DB[username]["password"] = hashed_new_pass
         USERS_DB[username]["must_change_password"] = False
-    db_update_password(username, req.new_password)
+    db_update_password(username, hashed_new_pass)
 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     db_save_audit_log(now_str, username, "Birlamchi HEMIS ID paroli yangi shaxsiy parolga muvaffaqiyatli almashtirildi")
@@ -1649,26 +1682,89 @@ def reset_to_council_indicators():
     return {"success": True, "count": len(INDICATORS_DB), "indicators": INDICATORS_DB}
 
 
-@app.get("/api/teachers", response_model=List[Teacher])
-def get_teachers():
-    result = []
-    for t in RAW_TEACHERS:
-        detail = calculate_kpi(t["oqv"], t["ilm"], t["xal"], t["man"], t["jarima"], t["fte"], t["is_first_year"])
+def get_unified_teachers_list() -> List[Teacher]:
+    """
+    users jadvalidan barcha 200+ pedagog xodimni to'liq yuklab,
+    tasdiqlangan arizalar (submissions) va bazaviy ballar asosida
+    har bir o'qituvchining jonli KPI hisob-kitobini chiqaradi.
+    """
+    active_teachers = db_load_all_active_teachers()
+    sub_scores = db_get_teacher_scores()
+
+    raw_map_by_id = {t["id"]: t for t in RAW_TEACHERS if "id" in t}
+    raw_map_by_name = {t["name"].strip().lower(): t for t in RAW_TEACHERS if "name" in t}
+
+    result: List[Teacher] = []
+    seen_ids = set()
+
+    for u in active_teachers:
+        t_id = int(u["id"])
+        if t_id in seen_ids:
+            continue
+        seen_ids.add(t_id)
+
+        t_name = u["name"].strip()
+        t_name_lower = t_name.lower()
+
+        raw_match = raw_map_by_id.get(t_id) or raw_map_by_name.get(t_name_lower)
+        emp_scores = sub_scores.get(t_id) or sub_scores.get(t_name_lower) or {"oqv": 0.0, "ilm": 0.0, "xal": 0.0, "man": 0.0}
+
+        base_oqv = float(raw_match["oqv"]) if raw_match else 0.0
+        base_ilm = float(raw_match["ilm"]) if raw_match else 0.0
+        base_xal = float(raw_match["xal"]) if raw_match else 0.0
+        base_man = float(raw_match["man"]) if raw_match else 0.0
+        jarima = float(raw_match["jarima"]) if raw_match else 0.0
+        is_first_year = bool(raw_match.get("is_first_year", False)) if raw_match else False
+        track = str(raw_match.get("track", "Taʼlim va tadqiqot")) if raw_match else "Taʼlim va tadqiqot"
+
+        calc_oqv = max(base_oqv, emp_scores["oqv"])
+        calc_ilm = max(base_ilm, emp_scores["ilm"])
+        calc_xal = max(base_xal, emp_scores["xal"])
+        calc_man = max(base_man, emp_scores["man"])
+
+        fte = float(u.get("fte") or (raw_match["fte"] if raw_match else 1.0))
+        is_head = u.get("role") == "HEAD_OF_DEPT" or "HEAD_OF_DEPT" in u.get("roles", [])
+
+        detail = calculate_kpi(calc_oqv, calc_ilm, calc_xal, calc_man, jarima, fte, is_first_year)
+
         result.append(Teacher(
-            id=t["id"],
-            name=t["name"],
-            faculty=t["faculty"],
-            department=t["department"],
-            position=t["position"],
-            degree=t["degree"],
-            fte=t["fte"],
-            track=t["track"],
-            is_first_year=t["is_first_year"],
-            is_head_of_dept=t["is_head_of_dept"],
-            image=t.get("image"),
+            id=t_id,
+            name=t_name,
+            faculty=u.get("faculty") or "Filial boʻlimi",
+            department=u.get("department") or "Boshqa",
+            position=u.get("position") or "Oʻqituvchi",
+            degree=u.get("degree") or "Darajasiz",
+            fte=fte,
+            track=track,
+            is_first_year=is_first_year,
+            is_head_of_dept=is_head,
+            image=u.get("image") or (raw_match.get("image") if raw_match else None),
             scores=detail
         ))
+
+    if not result:
+        for t in RAW_TEACHERS:
+            detail = calculate_kpi(t["oqv"], t["ilm"], t["xal"], t["man"], t["jarima"], t["fte"], t["is_first_year"])
+            result.append(Teacher(
+                id=t["id"],
+                name=t["name"],
+                faculty=t["faculty"],
+                department=t["department"],
+                position=t["position"],
+                degree=t["degree"],
+                fte=t["fte"],
+                track=t["track"],
+                is_first_year=t["is_first_year"],
+                is_head_of_dept=t["is_head_of_dept"],
+                image=t.get("image"),
+                scores=detail
+            ))
+
     return result
+
+@app.get("/api/teachers", response_model=List[Teacher])
+def get_teachers():
+    return get_unified_teachers_list()
 
 @app.get("/api/submissions", response_model=List[Submission])
 def get_submissions(teacher_id: Optional[int] = None, status: Optional[str] = None):
@@ -1680,13 +1776,15 @@ def get_submissions(teacher_id: Optional[int] = None, status: Optional[str] = No
     return res
 
 @app.post("/api/submissions", response_model=Submission)
-def create_submission(sub_in: SubmissionCreate):
+def create_submission(sub_in: SubmissionCreate, request: Request):
     global SYSTEM_SETTINGS
     if not SYSTEM_SETTINGS.submissions_open:
         raise HTTPException(
             status_code=400,
             detail=f"Hozirda KPI hujjatlarini qabul qilish muddati yakunlangan yoki administrator tomonidan vaqtincha yopilgan. Belgilangan muddat: {SYSTEM_SETTINGS.deadline_date}"
         )
+
+    auth_user = get_current_user_from_request(request)
 
     teacher = next((t for t in RAW_TEACHERS if t["id"] == sub_in.teacher_id), None)
     if not teacher:
@@ -1695,32 +1793,51 @@ def create_submission(sub_in: SubmissionCreate):
                 teacher = u
                 break
     if not teacher:
+        db_u = db_get_user(str(sub_in.teacher_id))
+        if db_u:
+            teacher = db_u
+    if not teacher:
         raise HTTPException(status_code=404, detail="Oʻqituvchi topilmadi")
-    
-    ind = next((i for i in INDICATORS_DB if i.id == sub_in.indicator_id), None)
-    default_ball = ind.max_ball if ind else 2.0
-    
-    # O'qituvchi o'ziga da'vo qilayotgan ball (kiritilmagan bo'lsa default mezon bali)
-    claimed = float(sub_in.claimed_ball) if sub_in.claimed_ball is not None else float(default_ball)
 
-    new_sub = Submission(
-        id=len(SUBMISSIONS_DB) + 101,
-        teacher_id=sub_in.teacher_id,
-        teacher_name=teacher["name"],
-        indicator_id=sub_in.indicator_id,
-        title=sub_in.title.strip(),
-        doi=sub_in.doi.strip() if sub_in.doi else None,
-        authors_count=sub_in.authors_count,
-        submitted_date=sub_in.submitted_date,
-        status="pending",
-        claimed_ball=claimed,
-        ball=claimed,
-        file_name=sub_in.file_name,
-        dept=ind.dept if ind else "Oʻquv-uslubiy boshqarma",
-        description=sub_in.description.strip() if sub_in.description else None
-    )
+    if auth_user and auth_user.get("role") == "TEACHER":
+        auth_id = str(auth_user.get("id"))
+        req_id = str(sub_in.teacher_id)
+        if auth_id != req_id and auth_user.get("username") != str(teacher.get("username", "")).lower():
+            raise HTTPException(status_code=403, detail="Siz faqat oʻz nomingizdan KPI arizasi topshirishingiz mumkin!")
+
+    ind = next((i for i in INDICATORS_DB if i.id == sub_in.indicator_id), None)
+    max_allowed = float(ind.max_ball) if ind else 2.0
+
+    # O'qituvchi o'ziga da'vo qilayotgan ball (mezon maksimal chegarasidan oshmasligi shart!)
+    if sub_in.claimed_ball is not None:
+        claimed = min(max(float(sub_in.claimed_ball), 0.0), max_allowed)
+    else:
+        claimed = float(max_allowed)
+
+    authors_num = max(1, int(sub_in.authors_count or 1))
+
+    sub_dict = {
+        "teacher_id": sub_in.teacher_id,
+        "teacher_name": teacher["name"],
+        "indicator_id": sub_in.indicator_id,
+        "title": sub_in.title.strip(),
+        "doi": sub_in.doi.strip() if sub_in.doi else None,
+        "authors_count": authors_num,
+        "submitted_date": sub_in.submitted_date or datetime.now().strftime("%Y-%m-%d"),
+        "status": "pending",
+        "claimed_ball": claimed,
+        "ball": claimed,
+        "file_name": sub_in.file_name,
+        "dept": ind.dept if ind else "Oʻquv-uslubiy boshqarma",
+        "description": sub_in.description.strip() if sub_in.description else None
+    }
+
+    # Baza orqali to'g'ri auto-increment ID olish (to'qnashuv va yo'qolish xavfi 100% bartaraf etiladi!)
+    generated_id = db_save_submission(sub_dict)
+    sub_dict["id"] = generated_id
+
+    new_sub = Submission(**sub_dict)
     SUBMISSIONS_DB.append(new_sub)
-    db_save_submission(new_sub.dict())
 
     audit_now = datetime.now().strftime("%Y-%m-%d %H:%M")
     audit_msg = f"Yangi KPI faoliyat natijasi yuklandi (#{new_sub.id}, Mezon: {new_sub.indicator_id}, Daʻvo qilingan ball: {new_sub.claimed_ball} ball)"
@@ -1778,11 +1895,31 @@ def update_submission(sub_id: int, update_data: SubmissionUpdate):
     return sub
 
 @app.delete("/api/submissions/{sub_id}")
-def delete_submission(sub_id: int):
+def delete_submission(sub_id: int, request: Request):
     global SUBMISSIONS_DB
     sub = next((s for s in SUBMISSIONS_DB if s.id == sub_id), None)
     if not sub:
+        all_subs = db_load_submissions()
+        sub_d = next((s for s in all_subs if s["id"] == sub_id), None)
+        if sub_d:
+            sub = Submission(**sub_d)
+    if not sub:
         raise HTTPException(status_code=404, detail="Ariza topilmadi")
+
+    auth_user = get_current_user_from_request(request)
+    if auth_user:
+        u_role = auth_user.get("role", "")
+        u_roles = auth_user.get("roles", [u_role])
+        u_name = auth_user.get("name", "").strip().lower()
+        sub_name = sub.teacher_name.strip().lower()
+        is_admin = any(r in ["ADMIN", "RECTORATE"] for r in u_roles)
+        is_owner = (u_name == sub_name) or (str(auth_user.get("id")) == str(sub.teacher_id))
+        if not is_admin and not is_owner:
+            raise HTTPException(
+                status_code=403,
+                detail="Siz faqat oʻzingiz yuklagan arizani oʻchirish huquqiga egasiz!"
+            )
+
     if sub.status != "pending":
         raise HTTPException(
             status_code=400,
@@ -1804,8 +1941,27 @@ def delete_submission(sub_id: int):
     return {"message": "Ariza muvaffaqiyatli oʻchirildi", "id": sub_id}
 
 @app.post("/api/submissions/{sub_id}/verify")
-def verify_submission(sub_id: int, action: VerificationAction):
+def verify_submission(sub_id: int, action: VerificationAction, request: Request):
+    auth_user = get_current_user_from_request(request)
+    if auth_user:
+        u_role = auth_user.get("role", "")
+        u_roles = auth_user.get("roles", [u_role])
+        if not any(r in ["HEAD_OF_DEPT", "DEAN", "ADMIN", "RECTORATE"] for r in u_roles):
+            raise HTTPException(
+                status_code=403,
+                detail="Arizalarni baholash huquqi faqat Kafedra mudiri, Dekan yoki Komissiyaga berilgan!"
+            )
+        if not action.reviewer_name:
+            action.reviewer_name = auth_user.get("name")
+        if not action.reviewer_id:
+            action.reviewer_id = auth_user.get("id")
+
     sub = next((s for s in SUBMISSIONS_DB if s.id == sub_id), None)
+    if not sub:
+        all_subs = db_load_submissions()
+        sub_d = next((s for s in all_subs if s["id"] == sub_id), None)
+        if sub_d:
+            sub = Submission(**sub_d)
     if not sub:
         raise HTTPException(status_code=404, detail="Ariza topilmadi")
     
@@ -3383,18 +3539,18 @@ def export_kpi_excel():
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = thin_border
 
-    # O'qituvchilarni hisoblash va tartiblash (Yakuniy ball bo'yicha kamayish tartibida)
+    # Barcha 200+ o'qituvchilarni hisoblash va tartiblash (Yakuniy ball bo'yicha kamayish tartibida)
+    all_unified = get_unified_teachers_list()
     processed_teachers = []
-    for t in RAW_TEACHERS:
-        detail = calculate_kpi(t["oqv"], t["ilm"], t["xal"], t["man"], t["jarima"], t["fte"], t["is_first_year"])
+    for t in all_unified:
         processed_teachers.append({
-            "id": t["id"],
-            "name": t["name"],
-            "department": t.get("department", "—"),
-            "position": t.get("position", "Oʻqituvchi"),
-            "degree": t.get("degree", "Darajasiz"),
-            "fte": t.get("fte", 1.0),
-            "detail": detail
+            "id": t.id,
+            "name": t.name,
+            "department": t.department or "—",
+            "position": t.position or "Oʻqituvchi",
+            "degree": t.degree or "Darajasiz",
+            "fte": t.fte or 1.0,
+            "detail": t.scores
         })
 
     # Yakuniy ball bo'yicha saralash
