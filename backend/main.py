@@ -11,6 +11,7 @@ import time
 import shutil
 from pydantic import BaseModel
 import requests
+import hashlib
 from dotenv import load_dotenv
 
 # .env faylini yuklash
