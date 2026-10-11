@@ -536,6 +536,10 @@ export default function KpiEnterpriseApp() {
   const [showProfNewPassword, setShowProfNewPassword] = useState<boolean>(false);
   const [showProfConfirmPassword, setShowProfConfirmPassword] = useState<boolean>(false);
 
+  // Telegram Notifications State
+  const [userTelegramChatIdInput, setUserTelegramChatIdInput] = useState<string>("");
+  const [isTelegramSaving, setIsTelegramSaving] = useState<boolean>(false);
+
   const API_BASE = typeof window !== "undefined"
     ? (process.env.NEXT_PUBLIC_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:8080/api" : "/kpi/api"))
     : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8080/api");
@@ -726,6 +730,36 @@ export default function KpiEnterpriseApp() {
       setProfPasswordError("Serverga ulanishda xatolik: " + err.message);
     } finally {
       setIsProfPasswordSaving(false);
+    }
+  };
+
+  const handleSaveTelegramChatId = async () => {
+    if (!userTelegramChatIdInput.trim()) {
+      showAlert({ title: "Xatolik", message: "Iltimos, Telegram Chat ID raqamingizni kiriting!", type: "warning" });
+      return;
+    }
+    setIsTelegramSaving(true);
+    try {
+      const res = await apiFetch(`${API_BASE}/user/telegram-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: userTelegramChatIdInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showAlert({ title: "Muvaffaqiyatli", message: data.message || "Telegram hisobingiz ulandi!", type: "success" });
+        if (currentUser) {
+          const updated = { ...currentUser, telegram_chat_id: userTelegramChatIdInput.trim() };
+          setCurrentUser(updated);
+          localStorage.setItem("kpi_session_user", JSON.stringify(updated));
+        }
+      } else {
+        showAlert({ title: "Xatolik", message: data.detail || "Telegramni ulashda xatolik yuz berdi.", type: "danger" });
+      }
+    } catch (e: any) {
+      showAlert({ title: "Xatolik", message: e.message || "Server bilan aloqa uzildi.", type: "danger" });
+    } finally {
+      setIsTelegramSaving(false);
     }
   };
 
@@ -5014,6 +5048,57 @@ export default function KpiEnterpriseApp() {
                           </span>
                         )}
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Telegram Xabarnomalar Boti */}
+                  <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                    <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-sky-500" />
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                          Telegram Xabarnomalar Boti
+                        </h4>
+                      </div>
+                      {currentUser.telegram_chat_id ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">
+                          Uланган: {currentUser.telegram_chat_id}
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 text-[10px] font-bold">
+                          Ulanmagan
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                      Arizangiz baholanganda, tasdiqlanganda yoki rad etilganda, shuningdek yangi xabarnomalar kelganda bot sizga shaxsiy xabar yuboradi.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <input
+                        type="text"
+                        value={userTelegramChatIdInput}
+                        onChange={(e) => setUserTelegramChatIdInput(e.target.value)}
+                        placeholder={currentUser.telegram_chat_id ? `Joriy ID: ${currentUser.telegram_chat_id}` : "Telegram Chat ID (masalan: 123456789)"}
+                        className={`px-3 py-2 border rounded-xl text-xs flex-1 focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                          theme === "dark"
+                            ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
+                            : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400"
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveTelegramChatId}
+                        disabled={isTelegramSaving}
+                        className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        {isTelegramSaving ? (
+                          <span>Saqlanmoqda...</span>
+                        ) : (
+                          <span>Ulash</span>
+                        )}
+                      </button>
                     </div>
                   </div>
 

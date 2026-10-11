@@ -125,6 +125,7 @@ export interface AuthUser {
   permissions?: string[];
   pinfl?: string;
   inn?: string;
+  telegram_chat_id?: string;
 }
 
 export interface EimzoKeyItem {
@@ -196,6 +197,9 @@ export interface SystemSettings {
   appeal_deadline?: string;
   current_stage?: string;
   budget_cap_monthly: number;
+  telegram_bot_token?: string;
+  telegram_channel_id?: string;
+  telegram_notifications_enabled?: boolean;
 }
 
 export interface AdminUserRecord {
