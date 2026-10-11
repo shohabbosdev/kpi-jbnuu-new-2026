@@ -45,7 +45,16 @@ from database import (
     db_get_teacher_scores, db_load_all_active_teachers, db_checkpoint,
     db_create_notification, db_get_notifications, db_mark_notification_read, db_mark_all_notifications_read,
     db_log_audit, db_get_audit_logs, db_get_publication_by_id,
-    db_get_hemis_resource_by_id, db_update_hemis_resource_url
+    db_get_hemis_resource_by_id, db_update_hemis_resource_url,
+    db_get_file_by_hash, db_save_file_hash, db_update_user_telegram_chat_id
+)
+
+from telegram_notifier import (
+    notify_submission_evaluation,
+    notify_new_course_doc_uploaded,
+    notify_appeal_filed,
+    send_telegram_async,
+    send_admin_channel_async
 )
 
 from security import (
@@ -1012,12 +1021,33 @@ UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".zip", ".rar", ".png", ".jpg", ".jpeg"}
 MAX_FILE_SIZE_MB = 10
 
+def validate_magic_bytes(ext: str, header_bytes: bytes) -> bool:
+    """
+    Fayl kengaytmasi va uning haqiqiy binar sarlavhasi (Magic Bytes)
+    o'rtasidagi muvofiqlikni tekshiradi. Soxta va xavfli fayllarni to'xtatadi.
+    """
+    if not header_bytes:
+        return False
+    if ext == ".pdf":
+        return header_bytes.startswith(b"%PDF-")
+    elif ext in {".docx", ".pptx", ".xlsx", ".zip"}:
+        return header_bytes.startswith(b"PK\x03\x04") or header_bytes.startswith(b"PK\x05\x06")
+    elif ext == ".rar":
+        return header_bytes.startswith(b"Rar!\x1a\x07")
+    elif ext == ".png":
+        return header_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+    elif ext in {".jpg", ".jpeg"}:
+        return header_bytes.startswith(b"\xff\xd8\xff")
+    elif ext == ".doc":
+        return header_bytes.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1") or header_bytes.startswith(b"{\\rtf")
+    return True
+
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...), request: Request = None):
     """
-    KPI daliliy hujjatlarini xavfsiz qabul qilish va diskka saqlash.
+    KPI daliliy hujjatlarini xavfsiz qabul qilish, binar tekshiruv (Magic Bytes)
+    va SHA-256 xesh asosida xotirani tejovchi deduplikatsiya bilan saqlash.
     Maksimal hajm: 10 MB. Ruxsat etilgan formatlar: PDF, DOCX, ZIP, PNG, JPG.
-    Faqat tizimga kirgan foydalanuvchilar fayl yuklashi mumkin.
     """
     if request:
         require_authenticated_user(request)
@@ -1028,33 +1058,80 @@ async def upload_file(file: UploadFile = File(...), request: Request = None):
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Faqat quyidagi formatlardagi fayllarni yuklash mumkin: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=f"Faqat quyidagi formatlardagi fayllarni yuklash mumkin: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
         )
     
     unique_filename = f"{uuid.uuid4().hex[:12]}_{safe_base.replace(' ', '_')}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
     
-    # Hajmni tekshirib oqim orqali yozish
+    # Hajmni tekshirib, binar sarlavhani tahlil qilish va SHA-256 xeshini hisoblash
     size = 0
-    with open(file_path, "wb") as buffer:
-        while chunk := await file.read(1024 * 1024):  # 1MB bo'laklar
-            size += len(chunk)
-            if size > MAX_FILE_SIZE_MB * 1024 * 1024:
-                buffer.close()
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Fayl hajmi ruxsat etilgan {MAX_FILE_SIZE_MB} MB dan oshmasligi kerak!"
-                )
-            buffer.write(chunk)
-            
+    sha256_hasher = hashlib.sha256()
+    is_first_chunk = True
+
+    try:
+        with open(file_path, "wb") as buffer:
+            while chunk := await file.read(1024 * 1024):  # 1MB bo'laklar
+                if is_first_chunk:
+                    # Binar sarlavha tekshiruvi (Anti-Spoofing / Magic Bytes)
+                    if not validate_magic_bytes(ext, chunk[:32]):
+                        buffer.close()
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Xavfsizlik xatosi: Faylning ichki binar tuzilishi uning kengaytmasiga ({ext}) mos kelmadi! Soxta yoki buzilgan fayl."
+                        )
+                    is_first_chunk = False
+
+                size += len(chunk)
+                if size > MAX_FILE_SIZE_MB * 1024 * 1024:
+                    buffer.close()
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Fayl hajmi ruxsat etilgan {MAX_FILE_SIZE_MB} MB dan oshmasligi kerak!"
+                    )
+                sha256_hasher.update(chunk)
+                buffer.write(chunk)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=500, detail=f"Faylni yozishda xatolik: {e}")
+
+    file_hash = sha256_hasher.hexdigest()
+
+    # SHA-256 Deduplikatsiya tekshiruvi: Agar xuddi shu mazmundagi fayl bazada mavjud bo'lsa
+    existing_file = db_get_file_by_hash(file_hash)
+    if existing_file and os.path.exists(os.path.join(UPLOAD_DIR, existing_file["saved_as"])):
+        # Yangi ortiqcha nusxani o'chirib, mavjud faylga havola qaytaramiz (Disk tejash!)
+        if os.path.exists(file_path) and file_path != os.path.join(UPLOAD_DIR, existing_file["saved_as"]):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+        return {
+            "success": True,
+            "file_name": file.filename,
+            "saved_as": existing_file["saved_as"],
+            "size_kb": round(existing_file["size_bytes"] / 1024, 1),
+            "url": f"/api/uploads/{existing_file['saved_as']}",
+            "deduplicated": True
+        }
+
+    # Yangi fayl ma'lumotlarini kesh jadvaliga kiritish
+    db_save_file_hash(file_hash, unique_filename, safe_base, size, ext)
+
     return {
         "success": True,
         "file_name": file.filename,
         "saved_as": unique_filename,
         "size_kb": round(size / 1024, 1),
-        "url": f"/api/uploads/{unique_filename}"
+        "url": f"/api/uploads/{unique_filename}",
+        "deduplicated": False
     }
 
 @app.get("/api/uploads/{filename}")
@@ -2131,6 +2208,18 @@ def verify_submission(sub_id: int, action: VerificationAction, request: Request)
             "item_id": sub.id
         })
 
+        try:
+            notify_submission_evaluation(
+                teacher_username=getattr(sub, "teacher_username", "") or str(sub.teacher_id),
+                teacher_name=sub.teacher_name,
+                indicator_name=sub.title or sub.indicator_id,
+                status="REJECTED",
+                score=0.0,
+                comment=reason
+            )
+        except Exception:
+            pass
+
         return {
             "success": True,
             "message": f"Ariza muvaffaqiyatli rad etildi. Sababi oʻqituvchi profilida koʻrsatiladi.",
@@ -2188,6 +2277,18 @@ def verify_submission(sub_id: int, action: VerificationAction, request: Request)
             "link_tab": "cabinet",
             "item_id": sub.id
         })
+
+        try:
+            notify_submission_evaluation(
+                teacher_username=getattr(sub, "teacher_username", "") or str(sub.teacher_id),
+                teacher_name=sub.teacher_name,
+                indicator_name=sub.title or sub.indicator_id,
+                status="APPROVED",
+                score=final_ball,
+                comment=sub.reviewer_comment or ""
+            )
+        except Exception:
+            pass
 
         return {
             "success": True,
@@ -2330,6 +2431,15 @@ def create_appeal(appeal_in: AppealCreate, request: Request = None):
         "link_tab": "appeals",
         "item_id": appeal_id
     })
+
+    try:
+        notify_appeal_filed(
+            teacher_name=appeal_in.teacher_name,
+            indicator_name=appeal_in.indicator_id,
+            reason=appeal_in.reason or ""
+        )
+    except Exception:
+        pass
 
     return created_obj
 
@@ -4222,6 +4332,17 @@ def create_course_doc(doc: CourseDocCreate):
         "item_id": res.get("id") if isinstance(res, dict) else None
     })
 
+    try:
+        notify_new_course_doc_uploaded(
+            teacher_name=doc.teacher_name,
+            subject_name=doc.subject_name,
+            doc_type=doc.doc_type,
+            doc_title=doc.title,
+            department_name=doc.department_name or ""
+        )
+    except Exception:
+        pass
+
     return {"success": True, "data": res}
 
 @app.get("/api/course-docs")
@@ -4788,6 +4909,55 @@ def get_audit_logs_endpoint(limit: int = 100, offset: int = 0, action: Optional[
     """Tizim harakatlari va xavfsizlik jurnali yozuvlarini olish (Audit Trail)"""
     logs = db_get_audit_logs(limit=limit, offset=offset, action=action, username=username)
     return {"success": True, "logs": logs, "total": len(logs)}
+
+# =============================================================
+# Telegram Xabarnomalar Boshqaruvi
+# =============================================================
+class TelegramLinkRequest(BaseModel):
+    chat_id: str
+
+@app.post("/api/user/telegram-link")
+def link_user_telegram(req: TelegramLinkRequest, request: Request):
+    user = require_authenticated_user(request)
+    chat_id = req.chat_id.strip()
+    db_update_user_telegram_chat_id(user["username"], chat_id)
+    if chat_id:
+        send_telegram_async(
+            chat_id,
+            f"✅ <b>OʻzMU JBNUU KPI Tizimi</b>\n\n"
+            f"Hurmatli <b>{user.get('name', '')}</b>, Sizning Telegram hisobingiz muvaffaqiyatli ulandi!\n"
+            f"Endi arizalaringiz koʻrib chiqilganda va baholash natijalari eʼlon qilinganda toʻgʻridan-toʻgʻri ushbu bot orqali xabar olib turasiz."
+        )
+    return {"success": True, "message": "Telegram chat ID muvaffaqiyatli ulandi!"}
+
+class TelegramTestRequest(BaseModel):
+    bot_token: Optional[str] = None
+    chat_id: str
+
+@app.post("/api/admin/telegram/test")
+def test_telegram_connection(req: TelegramTestRequest, request: Request):
+    require_roles_any(request, ["ADMIN", "RECTOR", "SUPERADMIN"])
+    settings = get_system_settings() or {}
+    token = (req.bot_token.strip() if req.bot_token else None) or settings.get("telegram_bot_token")
+    if not token:
+        raise HTTPException(status_code=400, detail="Telegram Bot Token kiritilmagan!")
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": req.chat_id.strip(),
+        "text": "🎉 <b>OʻzMU JBNUU KPI Tizimi</b> — Sinov xabarnomasi muvaffaqiyatli yuborildi!\n\nBot toʻliq ishchi holatda.",
+        "parse_mode": "HTML"
+    }
+    try:
+        r = requests.post(url, json=payload, timeout=8)
+        data = r.json()
+        if not data.get("ok"):
+            raise HTTPException(status_code=400, detail=f"Telegram xatosi: {data.get('description')}")
+        return {"success": True, "message": "Sinov xabari muvaffaqiyatli yuborildi!"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ulanishda xatolik: {e}")
 
 if __name__ == "__main__":
     import uvicorn

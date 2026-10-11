@@ -73,6 +73,10 @@ def init_db():
         cursor.execute("ALTER TABLE users ADD COLUMN roles TEXT;")
     except Exception:
         pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN telegram_chat_id TEXT;")
+    except Exception:
+        pass
     
     # 2. Submissions / Applications table
     cursor.execute("""
@@ -129,12 +133,27 @@ def init_db():
         ("submission_deadline", "TEXT", "'2026-06-15'"),
         ("review_deadline", "TEXT", "'2026-06-25'"),
         ("appeal_deadline", "TEXT", "'2026-07-05'"),
-        ("current_stage", "TEXT", "'ALL_OPEN'")
+        ("current_stage", "TEXT", "'ALL_OPEN'"),
+        ("telegram_bot_token", "TEXT", "''"),
+        ("telegram_channel_id", "TEXT", "''"),
+        ("telegram_notifications_enabled", "INTEGER", "0")
     ]:
         try:
             cursor.execute(f"ALTER TABLE system_settings ADD COLUMN {col} {col_type} DEFAULT {default_val};")
         except Exception:
             pass
+
+    # Uploaded Files Hash (Deduplication va yaxlitlik jadvallari)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS uploaded_files_hash (
+            sha256 TEXT PRIMARY KEY,
+            saved_as TEXT NOT NULL,
+            original_name TEXT NOT NULL,
+            size_bytes INTEGER NOT NULL,
+            mime_type TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
 
     # 5. Indicators table
     cursor.execute("""
@@ -2413,6 +2432,42 @@ def db_get_audit_logs(limit: int = 100, offset: int = 0, action: Optional[str] =
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
+
+# =============================================================
+# Fayllar deduplikatsiyasi va yaxlitlik kesh xizmati
+# =============================================================
+def db_get_file_by_hash(sha256_hash: str) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM uploaded_files_hash WHERE sha256 = ?", (sha256_hash,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def db_save_file_hash(sha256_hash: str, saved_as: str, original_name: str, size_bytes: int, mime_type: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT OR REPLACE INTO uploaded_files_hash (sha256, saved_as, original_name, size_bytes, mime_type)
+        VALUES (?, ?, ?, ?, ?)
+    """, (sha256_hash, saved_as, original_name, size_bytes, mime_type))
+    conn.commit()
+    conn.close()
+
+def db_update_user_telegram_chat_id(username: str, chat_id: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET telegram_chat_id = ? WHERE username = ?", (chat_id, username))
+    conn.commit()
+    conn.close()
+
+def db_get_user_telegram_chat_id(username: str) -> Optional[str]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT telegram_chat_id FROM users WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    conn.close()
+    return row["telegram_chat_id"] if row and row["telegram_chat_id"] else None
 
 # Bazani ishga tushirish
 init_db()
